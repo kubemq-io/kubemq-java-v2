@@ -1,6 +1,7 @@
 package io.kubemq.example.pubsub;
 
 import io.kubemq.sdk.client.KubeMQClient;
+import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.pubsub.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,18 +19,21 @@ public class PubSubClientExample {
     private final PubSubClient pubSubClient;
     private final String eventChannelName = "mytest-channel";
     private final String eventStoreChannelName = "mytest-channel-eventstore";
+    private final String address = "localhost:50000";
+    private final String clientId = "kueMQClientId";
 
     /**
      * Constructs a PubSubClientExample instance, initializing the KubeMQClient and PubSubClient.
      */
     public PubSubClientExample() {
         // Setup KubeMQ client
-        String host = "localhost:50000";
-        String clientId = "kueMQClientId";
         kubeMQClient = KubeMQClient.builder()
-                .address(host)
+                .address(address)
                 .clientId(clientId)
                 .build();
+        // Ping to test Connection is succesffull
+        ServerInfo pingResult = kubeMQClient.ping();
+        System.out.println("Ping Response: "+pingResult.toString());
 
         // Create PubSubClient using the builder pattern
         pubSubClient = PubSubClient.builder()

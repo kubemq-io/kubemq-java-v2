@@ -3,6 +3,7 @@ package io.kubemq.sdk;
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.kubemq.sdk.client.KubeMQClient;
+import io.kubemq.sdk.common.ServerInfo;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
 import lombok.extern.slf4j.Slf4j;
@@ -45,12 +46,12 @@ public class KubeMQClientTest {
     @Order(1)
     public void testPing_Success() {
         log.info("Starting test: testPing_Success "+blockingStubMock+" "+managedChannelMock);
-        Kubemq.PingResult pingResultMock = Kubemq.PingResult.newBuilder().build();
+        Kubemq.PingResult pingResultMock = Kubemq.PingResult.newBuilder().setHost("localhost").build();
         when(blockingStubMock.ping(null)).thenReturn(pingResultMock);
 
-        Kubemq.PingResult result = kubeMQClient.ping();
+        ServerInfo result = kubeMQClient.ping();
 
-        assertEquals(pingResultMock, result);
+        assertEquals(pingResultMock.getHost(), result.getHost());
         verify(blockingStubMock, times(1)).ping(null);
         log.info("Finished test: testPing_Success");
     }
