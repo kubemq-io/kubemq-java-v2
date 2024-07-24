@@ -1,5 +1,6 @@
 package io.kubemq.sdk.pubsub;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 /**
@@ -10,6 +11,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PubSubStats {
 
     /**
@@ -22,6 +24,14 @@ public class PubSubStats {
      */
     private int volume;
 
+    private int waiting;
+
+    private int expired;
+
+    private int delayed;
+
+    private int responses;
+
     /**
      * Returns a string representation of the Pub/Sub statistics.
      * The string includes the number of messages and the volume of data.
@@ -30,7 +40,14 @@ public class PubSubStats {
      */
     @Override
     public String toString() {
-        return "Stats: messages=" + messages + ", volume=" + volume;
+        return "PubSubStats{" +
+                "messages=" + messages +
+                ", volume=" + volume +
+                ", waiting=" + waiting +
+                ", expired=" + expired +
+                ", delayed=" + delayed +
+                ", responses=" + responses +
+                '}';
     }
 }
 
