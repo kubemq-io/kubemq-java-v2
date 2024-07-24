@@ -1,5 +1,6 @@
 package io.kubemq.sdk;
 
+import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ChannelUtility;
 import io.kubemq.sdk.pubsub.*;
@@ -90,8 +91,8 @@ public class PubSubClientTest {
         List<PubSubChannel> expectedChannels = Arrays.asList(
                 new PubSubChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new PubSubStats(100, 200),
-                        new PubSubStats(150, 300)
+                        new PubSubStats(100, 200,0,0,0,0),
+                        new PubSubStats(150, 300,0,0,0,0)
                 ));
         mockedStatic.when(() -> ChannelUtility.decodePubSubChannelList(response.toByteArray())).thenReturn(expectedChannels);
 
@@ -112,8 +113,8 @@ public class PubSubClientTest {
         List<PubSubChannel> expectedChannels = Arrays.asList(
                 new PubSubChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new PubSubStats(100, 200),
-                        new PubSubStats(150, 300)
+                        new PubSubStats(100, 200,0,0,0,0),
+                        new PubSubStats(150, 300,0,0,0,0)
                 ));
 
         mockedStatic.when(() -> ChannelUtility.decodePubSubChannelList(response.toByteArray())).thenReturn(expectedChannels);
@@ -137,7 +138,7 @@ public class PubSubClientTest {
 
         pubSubClient.subscribeToEvents(subscription);
 
-        verify(client).subscribeToEvents(eq(subscribe));
+        verify(asyncClient).subscribeToEvents(eq(subscribe), any(StreamObserver.class));
         log.info("subscribeToEvents test passed");
     }
 
@@ -152,7 +153,7 @@ public class PubSubClientTest {
 
         pubSubClient.subscribeToEventsStore(subscription);
 
-        verify(client).subscribeToEvents(eq(subscribe));
+        verify(asyncClient).subscribeToEvents(eq(subscribe), any(StreamObserver.class));
         log.info("subscribeToEventsStore test passed");
     }
 
