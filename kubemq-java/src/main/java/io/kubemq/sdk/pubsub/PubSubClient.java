@@ -1,5 +1,6 @@
 package io.kubemq.sdk.pubsub;
 
+import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ChannelUtility;
 import kubemq.Kubemq;
@@ -75,6 +76,7 @@ public class PubSubClient {
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
+                    .setRequestTypeDataValue(2)
                     .setMetadata("create-channel")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
                     .setClientID(kubeMQClient.getClientId())
@@ -104,6 +106,7 @@ public class PubSubClient {
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
+                    .setRequestTypeDataValue(2)
                     .setMetadata("create-channel")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
                     .setClientID(kubeMQClient.getClientId())
@@ -143,8 +146,9 @@ public class PubSubClient {
                     .setTimeout(10 * 1000)
                     .build();
             kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            log.debug("Listing events channels response: {}",response);
             if (response.getExecuted()) {
-                return ChannelUtility.decodePubSubChannelList(response.toByteArray());
+                return ChannelUtility.decodePubSubChannelList(response.getBody().toByteArray());
             } else {
                 throw new RuntimeException(response.getError());
             }
@@ -176,8 +180,9 @@ public class PubSubClient {
                     .setTimeout(10 * 1000)
                     .build();
             kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            log.debug("Listing events store channels response: {}",response);
             if (response.getExecuted()) {
-                return ChannelUtility.decodePubSubChannelList(response.toByteArray());
+                return ChannelUtility.decodePubSubChannelList(response.getBody().toByteArray());
             } else {
                 throw new RuntimeException(response.getError());
             }
@@ -198,7 +203,29 @@ public class PubSubClient {
             log.debug("Subscribing to events");
             subscription.validate();
             kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
-            kubeMQClient.getClient().subscribeToEvents(subscribe);
+//            kubeMQClient.getClient().subscribeToEvents(subscribe);
+
+            StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
+                @Override
+                public void onNext(Kubemq.EventReceive messageReceive) {
+                    log.trace("Event Received Event: EventID:'{}', Channel:'{}', Metadata: '{}'", messageReceive.getEventID(), messageReceive.getChannel(), messageReceive.getMetadata());
+                    // Send the received message to the consumer
+                    subscription.raiseOnReceiveMessage(EventMessageReceived.decode(messageReceive));
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    log.error("Error in StreamObserver: ", t);
+                    subscription.raiseOnError(t.getMessage());
+                }
+
+                @Override
+                public void onCompleted() {
+                    log.trace("StreamObserver completed.");
+                }
+            };
+            kubeMQClient.getAsyncClient().subscribeToEvents(subscribe, observer);
+
         } catch (Exception e) {
             log.error("Failed to subscribe to events", e);
             throw new RuntimeException(e);
@@ -216,8 +243,30 @@ public class PubSubClient {
             log.debug("Subscribing to events store");
             subscription.validate();
             kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
+//            kubeMQClient.getClient().subscribeToEvents(subscribe);
 
-            kubeMQClient.getClient().subscribeToEvents(subscribe);
+            StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
+                @Override
+                public void onNext(Kubemq.EventReceive messageReceive) {
+                    log.trace("Event Received Event: EventID:'{}', Channel:'{}', Metadata: '{}'", messageReceive.getEventID(), messageReceive.getChannel(), messageReceive.getMetadata());
+                    // Send the received message to the consumer
+                    subscription.raiseOnReceiveMessage(EventStoreMessageReceived.decode(messageReceive));
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    log.error("Error in StreamObserver: ", t);
+                    subscription.raiseOnError(t.getMessage());
+                }
+
+                @Override
+                public void onCompleted() {
+                    log.trace("StreamObserver completed.");
+                }
+            };
+
+            kubeMQClient.getAsyncClient().subscribeToEvents(subscribe, observer);
+
         } catch (Exception e) {
             log.error("Failed to subscribe to events store", e);
             throw new RuntimeException(e);
@@ -237,6 +286,7 @@ public class PubSubClient {
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
+                    .setRequestTypeDataValue(2)
                     .setMetadata("delete-channel")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
                     .setClientID(kubeMQClient.getClientId())
@@ -266,6 +316,7 @@ public class PubSubClient {
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
+                    .setRequestTypeDataValue(2)
                     .setMetadata("delete-channel")
                     .setChannel("kubemq.cluster.internal.requests")
                     .setClientID(kubeMQClient.getClientId())

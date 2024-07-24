@@ -43,7 +43,7 @@ public class DeleteChannelExample {
     public void deleteEventsChannel() {
         try {
             boolean isChannelDeleted = pubSubClient.deleteEventsChannel(eventChannelName);
-            System.out.println("Channel deleted: " + isChannelDeleted);
+            System.out.println("Events Channel deleted: " + isChannelDeleted);
         } catch (RuntimeException e) {
             System.err.println("Failed to delete events channel: " + e.getMessage());
         }
@@ -54,8 +54,8 @@ public class DeleteChannelExample {
      */
     public void deleteEventsStoreChannel() {
         try {
-            boolean isChannelDeleted = pubSubClient.deleteEventsChannel(eventStoreChannelName);
-            System.out.println("Channel deleted: " + isChannelDeleted);
+            boolean isChannelDeleted = pubSubClient.deleteEventsStoreChannel(eventStoreChannelName);
+            System.out.println("Events store Channel deleted: " + isChannelDeleted);
         } catch (RuntimeException e) {
             System.err.println("Failed to delete events store channel: " + e.getMessage());
         }

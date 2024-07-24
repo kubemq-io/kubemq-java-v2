@@ -8,6 +8,8 @@ import io.kubemq.sdk.pubsub.EventsStoreSubscription;
 import io.kubemq.sdk.pubsub.EventsStoreType;
 import io.kubemq.sdk.pubsub.EventsSubscription;
 import io.kubemq.sdk.pubsub.PubSubClient;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
@@ -63,7 +65,6 @@ public class SubscribeToEventExample {
 
             EventsSubscription subscription = EventsSubscription.builder()
                     .channel(eventChannelName)
-                    .group("All IT Team")
                     .onReceiveEventCallback(onReceiveEventCallback)
                     .onErrorCallback(onErrorCallback)
                     .build();
@@ -97,8 +98,9 @@ public class SubscribeToEventExample {
 
             EventsStoreSubscription subscription = EventsStoreSubscription.builder()
                     .channel(eventStoreChannelName)
-                    .group("All IT Team")
-                    .eventsStoreType(EventsStoreType.StartNewOnly)
+                    //.group("All IT Team")
+                    .eventsStoreType(EventsStoreType.StartAtTime)
+                    .eventsStoreStartTime(Instant.now().minus(1, ChronoUnit.HOURS))
                     .onReceiveEventCallback(onReceiveEventCallback)
                     .onErrorCallback(onErrorCallback)
                     .build();

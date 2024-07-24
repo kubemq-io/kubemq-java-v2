@@ -97,7 +97,7 @@ public class EventsStoreSubscription {
         if (onReceiveEventCallback == null) {
             throw new IllegalArgumentException("Event Store subscription must have an onReceiveEventCallback function.");
         }
-        if (eventsStoreType == EventsStoreType.Undefined) {
+        if (eventsStoreType == null || eventsStoreType == EventsStoreType.Undefined) {
             throw new IllegalArgumentException("Event Store subscription must have an events store type.");
         }
         if (eventsStoreType == EventsStoreType.StartAtSequence && eventsStoreSequenceValue == 0) {
@@ -121,16 +121,17 @@ public class EventsStoreSubscription {
                 .setChannel(channel)
                 .setGroup(Optional.ofNullable(group).orElse(""))
                 .setEventsStoreTypeData(Kubemq.Subscribe.EventsStoreType.forNumber(eventsStoreType == null ? 0 : eventsStoreType.getValue()))
+                .setEventsStoreTypeValue(eventsStoreStartTime != null?(int) eventsStoreStartTime.getEpochSecond() : eventsStoreSequenceValue)
                 .build();
-        switch (eventsStoreType) {
-            case StartAtSequence:
-                subscribe.newBuilderForType().setEventsStoreTypeValue(eventsStoreSequenceValue);
-                break;
-            case StartAtTime:
-                subscribe.newBuilderForType().setEventsStoreTypeValue((int) eventsStoreStartTime.getEpochSecond());
-                break;
-            default:
-        }
+//        switch (eventsStoreType) {
+//            case StartAtSequence:
+//                subscribe.setEventsStoreTypeValue(eventsStoreSequenceValue);
+//                break;
+//            case StartAtTime:
+//                subscribe.newBuilderForType().setEventsStoreTypeValue((int) eventsStoreStartTime.getEpochSecond());
+//                break;
+//            default:
+//        }
         return subscribe;
     }
 
