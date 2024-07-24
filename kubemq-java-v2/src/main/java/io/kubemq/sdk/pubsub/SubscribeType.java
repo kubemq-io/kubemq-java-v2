@@ -23,10 +23,13 @@
  */
 package io.kubemq.sdk.pubsub;
 
+import lombok.Getter;
+
 /**
  * Enumeration of the types of subscription operations supported by the system.
  * Each type represents a different pattern of subscription behavior.
  */
+@Getter
 public enum SubscribeType {
 
     /**
@@ -61,7 +64,7 @@ public enum SubscribeType {
      *
      * @param value The integer value associated with the subscription type.
      */
-    private SubscribeType(int value) {
+    SubscribeType(int value) {
         this.value = value;
     }
 

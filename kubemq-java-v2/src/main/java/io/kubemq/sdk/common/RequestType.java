@@ -23,9 +23,12 @@
  */
 package io.kubemq.sdk.common;
 
+import lombok.Getter;
+
 /**
  * Enum representing different types of requests that can be made to KubeMQ.
  */
+@Getter
 public enum RequestType {
 
     /**
@@ -57,12 +60,4 @@ public enum RequestType {
         this.value = value;
     }
 
-    /**
-     * Gets the integer value associated with the request type.
-     *
-     * @return the integer value of the request type.
-     */
-    public int getValue() {
-        return value;
-    }
 }

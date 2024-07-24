@@ -23,10 +23,13 @@
  */
 package io.kubemq.sdk.pubsub;
 
+import lombok.Getter;
+
 /**
  * Enum representing different types of event store subscriptions.
  * These types define the starting point from which events are stored and retrieved.
  */
+@Getter
 public enum EventsStoreType {
 
     /**
@@ -72,7 +75,7 @@ public enum EventsStoreType {
      *
      * @param value The integer value representing the event store type.
      */
-    private EventsStoreType(int value) {
+     EventsStoreType(int value) {
         this.value = value;
     }
 
