@@ -1,9 +1,10 @@
-package io.kubemq.example.pubsub;
+package io.kubemq.sdk.example;
 
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.pubsub.PubSubChannel;
 import io.kubemq.sdk.pubsub.PubSubClient;
+
 import java.util.List;
 
 
@@ -11,7 +12,7 @@ public class ListEventsChanneExample {
  
     private final KubeMQClient kubeMQClient;
     private final PubSubClient pubSubClient;
-    private final String searchQuery = null;
+    private final String searchQuery = "test";
     private final String address = "localhost:50000";
     private final String clientId = "kueMQClientId";
 
@@ -58,7 +59,7 @@ public class ListEventsChanneExample {
     public void listEventsStoreChannel() {
         try {
               System.out.println("Events Channel listing");
-           List<PubSubChannel> eventChannel = pubSubClient.listEventsChannels(searchQuery);
+           List<PubSubChannel> eventChannel = pubSubClient.listEventsStoreChannels(searchQuery);
            eventChannel.forEach(  evt -> {
                System.out.println("Name: "+evt.getName()+" ChannelTYpe: "+evt.getType()+" isActive: "+evt.getIsActive());
            });
