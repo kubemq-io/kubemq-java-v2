@@ -4,7 +4,6 @@ import io.kubemq.sdk.common.*;
 import io.kubemq.sdk.pubsub.PubSubChannel;
 import io.kubemq.sdk.pubsub.PubSubStats;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,13 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 public class ChannelUtilityTest {
-
-    private ChannelUtility channelUtility;
-
-    @BeforeEach
-    public void setUp() {
-        channelUtility = new ChannelUtility();
-    }
 
     @Test
     public void testDecodeQueuesChannelList_Success() throws IOException {
