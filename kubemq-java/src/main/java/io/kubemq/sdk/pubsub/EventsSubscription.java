@@ -83,6 +83,7 @@ public class EventsSubscription {
                 .setGroup(group != null ?group :"")
                 .setClientID(clientId)
                 .setSubscribeTypeData(Kubemq.Subscribe.SubscribeType.Events)
+                .setSubscribeTypeDataValue(1)
                 .build();
     }
 

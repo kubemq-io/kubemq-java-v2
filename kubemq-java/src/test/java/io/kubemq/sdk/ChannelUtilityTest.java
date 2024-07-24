@@ -48,8 +48,8 @@ public class ChannelUtilityTest {
         List<PubSubChannel> expectedChannels = Arrays.asList(
                 new PubSubChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new PubSubStats(100, 200),
-                        new PubSubStats(150, 300)
+                        new PubSubStats(100, 200,0,0,0,0),
+                        new PubSubStats(150, 300,0,0,0,0)
                 )
         );
 
