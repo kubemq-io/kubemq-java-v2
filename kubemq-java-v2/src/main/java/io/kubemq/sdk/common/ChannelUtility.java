@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubemq.sdk.pubsub.PubSubChannel;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -23,9 +24,8 @@ public class ChannelUtility {
      * @throws IOException If there is an error during the decoding process.
      */
     public static List<PubSubChannel> decodePubSubChannelList(byte[] dataBytes) throws IOException {
-        String dataStr = new String(dataBytes, "UTF-8");
-        List<PubSubChannel> channels = objectMapper.readValue(dataStr, new TypeReference<List<PubSubChannel>>() {});
-        return channels;
+        String dataStr = new String(dataBytes, StandardCharsets.UTF_8);
+        return objectMapper.readValue(dataStr, new TypeReference<List<PubSubChannel>>() {});
     }
 
     /**
@@ -36,9 +36,8 @@ public class ChannelUtility {
      * @throws IOException If there is an error during the decoding process.
      */
     public static List<QueuesChannel> decodeQueuesChannelList(byte[] dataBytes) throws IOException {
-        String dataStr = new String(dataBytes, "UTF-8");
-        List<QueuesChannel> channels = objectMapper.readValue(dataStr, new TypeReference<List<QueuesChannel>>() {});
-        return channels;
+        String dataStr = new String(dataBytes, StandardCharsets.UTF_8);
+        return objectMapper.readValue(dataStr, new TypeReference<List<QueuesChannel>>() {});
     }
 
     /**
@@ -49,8 +48,7 @@ public class ChannelUtility {
      * @throws IOException If there is an error during the decoding process.
      */
     public static List<CQChannel> decodeCqChannelList(byte[] dataBytes) throws IOException {
-        String dataStr = new String(dataBytes, "UTF-8");
-        List<CQChannel> channels = objectMapper.readValue(dataStr, new TypeReference<List<CQChannel>>() {});
-        return channels;
+        String dataStr = new String(dataBytes, StandardCharsets.UTF_8);
+        return objectMapper.readValue(dataStr, new TypeReference<List<CQChannel>>() {});
     }
 }
