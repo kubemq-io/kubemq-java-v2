@@ -26,7 +26,6 @@ replay_pid*
 *.iml
 *.ipr
 *.iws
-*.jar
 *.sw?
 *~
 .#*
