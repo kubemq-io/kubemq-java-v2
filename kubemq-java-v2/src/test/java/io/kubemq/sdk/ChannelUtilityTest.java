@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,7 +24,7 @@ public class ChannelUtilityTest {
         log.info("Starting test: testDecodeQueuesChannelList_Success");
 
         String json = "[{\"name\":\"channel1\",\"type\":\"type1\",\"lastActivity\":1622014799,\"isActive\":true,\"incoming\":{\"messages\":100,\"volume\":200,\"waiting\":10,\"expired\":5,\"delayed\":2},\"outgoing\":{\"messages\":150,\"volume\":300,\"waiting\":8,\"expired\":3,\"delayed\":1}}]";
-        byte[] dataBytes = json.getBytes("UTF-8");
+        byte[] dataBytes = json.getBytes(StandardCharsets.UTF_8);
         List<QueuesChannel> expectedChannels = Arrays.asList(
                 new QueuesChannel(
                         "channel1", "type1", 1622014799L, true,
@@ -43,7 +44,7 @@ public class ChannelUtilityTest {
         log.info("Starting test: testDecodePubSubChannelList_Success");
 
         String json = "[{\"name\":\"channel1\",\"type\":\"type1\",\"lastActivity\":1622014799,\"isActive\":true,\"incoming\":{\"messages\":100,\"volume\":200},\"outgoing\":{\"messages\":150,\"volume\":300}}]";
-        byte[] dataBytes = json.getBytes("UTF-8");
+        byte[] dataBytes = json.getBytes(StandardCharsets.UTF_8);
         List<PubSubChannel> expectedChannels = Arrays.asList(
                 new PubSubChannel(
                         "channel1", "type1", 1622014799L, true,
@@ -63,7 +64,7 @@ public class ChannelUtilityTest {
         log.info("Starting test: testDecodeCQChannelList_Success");
 
         String json = "[{\"name\":\"channel1\",\"type\":\"type1\",\"lastActivity\":1622014799,\"isActive\":true,\"incoming\":{\"messages\":100,\"volume\":200},\"outgoing\":{\"messages\":150,\"volume\":300}}]";
-        byte[] dataBytes = json.getBytes("UTF-8");
+        byte[] dataBytes = json.getBytes(StandardCharsets.UTF_8);
         List<CQChannel> expectedChannels = Arrays.asList(
                 new CQChannel(
                         "channel1", "type1", 1622014799L, true,
