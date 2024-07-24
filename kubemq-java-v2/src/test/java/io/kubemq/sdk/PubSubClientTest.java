@@ -1,6 +1,5 @@
 package io.kubemq.sdk;
 
-import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ChannelUtility;
 import io.kubemq.sdk.pubsub.*;
@@ -138,7 +137,7 @@ public class PubSubClientTest {
 
         pubSubClient.subscribeToEvents(subscription);
 
-        verify(asyncClient).subscribeToEvents(eq(subscribe), any(StreamObserver.class));
+        verify(client).subscribeToEvents(eq(subscribe));
         log.info("subscribeToEvents test passed");
     }
 
@@ -153,7 +152,7 @@ public class PubSubClientTest {
 
         pubSubClient.subscribeToEventsStore(subscription);
 
-        verify(asyncClient).subscribeToEvents(eq(subscribe), any(StreamObserver.class));
+        verify(client).subscribeToEvents(eq(subscribe));
         log.info("subscribeToEventsStore test passed");
     }
 
