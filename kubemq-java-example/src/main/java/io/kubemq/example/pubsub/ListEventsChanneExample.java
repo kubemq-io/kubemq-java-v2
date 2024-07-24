@@ -1,4 +1,4 @@
-package io.kubemq.sdk.example;
+package io.kubemq.example.pubsub;
 
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
@@ -12,7 +12,7 @@ public class ListEventsChanneExample {
  
     private final KubeMQClient kubeMQClient;
     private final PubSubClient pubSubClient;
-    private final String searchQuery = "test";
+    private final String searchQuery = "";
     private final String address = "localhost:50000";
     private final String clientId = "kueMQClientId";
 
