@@ -112,8 +112,8 @@ public class KubeMQClient implements AutoCloseable {
                         .sslContext(sslContext)
                         .negotiationType(NegotiationType.TLS)
                         .maxInboundMessageSize(maxReceiveSize == 0 ? 4194304 : maxReceiveSize) // Default 4MIB
-                        .keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
-                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 60 : pingTimeoutInSeconds, TimeUnit.SECONDS)
+                        .keepAliveTime(pingIntervalInSeconds == 0 ? 380 : pingIntervalInSeconds, TimeUnit.SECONDS)
+                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 120 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                         .keepAliveWithoutCalls(keepAlive)
                         .build();
             } catch (SSLException e) {
