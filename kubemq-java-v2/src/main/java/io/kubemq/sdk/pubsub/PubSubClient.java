@@ -195,6 +195,7 @@ public class PubSubClient {
     public void subscribeToEvents(EventsSubscription subscription) {
         try {
             log.debug("Subscribing to events");
+            subscription.validate();
             kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
             StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
                 @Override
@@ -231,6 +232,7 @@ public class PubSubClient {
     public void subscribeToEventsStore(EventsStoreSubscription subscription) {
         try {
             log.debug("Subscribing to events store");
+            subscription.validate();
             kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
             StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
                 @Override
