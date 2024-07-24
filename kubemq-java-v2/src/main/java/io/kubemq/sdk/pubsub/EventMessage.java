@@ -25,7 +25,6 @@ public class EventMessage {
      * The channel to which the event message is sent.
      * This field is mandatory.
      */
-    @NonNull
     private String channel;
 
     /**
@@ -47,10 +46,9 @@ public class EventMessage {
      * Validates the event message.
      * Ensures that the channel is not null or empty and that at least one of metadata, body, or tags is present.
      *
-     * @return the validated event message.
      * @throws IllegalArgumentException if validation fails.
      */
-    public EventMessage validate() {
+    public void validate() {
         if (channel == null || channel.isEmpty()) {
             throw new IllegalArgumentException("Event message must have a channel.");
         }
@@ -58,8 +56,6 @@ public class EventMessage {
         if (metadata == null && body.length == 0 && (tags == null || tags.isEmpty())) {
             throw new IllegalArgumentException("Event message must have at least one of the following: metadata, body, or tags.");
         }
-
-        return this;
     }
 
     /**

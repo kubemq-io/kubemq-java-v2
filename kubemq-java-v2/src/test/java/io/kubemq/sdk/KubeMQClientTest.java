@@ -61,11 +61,9 @@ public class KubeMQClientTest {
         log.info("Starting test: testPing_Failure");
         when(blockingStubMock.ping(null)).thenThrow(new StatusRuntimeException(io.grpc.Status.UNAVAILABLE));
 
-        Exception exception = assertThrows(RuntimeException.class, () -> {
-            kubeMQClient.ping();
-        });
+        Exception exception = assertThrows(RuntimeException.class, () -> kubeMQClient.ping());
 
-        assertTrue(exception.getCause() instanceof StatusRuntimeException);
+        assertInstanceOf(StatusRuntimeException.class, exception.getCause());
         verify(blockingStubMock, times(1)).ping(null);
         log.info("Finished test: testPing_Failure");
     }

@@ -59,7 +59,7 @@ public class EventStoreMessageReceived {
 
     /**
      * Decodes a Kubemq.EventReceive object into an EventStoreMessageReceived instance.
-     *
+     * <p>
      * Converts the fields of the provided `EventReceive` object into the corresponding
      * fields of the `EventStoreMessageReceived` instance.
      *

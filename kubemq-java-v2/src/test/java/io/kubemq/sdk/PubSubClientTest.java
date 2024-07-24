@@ -27,8 +27,8 @@ import static org.mockito.Mockito.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class PubSubClientTest {
 
-    private static final String CLIENT_ID = "TestsCLientID";
-    private static MockedStatic<ChannelUtility> mockedStatic = mockStatic(ChannelUtility.class);
+    private static final String CLIENT_ID = "TestsClientID";
+    private static final MockedStatic<ChannelUtility> mockedStatic = mockStatic(ChannelUtility.class);
     @Mock
     private kubemqGrpc.kubemqBlockingStub client;
 

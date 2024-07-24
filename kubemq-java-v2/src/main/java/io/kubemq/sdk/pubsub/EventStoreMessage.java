@@ -46,10 +46,9 @@ public class EventStoreMessage {
     /**
      * Validates that the necessary fields are present in the message.
      *
-     * @return The current instance of EventStoreMessage.
      * @throws IllegalArgumentException If any required field is missing.
      */
-    public EventStoreMessage validate() {
+    public void validate() {
         if (channel == null || channel.isEmpty()) {
             throw new IllegalArgumentException("Event Store message must have a channel.");
         }
@@ -57,8 +56,6 @@ public class EventStoreMessage {
         if (metadata == null && body == null && (tags == null || tags.isEmpty())) {
             throw new IllegalArgumentException("Event Store message must have at least one of the following: metadata, body, or tags.");
         }
-
-        return this;
     }
 
     /**
@@ -79,7 +76,7 @@ public class EventStoreMessage {
                 .setMetadata(Optional.ofNullable(metadata).orElse(""))
                 .setBody(ByteString.copyFrom(body))
                 .setStore(true)
-                .putAllTags(Optional.ofNullable(tags).orElse(new HashMap<String, String>()))
+                .putAllTags(Optional.ofNullable(tags).orElse(new HashMap<>()))
                 .build();
     }
 
