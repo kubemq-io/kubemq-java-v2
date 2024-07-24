@@ -6,6 +6,7 @@ import io.grpc.netty.shaded.io.grpc.netty.NegotiationType;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
+import io.kubemq.sdk.common.ServerInfo;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
 import lombok.Builder;
@@ -180,12 +181,17 @@ public class KubeMQClient implements AutoCloseable {
      * @return The ping result from the server.
      * @throws RuntimeException if the ping request fails.
      */
-    public Kubemq.PingResult ping() {
+    public ServerInfo ping() {
         try {
             log.debug("Pinging KubeMQ server at {}", address);
             Kubemq.PingResult pingResult = blockingStub.ping(null);
-            log.info("Ping successful. Response: {}", pingResult);
-            return pingResult;
+            log.debug("Ping successful. Response: {}", pingResult);
+            return ServerInfo.builder()
+                    .host(pingResult.getHost())
+                    .version(pingResult.getVersion())
+                    .serverStartTime(pingResult.getServerStartTime())
+                    .serverUpTimeSeconds(pingResult.getServerUpTimeSeconds())
+                            .build();
         } catch (StatusRuntimeException e) {
             log.error("Ping failed", e);
             throw new RuntimeException(e);
