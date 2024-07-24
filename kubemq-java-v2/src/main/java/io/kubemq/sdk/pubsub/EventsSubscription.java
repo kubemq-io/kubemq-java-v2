@@ -80,7 +80,7 @@ public class EventsSubscription {
     public Kubemq.Subscribe encode(String clientId) {
         return Kubemq.Subscribe.newBuilder()
                 .setChannel(channel)
-                .setGroup(group)
+                .setGroup(group != null ?group :"")
                 .setClientID(clientId)
                 .setSubscribeTypeData(Kubemq.Subscribe.SubscribeType.Events)
                 .build();
