@@ -63,6 +63,19 @@ public class PubSubClient {
         }
     }
 
+
+    public StreamObserver<Kubemq.Event> sendEventsStream(StreamObserver<kubemq.Kubemq.Result> resultStreamObserver) {
+        try {
+            log.debug("Creating events stream");
+            StreamObserver<Kubemq.Event> eventStreamObserver = kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
+            log.debug("Events stream created: {}",eventStreamObserver);
+            return eventStreamObserver;
+        } catch (Exception e) {
+            log.error("Failed to create events stream", e);
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * Creates an events channel with the specified name.
      *
@@ -243,8 +256,6 @@ public class PubSubClient {
             log.debug("Subscribing to events store");
             subscription.validate();
             kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
-//            kubeMQClient.getClient().subscribeToEvents(subscribe);
-
             StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
                 @Override
                 public void onNext(Kubemq.EventReceive messageReceive) {

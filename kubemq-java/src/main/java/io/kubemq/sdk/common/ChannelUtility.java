@@ -2,7 +2,9 @@ package io.kubemq.sdk.common;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kubemq.sdk.cq.CQChannel;
 import io.kubemq.sdk.pubsub.PubSubChannel;
+import io.kubemq.sdk.queries.QueuesChannel;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
