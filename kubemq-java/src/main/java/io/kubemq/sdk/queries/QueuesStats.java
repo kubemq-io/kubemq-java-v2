@@ -1,4 +1,4 @@
-package io.kubemq.sdk.common;
+package io.kubemq.sdk.queries;
 
 import lombok.*;
 

@@ -1,8 +1,12 @@
 package io.kubemq.sdk;
 
 import io.kubemq.sdk.common.*;
+import io.kubemq.sdk.cq.CQChannel;
+import io.kubemq.sdk.cq.CQStats;
 import io.kubemq.sdk.pubsub.PubSubChannel;
 import io.kubemq.sdk.pubsub.PubSubStats;
+import io.kubemq.sdk.queries.QueuesChannel;
+import io.kubemq.sdk.queries.QueuesStats;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
