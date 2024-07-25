@@ -18,9 +18,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -46,7 +46,7 @@ public class PubSubClientTest {
         MockitoAnnotations.openMocks(this);
         lenient().when(kubeMQClient.getClient()).thenReturn(client);
         lenient().when(kubeMQClient.getAsyncClient()).thenReturn(asyncClient);
-        when(kubeMQClient.getClientId()).thenReturn(CLIENT_ID);
+        lenient().when(kubeMQClient.getClientId()).thenReturn(CLIENT_ID);
         pubSubClient = PubSubClient.builder().kubeMQClient(kubeMQClient).build(); // Manually inject the initialized kubeMQClient
     }
 
@@ -193,6 +193,18 @@ public class PubSubClientTest {
         verify(eventStoreMessage).validate();
         verify(client).sendEvent(event);
         log.info("sendEventsStoreMessage test passed");
+    }
+
+    @Test
+    @Order(37)
+    public void testSendToEventsStream() throws Exception {
+        log.info("Testing sendToEventsStream");
+        StreamObserver subscription = mock(StreamObserver.class);
+        StreamObserver<Kubemq.Event> result = mock(StreamObserver.class);
+        when(pubSubClient.sendEventsStream(subscription)).thenReturn(result);
+
+        assertEquals(pubSubClient.sendEventsStream(subscription),result);
+        log.info("sendToEventsStream test passed");
     }
 
     @Test
