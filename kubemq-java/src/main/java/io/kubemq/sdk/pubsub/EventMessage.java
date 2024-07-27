@@ -35,11 +35,13 @@ public class EventMessage {
     /**
      * Body of the event message in bytes.
      */
+    @Builder.Default
     private byte[] body = new byte[0];
 
     /**
      * Tags associated with the event message as key-value pairs.
      */
+    @Builder.Default
     private Map<String, String> tags = new HashMap<>();
 
     /**

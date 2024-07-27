@@ -2,7 +2,7 @@ package io.kubemq.sdk.pubsub;
 
 import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
-import io.kubemq.sdk.common.ChannelUtility;
+import io.kubemq.sdk.common.ChannelDecoder;
 import kubemq.Kubemq;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ public class PubSubClient {
      */
     public EventSendResult sendEventsMessage(EventMessage message) {
         try {
-            log.debug("Sending event message");
+            log.trace("Sending event message");
             message.validate();
             Kubemq.Event event = message.encode(kubeMQClient.getClientId());
             kubemq.Kubemq.Result result = kubeMQClient.getClient().sendEvent(event);
@@ -52,7 +52,7 @@ public class PubSubClient {
      */
     public EventSendResult sendEventsStoreMessage(EventStoreMessage message) {
         try {
-            log.debug("Sending event store message");
+            log.trace("Sending event store message");
             message.validate();
             Kubemq.Event event = message.encode(kubeMQClient.getClientId());
             kubemq.Kubemq.Result result = kubeMQClient.getClient().sendEvent(event);
@@ -66,9 +66,9 @@ public class PubSubClient {
 
     public StreamObserver<Kubemq.Event> sendEventsStream(StreamObserver<kubemq.Kubemq.Result> resultStreamObserver) {
         try {
-            log.debug("Creating events stream");
+            log.trace("Creating events stream");
             StreamObserver<Kubemq.Event> eventStreamObserver = kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
-            log.debug("Events stream created: {}",eventStreamObserver);
+            log.trace("Events stream created: {}",eventStreamObserver);
             return eventStreamObserver;
         } catch (Exception e) {
             log.error("Failed to create events stream", e);
@@ -85,7 +85,7 @@ public class PubSubClient {
      */
     public boolean createEventsChannel(String channelName) {
         try {
-            log.debug("Creating events channel: {}", channelName);
+            log.trace("Creating events channel: {}", channelName);
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
@@ -115,7 +115,7 @@ public class PubSubClient {
      */
     public boolean createEventsStoreChannel(String channelName) {
         try {
-            log.debug("Creating events store channel: {}", channelName);
+            log.trace("Creating events store channel: {}", channelName);
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
@@ -146,7 +146,7 @@ public class PubSubClient {
      */
     public List<PubSubChannel> listEventsChannels(String search) {
         try {
-            log.debug("Listing events channels with search: {}", search);
+            log.trace("Listing events channels with search: {}", search);
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
@@ -159,9 +159,9 @@ public class PubSubClient {
                     .setTimeout(10 * 1000)
                     .build();
             kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
-            log.debug("Listing events channels response: {}",response);
+            log.trace("Listing events channels response: {}",response);
             if (response.getExecuted()) {
-                return ChannelUtility.decodePubSubChannelList(response.getBody().toByteArray());
+                return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());
             } else {
                 throw new RuntimeException(response.getError());
             }
@@ -180,7 +180,7 @@ public class PubSubClient {
      */
     public List<PubSubChannel> listEventsStoreChannels(String search) {
         try {
-            log.debug("Listing events store channels with search: {}", search);
+            log.trace("Listing events store channels with search: {}", search);
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
@@ -193,9 +193,9 @@ public class PubSubClient {
                     .setTimeout(10 * 1000)
                     .build();
             kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
-            log.debug("Listing events store channels response: {}",response);
+            log.trace("Listing events store channels response: {}",response);
             if (response.getExecuted()) {
-                return ChannelUtility.decodePubSubChannelList(response.getBody().toByteArray());
+                return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());
             } else {
                 throw new RuntimeException(response.getError());
             }
@@ -213,7 +213,7 @@ public class PubSubClient {
      */
     public void subscribeToEvents(EventsSubscription subscription) {
         try {
-            log.debug("Subscribing to events");
+            log.trace("Subscribing to events");
             subscription.validate();
             kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
 //            kubeMQClient.getClient().subscribeToEvents(subscribe);
@@ -253,7 +253,7 @@ public class PubSubClient {
      */
     public void subscribeToEventsStore(EventsStoreSubscription subscription) {
         try {
-            log.debug("Subscribing to events store");
+            log.trace("Subscribing to events store");
             subscription.validate();
             kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
             StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
@@ -293,7 +293,7 @@ public class PubSubClient {
      */
     public boolean deleteEventsChannel(String channelName) {
         try {
-            log.debug("Deleting events channel: {}", channelName);
+            log.trace("Deleting events channel: {}", channelName);
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
@@ -323,7 +323,7 @@ public class PubSubClient {
      */
     public boolean deleteEventsStoreChannel(String channelName) {
         try {
-            log.debug("Deleting events store channel: {}", channelName);
+            log.trace("Deleting events store channel: {}", channelName);
             Kubemq.Request request = Kubemq.Request.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setRequestTypeData(Kubemq.Request.RequestType.Query)
