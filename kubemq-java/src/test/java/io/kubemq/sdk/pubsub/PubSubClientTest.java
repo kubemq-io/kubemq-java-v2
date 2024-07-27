@@ -1,9 +1,8 @@
-package io.kubemq.sdk;
+package io.kubemq.sdk.pubsub;
 
 import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
-import io.kubemq.sdk.common.ChannelUtility;
-import io.kubemq.sdk.pubsub.*;
+import io.kubemq.sdk.common.ChannelDecoder;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
 import lombok.extern.slf4j.Slf4j;
@@ -16,11 +15,11 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.mock;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -28,7 +27,7 @@ import static org.mockito.Mockito.mock;
 public class PubSubClientTest {
 
     private static final String CLIENT_ID = "TestsClientID";
-    private static final MockedStatic<ChannelUtility> mockedStatic = mockStatic(ChannelUtility.class);
+    private static final MockedStatic<ChannelDecoder> mockedStatic = mockStatic(ChannelDecoder.class);
     @Mock
     private kubemqGrpc.kubemqBlockingStub client;
 
@@ -88,13 +87,13 @@ public class PubSubClientTest {
         log.info("Testing listEventsChannels");
         Kubemq.Request request = Kubemq.Request.newBuilder().build();
         Kubemq.Response response = Kubemq.Response.newBuilder().setExecuted(true).build();
-        List<PubSubChannel> expectedChannels = Arrays.asList(
+        List<PubSubChannel> expectedChannels = Collections.singletonList(
                 new PubSubChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new PubSubStats(100, 200,0,0,0,0),
-                        new PubSubStats(150, 300,0,0,0,0)
+                        new PubSubStats(100, 200, 0, 0, 0, 0),
+                        new PubSubStats(150, 300, 0, 0, 0, 0)
                 ));
-        mockedStatic.when(() -> ChannelUtility.decodePubSubChannelList(response.toByteArray())).thenReturn(expectedChannels);
+        mockedStatic.when(() -> ChannelDecoder.decodePubSubChannelList(response.toByteArray())).thenReturn(expectedChannels);
 
         when(client.sendRequest(any(Kubemq.Request.class))).thenReturn(response);
         List<PubSubChannel> result = pubSubClient.listEventsChannels("search");
@@ -110,14 +109,14 @@ public class PubSubClientTest {
         log.info("Testing listEventsStoreChannels");
         Kubemq.Request request = Kubemq.Request.newBuilder().build();
         Kubemq.Response response = Kubemq.Response.newBuilder().setExecuted(true).build();
-        List<PubSubChannel> expectedChannels = Arrays.asList(
+        List<PubSubChannel> expectedChannels = Collections.singletonList(
                 new PubSubChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new PubSubStats(100, 200,0,0,0,0),
-                        new PubSubStats(150, 300,0,0,0,0)
+                        new PubSubStats(100, 200, 0, 0, 0, 0),
+                        new PubSubStats(150, 300, 0, 0, 0, 0)
                 ));
 
-        mockedStatic.when(() -> ChannelUtility.decodePubSubChannelList(response.toByteArray())).thenReturn(expectedChannels);
+        mockedStatic.when(() -> ChannelDecoder.decodePubSubChannelList(response.toByteArray())).thenReturn(expectedChannels);
         when(client.sendRequest(any(Kubemq.Request.class))).thenReturn(response);
 
         List<PubSubChannel> result = pubSubClient.listEventsStoreChannels("search");

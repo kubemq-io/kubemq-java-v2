@@ -1,5 +1,6 @@
-package io.kubemq.sdk.queries;
+package io.kubemq.sdk.queues;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 /**
@@ -11,6 +12,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class QueuesStats {
 
     /**
@@ -37,4 +39,18 @@ public class QueuesStats {
      * The number of delayed messages in the queue.
      */
     private int delayed;
+
+    private int responses;
+
+    @Override
+    public String toString() {
+        return "QueuesStats{" +
+                "messages=" + messages +
+                ", volume=" + volume +
+                ", waiting=" + waiting +
+                ", expired=" + expired +
+                ", delayed=" + delayed +
+                ", responses=" + responses +
+                '}';
+    }
 }

@@ -4,17 +4,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubemq.sdk.cq.CQChannel;
 import io.kubemq.sdk.pubsub.PubSubChannel;
-import io.kubemq.sdk.queries.QueuesChannel;
+import io.kubemq.sdk.queues.QueuesChannel;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * ChannelUtility provides utility methods for decoding channel data from byte arrays.
+ * ChannelDecoder provides utility methods for decoding channel data from byte arrays.
  * This class uses Jackson's ObjectMapper to convert JSON byte arrays into lists of channel objects.
  */
-public class ChannelUtility {
+public class ChannelDecoder {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
