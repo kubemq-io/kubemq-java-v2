@@ -31,12 +31,12 @@ public class KubeMQClientTest {
     private ManagedChannel managedChannelMock;
 
     @InjectMocks
-    private KubeMQClient kubeMQClient =new KubeMQClient("localhost", "testClient", "authToken", false, null, null, 0, false, 0, 0, KubeMQClient.Level.INFO);
+    private KubeMQClient kubeMQClient =new KubeMQClient("localhost", "testClient", "authToken", false, null, null, 0,0, false, 0, 0, KubeMQClient.Level.INFO);
 
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        kubeMQClient =new KubeMQClient("localhost", "testClient", "authToken", false, null, null, 0, false, 0, 0, KubeMQClient.Level.INFO);
+        kubeMQClient =new KubeMQClient("localhost", "testClient", "authToken", false, null, null, 0,0, false, 0, 0, KubeMQClient.Level.INFO);
 
         kubeMQClient.setBlockingStub(blockingStubMock);
         kubeMQClient.setManagedChannel(managedChannelMock);

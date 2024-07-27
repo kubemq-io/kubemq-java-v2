@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.kubemq.sdk</groupId>
-    <artifactId>kubemq-java-example</artifactId>
+    <artifactId>kubemq-sdk-java-example</artifactId>
     <version>2.0.0</version>
     <packaging>jar</packaging>
 
@@ -19,7 +19,7 @@
     <dependencies>
         <dependency>
             <groupId>io.kubemq.sdk</groupId>
-            <artifactId>kubemq-java</artifactId>
+            <artifactId>kubemq-sdk-Java</artifactId>
             <version>2.0.0</version>
         </dependency>
         

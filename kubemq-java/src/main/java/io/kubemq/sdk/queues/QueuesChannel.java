@@ -1,4 +1,4 @@
-package io.kubemq.sdk.queries;
+package io.kubemq.sdk.queues;
 
 import lombok.*;
 

@@ -41,6 +41,7 @@ public class EventStoreMessage {
     /**
      * The tags associated with the message.
      */
+    @Builder.Default
     private Map<String, String> tags = new HashMap<>();
 
     /**

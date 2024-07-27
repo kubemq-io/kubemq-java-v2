@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Getter
-@Setter
 public class KubeMQClient implements AutoCloseable {
 
     private final String address;
@@ -37,14 +36,19 @@ public class KubeMQClient implements AutoCloseable {
     private final String tlsCertFile;
     private final String tlsKeyFile;
     private final int maxReceiveSize;
+    private final int reconnectIntervalSeconds;
     private final boolean keepAlive;
     private final int pingIntervalInSeconds;
     private final int pingTimeoutInSeconds;
     private final Level logLevel;
 
+    @Setter
     private ManagedChannel managedChannel;
+    @Setter
     private kubemqGrpc.kubemqBlockingStub blockingStub;
+    @Setter
     private kubemqGrpc.kubemqStub asyncStub;
+    @Setter
     private Metadata metadata;
 
     /**
@@ -64,7 +68,7 @@ public class KubeMQClient implements AutoCloseable {
      */
     @Builder
     public KubeMQClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
-                        int maxReceiveSize, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
+                        int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
         if (address == null || clientId == null) {
             throw new IllegalArgumentException("Address and clientId are required");
         }
@@ -79,6 +83,7 @@ public class KubeMQClient implements AutoCloseable {
         this.tlsCertFile = tlsCertFile;
         this.tlsKeyFile = tlsKeyFile;
         this.maxReceiveSize = maxReceiveSize;
+        this.reconnectIntervalSeconds = reconnectIntervalSeconds;
         this.keepAlive = keepAlive;
         this.pingIntervalInSeconds = pingIntervalInSeconds;
         this.pingTimeoutInSeconds = pingTimeoutInSeconds;
@@ -112,9 +117,10 @@ public class KubeMQClient implements AutoCloseable {
                         .sslContext(sslContext)
                         .negotiationType(NegotiationType.TLS)
                         .maxInboundMessageSize(maxReceiveSize == 0 ? 4194304 : maxReceiveSize) // Default 4MIB
-                        .keepAliveTime(pingIntervalInSeconds == 0 ? 380 : pingIntervalInSeconds, TimeUnit.SECONDS)
-                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 120 : pingTimeoutInSeconds, TimeUnit.SECONDS)
+                        .keepAliveTime(pingIntervalInSeconds == 0 ? 180 : pingIntervalInSeconds, TimeUnit.SECONDS)
+                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 20 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                         .keepAliveWithoutCalls(keepAlive)
+                        .enableRetry()
                         .build();
             } catch (SSLException e) {
                 log.error("Failed to set up SSL context", e);
@@ -123,8 +129,8 @@ public class KubeMQClient implements AutoCloseable {
         } else {
             managedChannel = ManagedChannelBuilder.forTarget(address)
                     .maxInboundMessageSize(maxReceiveSize == 0 ? 4194304 : maxReceiveSize) // Default 4MIB
-                    .keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
-                    .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 60 : pingTimeoutInSeconds, TimeUnit.SECONDS)
+                    .keepAliveTime(pingIntervalInSeconds == 0 ? 180 : pingIntervalInSeconds, TimeUnit.SECONDS)
+                    .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 20 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                     .keepAliveWithoutCalls(keepAlive)
                     .usePlaintext().build();
         }
@@ -183,9 +189,9 @@ public class KubeMQClient implements AutoCloseable {
      */
     public ServerInfo ping() {
         try {
-            log.debug("Pinging KubeMQ server at {}", address);
+            log.trace("Pinging KubeMQ server at {}", address);
             Kubemq.PingResult pingResult = blockingStub.ping(null);
-            log.debug("Ping successful. Response: {}", pingResult);
+            log.trace("Ping successful. Response: {}", pingResult);
             return ServerInfo.builder()
                     .host(pingResult.getHost())
                     .version(pingResult.getVersion())
