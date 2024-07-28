@@ -142,53 +142,53 @@ public class QueuesClient {
         return batchSendResult;
     }
 
-    /**
-     * Receives messages from a queues channel.
-     *
-     * @param id                   The request ID.
-     * @param channel              The name of the channel to receive messages from.
-     * @param maxMessages          The maximum number of messages to receive.
-     * @param waitTimeoutInSeconds The maximum time in seconds to wait for new messages.
-     * @param peak                 Whether to peak at the messages without removing them from the queue.
-     * @return QueueMessagesReceived The response object containing the received messages.
-     */
-    public QueueMessagesReceived receiveQueuesMessages(String id, String channel, int maxMessages, int waitTimeoutInSeconds, boolean peak) {
-        log.trace("Receiving queues messages");
-        if (channel == null) {
-            throw new IllegalArgumentException("channel cannot be null.");
-        }
-        if (maxMessages < 1) {
-            throw new IllegalArgumentException("maxMessages must be greater than 0.");
-        }
-        if (waitTimeoutInSeconds < 1) {
-            throw new IllegalArgumentException("waitTimeoutInSeconds must be greater than 0.");
-        }
-
-        Kubemq.ReceiveQueueMessagesRequest rcvQueuesMessageReq = Kubemq.ReceiveQueueMessagesRequest.newBuilder()
-                .setRequestID(id != null ? id : UUID.randomUUID().toString())
-                .setClientID(kubeMQClient.getClientId())
-                .setChannel(channel)
-                .setMaxNumberOfMessages(maxMessages)
-                .setWaitTimeSeconds(waitTimeoutInSeconds)
-                .setIsPeak(peak)
-                .build();
-
-        Kubemq.ReceiveQueueMessagesResponse rcvQueuesMessageResponse = kubeMQClient.getClient().receiveQueueMessages(rcvQueuesMessageReq);
-        log.trace("Queues messages received: {}", rcvQueuesMessageResponse);
-        QueueMessagesReceived queueMessagesReceived = QueueMessagesReceived.builder()
-                .messagesExpired(rcvQueuesMessageResponse.getMessagesExpired())
-                .error(rcvQueuesMessageResponse.getError())
-                .isError(rcvQueuesMessageResponse.getIsError())
-                .messagesReceived(rcvQueuesMessageResponse.getMessagesReceived())
-                .isPeak(rcvQueuesMessageResponse.getIsPeak())
-                .requestID(rcvQueuesMessageResponse.getRequestID())
-                .build();
-
-        for (Kubemq.QueueMessage queueMessage : rcvQueuesMessageResponse.getMessagesList()) {
-            queueMessagesReceived.getMessages().add(QueueMessageWrapper.decode(queueMessage));
-        }
-        return queueMessagesReceived;
-    }
+//    /**
+//     * Receives messages from a queues channel.
+//     *
+//     * @param id                   The request ID.
+//     * @param channel              The name of the channel to receive messages from.
+//     * @param maxMessages          The maximum number of messages to receive.
+//     * @param waitTimeoutInSeconds The maximum time in seconds to wait for new messages.
+//     * @param peak                 Whether to peak at the messages without removing them from the queue.
+//     * @return QueueMessagesReceived The response object containing the received messages.
+//     */
+//    public QueueMessageReceived getQueuesMessages(String id, String channel, int maxMessages, int waitTimeoutInSeconds, boolean peak) {
+//        log.trace("Receiving queues messages");
+//        if (channel == null) {
+//            throw new IllegalArgumentException("channel cannot be null.");
+//        }
+//        if (maxMessages < 1) {
+//            throw new IllegalArgumentException("maxMessages must be greater than 0.");
+//        }
+//        if (waitTimeoutInSeconds < 1) {
+//            throw new IllegalArgumentException("waitTimeoutInSeconds must be greater than 0.");
+//        }
+//
+//        Kubemq.ReceiveQueueMessagesRequest rcvQueuesMessageReq = Kubemq.ReceiveQueueMessagesRequest.newBuilder()
+//                .setRequestID(id != null ? id : UUID.randomUUID().toString())
+//                .setClientID(kubeMQClient.getClientId())
+//                .setChannel(channel)
+//                .setMaxNumberOfMessages(maxMessages)
+//                .setWaitTimeSeconds(waitTimeoutInSeconds)
+//                .setIsPeak(peak)
+//                .build();
+//
+//        Kubemq.ReceiveQueueMessagesResponse rcvQueuesMessageResponse = kubeMQClient.getClient().receiveQueueMessages(rcvQueuesMessageReq);
+//        log.trace("Queues messages received: {}", rcvQueuesMessageResponse);
+//        QueueMessageReceived queueMessagesReceived = QueueMessageReceived.builder()
+//                .messagesExpired(rcvQueuesMessageResponse.getMessagesExpired())
+//                .error(rcvQueuesMessageResponse.getError())
+//                .isError(rcvQueuesMessageResponse.getIsError())
+//                .messagesReceived(rcvQueuesMessageResponse.getMessagesReceived())
+//                .isPeak(rcvQueuesMessageResponse.getIsPeak())
+//                .requestID(rcvQueuesMessageResponse.getRequestID())
+//                .build();
+//
+//        for (Kubemq.QueueMessage queueMessage : rcvQueuesMessageResponse.getMessagesList()) {
+//            queueMessagesReceived.getMessages().add(QueueMessageWrapper.decode(queueMessage));
+//        }
+//        return queueMessagesReceived;
+//    }
 
     /**
      * Streams messages to a queues channel.
@@ -203,21 +203,87 @@ public class QueuesClient {
     /**
      * Sends messages upstream to a queues channel.
      *
-     * @param queueUploadstreamResponse The response observer for the upstream.
+     * @param upstreamRequest The response observer for the upstream.
      * @return StreamObserver<kubemq.Kubemq.QueuesUpstreamRequest> The request observer for the upstream.
      */
-    public StreamObserver<kubemq.Kubemq.QueuesUpstreamRequest> sendQueuesMessagesUpStream(StreamObserver<Kubemq.QueuesUpstreamResponse> queueUploadstreamResponse) {
-        return kubeMQClient.getAsyncClient().queuesUpstream(queueUploadstreamResponse);
+    public StreamObserver<Kubemq.QueuesUpstreamRequest> sendMessageQueuesUpStream(UpstreamSender upstreamRequest) {
+        StreamObserver<Kubemq.QueuesUpstreamResponse> request = new StreamObserver<Kubemq.QueuesUpstreamResponse>() {
+
+            @Override
+            public void onNext(Kubemq.QueuesUpstreamResponse messageReceive) {
+                log.trace("QueuesUpstreamResponse Received Metadata: '{}'", messageReceive);
+                // Send the received message to the consumer
+                UpstreamResponse qpResp = UpstreamResponse.builder()
+                        .refRequestId(messageReceive.getRefRequestID())
+                        .error(messageReceive.getError())
+                        .isError(messageReceive.getIsError())
+                        .build();
+                for (Kubemq.SendQueueMessageResult queueMessageResult : messageReceive.getResultsList()) {
+                    qpResp.getResults().add(QueueSendResult.builder().build().decode(queueMessageResult));
+                }
+                upstreamRequest.raiseOnReceiveMessage(qpResp);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error in QueuesUpstreamResponse StreamObserver: ", t);
+                upstreamRequest.raiseOnError(t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                log.trace("QueuesUpstreamResponse StreamObserver completed.");
+            }
+        };
+        return kubeMQClient.getAsyncClient().queuesUpstream(request);
     }
 
     /**
      * Receives messages downstream from a queues channel.
      *
-     * @param queueDownstreamResponse The response observer for the downstream.
-     * @return StreamObserver<kubemq.Kubemq.QueuesDownstreamRequest> The request observer for the downstream.
+     * @param queuesPollRequest Queues Poll request to poll the messages from queue
+
      */
-    public StreamObserver<kubemq.Kubemq.QueuesDownstreamRequest> receiveQueuesMessagesDownStream(StreamObserver<Kubemq.QueuesDownstreamResponse> queueDownstreamResponse) {
-        return kubeMQClient.getAsyncClient().queuesDownstream(queueDownstreamResponse);
+    public void receiveQueuesMessagesDownStream(QueuesPollRequest queuesPollRequest) {
+
+        final StreamObserver<Kubemq.QueuesDownstreamRequest>[] responseHandler = new StreamObserver[1];
+        StreamObserver<Kubemq.QueuesDownstreamResponse> request = new StreamObserver<Kubemq.QueuesDownstreamResponse>() {
+
+            @Override
+            public void onNext(Kubemq.QueuesDownstreamResponse messageReceive) {
+                log.trace("QueuesDownstreamResponse Received Metadata: '{}'", messageReceive);
+                // Send the received message to the consumer
+                QueuesPollResponse qpResp = QueuesPollResponse.builder()
+                        .refRequestId(messageReceive.getRefRequestId())
+                        .activeOffsets(messageReceive.getActiveOffsetsList())
+                        .receiverClientId(messageReceive.getTransactionId())
+                        .isTransactionCompleted(messageReceive.getTransactionComplete())
+                        .transactionId(messageReceive.getTransactionId())
+                        .error(messageReceive.getError())
+                        .isError(messageReceive.getIsError())
+                        .build();
+                for (Kubemq.QueueMessage queueMessage : messageReceive.getMessagesList()) {
+                    qpResp.getMessages().add(QueueMessageReceived.decode(queueMessage, qpResp.getTransactionId(),
+                            qpResp.isTransactionCompleted(), qpResp.getReceiverClientId(), responseHandler[0]));
+                }
+                queuesPollRequest.raiseOnReceiveMessage(qpResp);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error in QueuesDownstreamResponse StreamObserver: ", t);
+                queuesPollRequest.raiseOnError(t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                log.trace("QueuesDownstreamResponse StreamObserver completed.");
+            }
+        };
+
+        responseHandler[0] = kubeMQClient.getAsyncClient().queuesDownstream(request);
+        responseHandler[0].onNext(queuesPollRequest.encode(kubeMQClient.getClientId()));
+       // return responseHandler[0];
     }
 
     /**
