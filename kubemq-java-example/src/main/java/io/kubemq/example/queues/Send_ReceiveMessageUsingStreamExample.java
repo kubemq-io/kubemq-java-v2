@@ -41,6 +41,7 @@ public class Send_ReceiveMessageUsingStreamExample {
         kubeMQClient = KubeMQClient.builder()
                 .address(address)
                 .clientId(clientId)
+                .keepAlive(true)
                 .build();
 
         // Ping to test connection is successful
