@@ -142,63 +142,6 @@ public class QueuesClient {
         return batchSendResult;
     }
 
-//    /**
-//     * Receives messages from a queues channel.
-//     *
-//     * @param id                   The request ID.
-//     * @param channel              The name of the channel to receive messages from.
-//     * @param maxMessages          The maximum number of messages to receive.
-//     * @param waitTimeoutInSeconds The maximum time in seconds to wait for new messages.
-//     * @param peak                 Whether to peak at the messages without removing them from the queue.
-//     * @return QueueMessagesReceived The response object containing the received messages.
-//     */
-//    public QueueMessageReceived getQueuesMessages(String id, String channel, int maxMessages, int waitTimeoutInSeconds, boolean peak) {
-//        log.trace("Receiving queues messages");
-//        if (channel == null) {
-//            throw new IllegalArgumentException("channel cannot be null.");
-//        }
-//        if (maxMessages < 1) {
-//            throw new IllegalArgumentException("maxMessages must be greater than 0.");
-//        }
-//        if (waitTimeoutInSeconds < 1) {
-//            throw new IllegalArgumentException("waitTimeoutInSeconds must be greater than 0.");
-//        }
-//
-//        Kubemq.ReceiveQueueMessagesRequest rcvQueuesMessageReq = Kubemq.ReceiveQueueMessagesRequest.newBuilder()
-//                .setRequestID(id != null ? id : UUID.randomUUID().toString())
-//                .setClientID(kubeMQClient.getClientId())
-//                .setChannel(channel)
-//                .setMaxNumberOfMessages(maxMessages)
-//                .setWaitTimeSeconds(waitTimeoutInSeconds)
-//                .setIsPeak(peak)
-//                .build();
-//
-//        Kubemq.ReceiveQueueMessagesResponse rcvQueuesMessageResponse = kubeMQClient.getClient().receiveQueueMessages(rcvQueuesMessageReq);
-//        log.trace("Queues messages received: {}", rcvQueuesMessageResponse);
-//        QueueMessageReceived queueMessagesReceived = QueueMessageReceived.builder()
-//                .messagesExpired(rcvQueuesMessageResponse.getMessagesExpired())
-//                .error(rcvQueuesMessageResponse.getError())
-//                .isError(rcvQueuesMessageResponse.getIsError())
-//                .messagesReceived(rcvQueuesMessageResponse.getMessagesReceived())
-//                .isPeak(rcvQueuesMessageResponse.getIsPeak())
-//                .requestID(rcvQueuesMessageResponse.getRequestID())
-//                .build();
-//
-//        for (Kubemq.QueueMessage queueMessage : rcvQueuesMessageResponse.getMessagesList()) {
-//            queueMessagesReceived.getMessages().add(QueueMessageWrapper.decode(queueMessage));
-//        }
-//        return queueMessagesReceived;
-//    }
-
-    /**
-     * Streams messages to a queues channel.
-     *
-     * @param streamQueueMessageResponse The response observer for the stream.
-     * @return StreamObserver<Kubemq.StreamQueueMessagesRequest> The request observer for the stream.
-     */
-    public StreamObserver<Kubemq.StreamQueueMessagesRequest> streamQueuesMessages(StreamObserver<Kubemq.StreamQueueMessagesResponse> streamQueueMessageResponse) {
-        return kubeMQClient.getAsyncClient().streamQueueMessage(streamQueueMessageResponse);
-    }
 
     /**
      * Sends messages upstream to a queues channel.
