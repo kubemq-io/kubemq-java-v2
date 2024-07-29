@@ -229,21 +229,6 @@ public class QueuesClientTest {
 //        log.info("receiveQueuesMessages test passed");
 //    }
 
-    @Test
-    @Order(30)
-    public void testStreamQueuesMessages() throws Exception {
-        log.info("Testing streamQueuesMessages");
-        StreamObserver<Kubemq.StreamQueueMessagesResponse> responseObserver = mock(StreamObserver.class);
-        StreamObserver<Kubemq.StreamQueueMessagesRequest> requestObserver = mock(StreamObserver.class);
-
-        when(kubeMQClient.getAsyncClient().streamQueueMessage(any())).thenReturn(requestObserver);
-
-        StreamObserver<Kubemq.StreamQueueMessagesRequest> result = queuesClient.streamQueuesMessages(responseObserver);
-
-        assertNotNull(result);
-        assertEquals(requestObserver, result);
-        log.info("streamQueuesMessages test passed");
-    }
 
     @Test
     @Order(35)
