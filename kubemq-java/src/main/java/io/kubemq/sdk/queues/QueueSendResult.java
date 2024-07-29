@@ -11,7 +11,6 @@ import java.time.ZoneId;
  * QueueSendResult represents the result of sending a message to a queue.
  */
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -73,6 +72,30 @@ public class QueueSendResult {
                 ", isError=" + isError +
                 ", error='" + error + '\'' +
                 '}';
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public void setSentAt(LocalDateTime sentAt) {
+        this.sentAt = sentAt;
+    }
+
+    public void setExpiredAt(LocalDateTime expiredAt) {
+        this.expiredAt = expiredAt;
+    }
+
+    public void setDelayedTo(LocalDateTime delayedTo) {
+        this.delayedTo = delayedTo;
+    }
+
+    public void setIsError(boolean isError) {
+        this.isError = isError;
+    }
+
+    public void setError(String error) {
+        this.error = error;
     }
 }
 
