@@ -5,16 +5,14 @@ import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.queues.QueueMessageWrapper;
+import io.kubemq.sdk.queues.QueueSendResult;
 import io.kubemq.sdk.queues.QueuesClient;
 import io.kubemq.sdk.queues.QueuesPollRequest;
 import io.kubemq.sdk.queues.QueuesPollResponse;
-import io.kubemq.sdk.queues.UpstreamResponse;
-import io.kubemq.sdk.queues.UpstreamSender;
 import java.util.UUID;
 import kubemq.Kubemq.QueuesDownstreamRequest;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
-import kubemq.Kubemq;
 
 /**
  * Example class demonstrating how to poll the queue messages using a
@@ -58,57 +56,21 @@ public class Send_ReceiveMessageUsingStreamExample {
     /**
      * Initiates the queue messages stream to send messages and receive messages send result from server.
      */
-    public void sendMessage() {
+    public void sendQueueMessage() {
          System.out.println("\n============================== sendMessage Started =============================\n");
-       // Define the onReceiveMessageSendCallback handler to receive the message result
-        Consumer<UpstreamResponse> onReceiveMessageSendCallback = (response) -> {
-            System.out.println("Received Message send result");
-            
-            if(response.isError()){
-            System.out.println("Error: "+response.getError());
-            }else{
-            
-            System.out.println("RefRequestId: "+response.getRefRequestId());
-            response.getResults().forEach(  qsr -> {
-              System.out.println("Message Send Result Id: "+ qsr.getId());
-                System.out.println("Sent At: "+qsr.getSentAt());
-            });
-            }
-        };
-
-        // Define the onErrorCallback
-        Consumer<String> onErrorCallback = (errorMsg) -> {
-            System.err.println("Error: " + errorMsg);
-        };
-
-        // Create an UpstreamSender to setup stream to send message
-        UpstreamSender upstreamSender = UpstreamSender.builder()
-                .onReceiveMessageSendCallback(onReceiveMessageSendCallback)
-                .onErrorCallback(onErrorCallback)
-                .build();
-
-        StreamObserver<Kubemq.QueuesUpstreamRequest> requestObserver = queuesClient.sendMessageQueuesUpStream(upstreamSender);
-
-        // Send message in Stream 
-        QueueMessageWrapper message1 = QueueMessageWrapper.builder()
-                    .body("Sending data in queue messages 1 stream".getBytes())
+            // Send message in Stream 
+            QueueMessageWrapper message = QueueMessageWrapper.builder()
+                    .body(("Sending data in queue message stream").getBytes())
                     .channel(channelName)
                     .metadata("metadata")
                     .id(UUID.randomUUID().toString())
                     .build();
-        
-          QueueMessageWrapper message2 = QueueMessageWrapper.builder()
-                    .body("Sending data in queue messages 12 stream".getBytes())
-                    .channel(channelName)
-                    .metadata("metadata")
-                    .id(UUID.randomUUID().toString())
-                    .build();
-          
-          requestObserver.onNext(message1.encode(clientId));
-          requestObserver.onNext(message2.encode(clientId));
-         System.out.println("Two Message sent to queue Up stream ");
-        
+            QueueSendResult sendResult = queuesClient.sendQueuesMessageUpStream(message);
+
+            System.out.println("Message sent Response: " + sendResult);
+
     }
+    
 
 
     public void receiveQueuesMessages() {
@@ -133,7 +95,6 @@ public class Send_ReceiveMessageUsingStreamExample {
                // *** ReQueue message
               // msg.reQueue(channelName);
             });
-            System.out.println("\n\n");
         };
 
         // Define the onErrorCallback
@@ -163,7 +124,7 @@ public class Send_ReceiveMessageUsingStreamExample {
     public static void main(String[] args) throws InterruptedException {
         Send_ReceiveMessageUsingStreamExample example = new Send_ReceiveMessageUsingStreamExample();
         System.out.println("Starting to send messages & Receive message from queue stream: " + new java.util.Date());
-        example.sendMessage();
+        example.sendQueueMessage();
         example.receiveQueuesMessages();
 
         // Keep the main thread running to handle responses

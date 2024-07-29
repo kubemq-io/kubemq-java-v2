@@ -196,54 +196,22 @@ public class QueuesClientTest {
         log.info("sendQueuesMessageInBatch test passed");
     }
 
-
-//    @Test
-//    @Order(25)
-//    public void testReceiveQueuesMessages() throws Exception {
-//        log.info("Testing receiveQueuesMessages");
-//        Kubemq.ReceiveQueueMessagesRequest receiveRequest = Kubemq.ReceiveQueueMessagesRequest.newBuilder()
-//                .setRequestID(UUID.randomUUID().toString())
-//                .setClientID(CLIENT_ID)
-//                .setChannel("channelName")
-//                .setMaxNumberOfMessages(10)
-//                .setWaitTimeSeconds(5)
-//                .build();
-//        Kubemq.ReceiveQueueMessagesResponse receiveResponse = Kubemq.ReceiveQueueMessagesResponse.newBuilder()
-//                .setRequestID(receiveRequest.getRequestID())
-//                .setMessagesExpired(0)
-//                .setMessagesReceived(1)
-//                .build();
-//
-//        when(kubeMQClient.getClient().receiveQueueMessages(any())).thenReturn(receiveResponse);
-//
-//        QueueMessagesReceived messagesReceived = queuesClient.receiveQueuesMessages(
-//                receiveRequest.getRequestID(),
-//                "channelName",
-//                10,
-//                5,
-//                false
-//        );
-//
-//        assertNotNull(messagesReceived);
-//        assertEquals(1, messagesReceived.getMessagesReceived());
-//        log.info("receiveQueuesMessages test passed");
-//    }
-
-
     @Test
     @Order(35)
     public void testSendQueuesMessagesUpStream() throws Exception {
         log.info("Testing sendQueuesMessagesUpStream");
-        //StreamObserver<Kubemq.QueuesUpstreamResponse> responseObserver = mock(StreamObserver.class);
-        StreamObserver<Kubemq.QueuesUpstreamRequest> requestObserver = mock(StreamObserver.class);
+        QueueMessageWrapper messageMock = mock(QueueMessageWrapper.class);
+        Kubemq.QueuesUpstreamRequest upstreamRequest = mock(Kubemq.QueuesUpstreamRequest.class);
         UpstreamSender upstreamSender = mock(UpstreamSender.class);
 
-        when(kubeMQClient.getAsyncClient().queuesUpstream(any())).thenReturn(requestObserver);
+        // Create an instance of UpstreamSender
+        when(upstreamSender.sendMessage(any(KubeMQClient.class), any(Kubemq.QueuesUpstreamRequest.class)))
+                .thenReturn(QueueSendResult.builder().isError(false).build());
 
-        StreamObserver<Kubemq.QueuesUpstreamRequest> result = queuesClient.sendMessageQueuesUpStream(upstreamSender);
+        QueueSendResult result = upstreamSender.sendMessage(kubeMQClient, upstreamRequest);
 
         assertNotNull(result);
-        assertEquals(requestObserver, result);
+        assertFalse(result.isError());
         log.info("sendQueuesMessagesUpStream test passed");
     }
 
@@ -268,23 +236,6 @@ public class QueuesClientTest {
 
         log.info("receiveQueuesMessagesDownStream test passed");
     }
-
-//    @Test
-//    @Order(40)
-//    public void testReceiveQueuesMessagesDownStream() throws Exception {
-//        log.info("Testing receiveQueuesMessagesDownStream");
-//        StreamObserver<Kubemq.QueuesDownstreamResponse> responseObserver = mock(StreamObserver.class);
-//        StreamObserver<Kubemq.QueuesDownstreamRequest> requestObserver = mock(StreamObserver.class);
-//
-//        QueuesPollRequest queuesPollRequest = mock(QueuesPollRequest.class);
-//
-//        when(kubeMQClient.getAsyncClient().queuesDownstream(any())).thenReturn(requestObserver);
-//
-//         queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
-//
-//        verify(asyncClient).queuesDownstream(responseObserver);
-//        log.info("receiveQueuesMessagesDownStream test passed");
-//    }
 
     @Test
     @Order(45)

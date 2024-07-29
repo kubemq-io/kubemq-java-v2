@@ -144,41 +144,14 @@ public class QueuesClient {
 
 
     /**
-     * Sends messages upstream to a queues channel.
+     * Sends messages to a queues channel.
      *
-     * @param upstreamRequest The response observer for the upstream.
-     * @return StreamObserver<kubemq.Kubemq.QueuesUpstreamRequest> The request observer for the upstream.
+     * @param queueMessage message to send in queue
+     * @return UpstreamResponse The stream from the upstream.
      */
-    public StreamObserver<Kubemq.QueuesUpstreamRequest> sendMessageQueuesUpStream(UpstreamSender upstreamRequest) {
-        StreamObserver<Kubemq.QueuesUpstreamResponse> request = new StreamObserver<Kubemq.QueuesUpstreamResponse>() {
-
-            @Override
-            public void onNext(Kubemq.QueuesUpstreamResponse messageReceive) {
-                log.trace("QueuesUpstreamResponse Received Metadata: '{}'", messageReceive);
-                // Send the received message to the consumer
-                UpstreamResponse qpResp = UpstreamResponse.builder()
-                        .refRequestId(messageReceive.getRefRequestID())
-                        .error(messageReceive.getError())
-                        .isError(messageReceive.getIsError())
-                        .build();
-                for (Kubemq.SendQueueMessageResult queueMessageResult : messageReceive.getResultsList()) {
-                    qpResp.getResults().add(QueueSendResult.builder().build().decode(queueMessageResult));
-                }
-                upstreamRequest.raiseOnReceiveMessage(qpResp);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                log.error("Error in QueuesUpstreamResponse StreamObserver: ", t);
-                upstreamRequest.raiseOnError(t.getMessage());
-            }
-
-            @Override
-            public void onCompleted() {
-                log.trace("QueuesUpstreamResponse StreamObserver completed.");
-            }
-        };
-        return kubeMQClient.getAsyncClient().queuesUpstream(request);
+    public QueueSendResult sendQueuesMessageUpStream(QueueMessageWrapper queueMessage) {
+        queueMessage.validate();
+      return new UpstreamSender().sendMessage(kubeMQClient, queueMessage.encode(kubeMQClient.getClientId()));
     }
 
     /**
@@ -226,7 +199,6 @@ public class QueuesClient {
 
         responseHandler[0] = kubeMQClient.getAsyncClient().queuesDownstream(request);
         responseHandler[0].onNext(queuesPollRequest.encode(kubeMQClient.getClientId()));
-       // return responseHandler[0];
     }
 
     /**
