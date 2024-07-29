@@ -172,5 +172,108 @@ Each subscription request must have 2 callbacks:
 1. All subscriptions must use the SubscribeToEvents grpc function
 
 
+## Queues Functions
+
+### Send
+
+**Function Name**
+
+sendQueuesMessage
+
+**Input Parameters**
 
 
+**Input Parameters**
+
+| Name     | Type          | Description           |
+|----------|---------------|-----------------------|
+| message | Queue Message | Queue Message to send |
+
+**Output Parameters**
+
+Send Queue Message result or exception
+
+
+**GRPC RPC To Use**
+1. All sending functions must use the QueuesUpstream grpc function in order to send the message
+
+
+### Receive 
+
+**Function Name**
+
+receiveQueuesMessages
+
+**Input Parameters**
+
+
+| Name                 | Type   | Description                                     |
+|----------------------|--------|-------------------------------------------------|
+| channel              | string | channel name                                    |
+| maxMessages          | int    | max messages to pull - default is 1             |
+| waitTimeoutInSeconds | int    | the time to wait for all the messages to arrive |
+| autoAck              | bool   | auto ack when pulling the messages              |
+
+
+**Output Parameters**
+
+Receive Queue Results
+
+This object contains a list of all messages received and can do 3 functions:
+1. AckAll - will acc all the messages received
+2. RejectAll - will reject all the messages received
+3. RequeueAll - will re queue all the messages received to specific channel
+
+
+For every received message, three functions can be called:
+1. Ack – will ack this message
+2. Reject – will reject this message
+3. Requeue – will requeue this message with a specified channel
+
+## CQ Functions
+
+### Send
+
+**Definitions**
+
+| Type     | Name               | Input         | Result          |
+|----------|--------------------|---------------|-----------------|
+| Commands | sendCommandRequest | CommandRequest | CommandResponse |
+| Queries  | sendQueriesRequest | QueryRequest  | QueryResponse   |
+
+
+**GRPC RPC To Use**
+1. All sending functions must use the SendRequest grpc function
+
+
+
+
+### Subscribe
+
+**Definitions**
+
+| Type         | Name                | Input                         |
+|--------------|---------------------|-------------------------------|
+| Commands       | subscribeToCommands | Commands Subscription Request |
+| Queries | subscribeToQueries  | Queries Subscription Request  |
+
+**CallBacks**
+
+Each subscription request must have 2 callbacks:
+1. On Receive Request
+2. On Error
+
+**Sending Results** 
+
+When the request is received, a send response call should be send.
+CommandResponseMessage for commands and QueryResponseMessage for queries
+
+
+| Type         | Name                | Input                         |
+|--------------|---------------------|-------------------------------|
+| Commands       | subscribeToCommands | Commands Subscription Request |
+| Queries | subscribeToQueries  | Queries Subscription Request  |
+
+
+**GRPC RPC To Use**
+1. All subscriptions must use the SubscribeToRequests grpc function
