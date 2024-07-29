@@ -1,5 +1,6 @@
 package io.kubemq.sdk.pubsub;
 
+import io.kubemq.sdk.common.SubscribeType;
 import kubemq.Kubemq;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package io.kubemq.sdk.pubsub;
+package io.kubemq.sdk.common;
 
 import lombok.Getter;
 
