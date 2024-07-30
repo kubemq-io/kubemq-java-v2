@@ -1,15 +1,13 @@
 package io.kubemq.sdk.cq;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,15 +19,6 @@ public class CommandResponseMessage {
     private boolean isExecuted;
     private LocalDateTime timestamp;
     private String error;
-
-    public CommandResponseMessage(CommandMessageReceived commandReceived, boolean isExecuted, String error, LocalDateTime timestamp) {
-        this.commandReceived = commandReceived;
-        this.clientId = "";
-        this.requestId = "";
-        this.isExecuted = isExecuted;
-        this.timestamp = (timestamp != null) ? timestamp : LocalDateTime.now();
-        this.error = error;
-    }
 
     public CommandResponseMessage validate() {
         if (commandReceived == null) {
@@ -55,8 +44,8 @@ public class CommandResponseMessage {
                 .setRequestID(this.commandReceived.getId())
                 .setReplyChannel(this.commandReceived.getReplyChannel())
                 .setExecuted(this.isExecuted)
-                .setError(this.error)
-                .setTimestamp(this.timestamp.toEpochSecond(ZoneOffset.UTC) * 1_000_000_000L)
+                .setError(this.error != null ? this.error :"")
+                .setTimestamp(this.timestamp != null ?(this.timestamp.toEpochSecond(ZoneOffset.UTC) * 1_000_000_000L): Instant.now().toEpochMilli())
                 .build();
     }
 

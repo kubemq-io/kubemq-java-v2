@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.UUID;
-import java.util.function.Consumer;
 
 /**
  * Class representing a request to poll messages from a queue.
@@ -17,40 +16,12 @@ import java.util.function.Consumer;
 @Slf4j
 public class QueuesPollRequest {
     private String channel;
+    @Builder.Default
     private int pollMaxMessages = 1;
+    @Builder.Default
     private int pollWaitTimeoutInSeconds = 60;
+    @Builder.Default
     private boolean autoAckMessages = false;
-    /**
-     * Callback function to be invoked when message is received.
-     */
-    private Consumer<QueuesPollResponse> onReceiveMessageCallback;
-
-    /**
-     * Callback function to be invoked when an error occurs.
-     */
-    private Consumer<String> onErrorCallback;
-
-    /**
-     * Invokes the onReceiveMessageCallback with the given message.
-     *
-     * @param pollResponse The received message.
-     */
-    public void raiseOnReceiveMessage(QueuesPollResponse pollResponse) {
-        if (onReceiveMessageCallback != null) {
-            onReceiveMessageCallback.accept(pollResponse);
-        }
-    }
-
-    /**
-     * Invokes the onErrorCallback with the given error message.
-     *
-     * @param msg The error message.
-     */
-    public void raiseOnError(String msg) {
-        if (onErrorCallback != null) {
-            onErrorCallback.accept(msg);
-        }
-    }
 
     public void validate() {
         if (channel == null || channel.isEmpty()) {

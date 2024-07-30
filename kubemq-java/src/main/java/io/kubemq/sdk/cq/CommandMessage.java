@@ -79,6 +79,7 @@ public class CommandMessage {
      * @return The encoded protocol buffer message.
      */
     public Kubemq.Request encode(String clientId) {
+        tags.put("x-kubemq-client-id", clientId);
         return Kubemq.Request.newBuilder()
                 .setRequestID(id != null ? id : UUID.randomUUID().toString())
                 .setClientID(clientId)
@@ -88,7 +89,7 @@ public class CommandMessage {
                 .setMetadata(metadata != null ? metadata : "")
                 .putAllTags(tags)
                 .setBody(ByteString.copyFrom(body))
-                .setTimeout(timeoutInSeconds)
+                .setTimeout(timeoutInSeconds * 1000)
                 .build();
     }
 

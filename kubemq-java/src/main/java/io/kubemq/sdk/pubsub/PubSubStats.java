@@ -24,17 +24,30 @@ public class PubSubStats {
      */
     private int volume;
 
+    /**
+     * The number of messages currently waiting to be processed by the Pub/Sub channel.
+     */
     private int waiting;
 
+    /**
+     * The number of messages that have expired in the Pub/Sub channel.
+     */
     private int expired;
 
+    /**
+     * The number of messages that have been delayed in the Pub/Sub channel.
+     */
     private int delayed;
 
+    /**
+     * The number of responses sent by the Pub/Sub channel.
+     */
     private int responses;
 
     /**
      * Returns a string representation of the Pub/Sub statistics.
-     * The string includes the number of messages and the volume of data.
+     * The string includes the number of messages, the volume of data,
+     * the number of waiting, expired, delayed, and responses.
      *
      * @return A string representation of the Pub/Sub statistics.
      */
@@ -50,4 +63,3 @@ public class PubSubStats {
                 '}';
     }
 }
-

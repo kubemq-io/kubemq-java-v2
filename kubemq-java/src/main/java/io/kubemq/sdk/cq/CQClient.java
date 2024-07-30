@@ -30,15 +30,11 @@ public class CQClient {
      * @throws GRPCException if an error occurs during the gRPC call
      */
     public CommandResponseMessage sendCommandRequest(CommandMessage message) {
-        try {
             message.validate();
             Kubemq.Request request = message.encode(kubeMQClient.getClientId());
             Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
-            return new CommandResponseMessage().decode(response);
-        } catch (GRPCException e) {
-            log.error(e.getMessage(), e);
-            throw e;
-        }
+            log.debug("sendCommandRequest -> response: {}",response);
+            return  CommandResponseMessage.builder().build().decode(response);
     }
 
     /**
@@ -49,15 +45,11 @@ public class CQClient {
      * @throws GRPCException if an error occurs during the gRPC call
      */
     public QueryResponseMessage sendQueryRequest(QueryMessage message) {
-        try {
             message.validate();
             Kubemq.Request request = message.encode(kubeMQClient.getClientId());
             Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
-            return new QueryResponseMessage().decode(response);
-        } catch (GRPCException e) {
-            log.error(e.getMessage(), e);
-            throw e;
-        }
+            log.debug("sendQueryRequest -> response: {}",response);
+            return  QueryResponseMessage.builder().build().decode(response);
     }
 
     /**
@@ -67,13 +59,19 @@ public class CQClient {
      * @throws GRPCException if an error occurs during the gRPC call
      */
     public void sendResponseMessage(CommandResponseMessage message) {
-        try {
             message.validate();
             kubeMQClient.getClient().sendResponse(message.encode(kubeMQClient.getClientId()));
-        } catch (GRPCException e) {
-            log.error(e.getMessage(), e);
-            throw e;
-        }
+    }
+
+    /**
+     * Sends a response message to the KubeMQ server.
+     *
+     * @param message the response message to send
+     * @throws GRPCException if an error occurs during the gRPC call
+     */
+    public void sendResponseMessage(QueryResponseMessage message) {
+            message.validate();
+            kubeMQClient.getClient().sendResponse(message.encode(kubeMQClient.getClientId()));
     }
 
     /**
@@ -146,7 +144,7 @@ public class CQClient {
         StreamObserver<Kubemq.Request> commandSubscriptionObserver = new StreamObserver<Kubemq.Request>() {
             @Override
             public void onNext(Kubemq.Request messageReceive) {
-                log.trace("CommandsSubscription-> CommandMessageReceived Received: '{}'", messageReceive);
+                log.debug("CommandsSubscription-> CommandMessageReceived Received: '{}'", messageReceive);
                 commandsSubscription.raiseOnReceiveMessage(CommandMessageReceived.decode(messageReceive));
             }
 
@@ -158,7 +156,7 @@ public class CQClient {
 
             @Override
             public void onCompleted() {
-                log.trace("CommandsSubscription Stream completed.");
+                log.debug("CommandsSubscription Stream completed.");
             }
         };
 
@@ -176,7 +174,7 @@ public class CQClient {
         StreamObserver<Kubemq.Request> querySubscriptionObserver = new StreamObserver<Kubemq.Request>() {
             @Override
             public void onNext(Kubemq.Request messageReceive) {
-                log.trace("QueriesSubscription-> QueryMessageReceived Received: '{}'", messageReceive);
+                log.debug("QueriesSubscription-> QueryMessageReceived Received: '{}'", messageReceive);
                 queriesSubscription.raiseOnReceiveMessage(QueryMessageReceived.decode(messageReceive));
             }
 
@@ -188,7 +186,7 @@ public class CQClient {
 
             @Override
             public void onCompleted() {
-                log.trace("QueriesSubscription Stream completed.");
+                log.debug("QueriesSubscription Stream completed.");
             }
         };
 

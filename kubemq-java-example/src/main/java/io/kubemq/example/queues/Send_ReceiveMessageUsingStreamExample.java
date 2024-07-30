@@ -1,22 +1,19 @@
 package io.kubemq.example.queues;
 
 import com.google.protobuf.ByteString;
-import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
-import io.kubemq.sdk.queues.QueueMessageWrapper;
+import io.kubemq.sdk.queues.QueueMessage;
 import io.kubemq.sdk.queues.QueueSendResult;
 import io.kubemq.sdk.queues.QueuesClient;
 import io.kubemq.sdk.queues.QueuesPollRequest;
 import io.kubemq.sdk.queues.QueuesPollResponse;
 import java.util.UUID;
-import kubemq.Kubemq.QueuesDownstreamRequest;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Consumer;
 
 /**
- * Example class demonstrating how to poll the queue messages using a
- * bi-directional stream with KubeMQ. This class initializes the KubeMQClient
+ * Example class demonstrating how to poll the queue messages using from KubeMQ
+ * This class initializes the KubeMQClient
  * and QueuesClient, and handles the message polling, ack, requeue, reject.
  */
 public class Send_ReceiveMessageUsingStreamExample {
@@ -26,8 +23,6 @@ public class Send_ReceiveMessageUsingStreamExample {
     private final String channelName = "mytest-channel";
     private final String address = "localhost:50000";
     private final String clientId = "kubeMQClientId";
-
-    private StreamObserver<QueuesDownstreamRequest> responseHandler;
 
     /**
      * Constructs a QueuesDownstreamMessageExample instance, initializing the
@@ -59,7 +54,7 @@ public class Send_ReceiveMessageUsingStreamExample {
     public void sendQueueMessage() {
          System.out.println("\n============================== sendMessage Started =============================\n");
             // Send message in Stream 
-            QueueMessageWrapper message = QueueMessageWrapper.builder()
+            QueueMessage message = QueueMessage.builder()
                     .body(("Sending data in queue message stream").getBytes())
                     .channel(channelName)
                     .metadata("metadata")
@@ -76,14 +71,20 @@ public class Send_ReceiveMessageUsingStreamExample {
     public void receiveQueuesMessages() {
         System.out.println("\n============================== receiveQueuesMessages =============================\n");
 
-        // Define the onReceiveMessageCallback handler to receive the message from queue
-        Consumer<QueuesPollResponse> onReceiveMessageCallback = (response) -> {
-            System.out.println("Received Message: {}" + response);
+        QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
+                .channel(channelName)
+                .pollMaxMessages(1)
+                .pollWaitTimeoutInSeconds(10)
+                .build();
 
-            System.out.println("RefRequestId: " + response.getRefRequestId());
-            System.out.println("ReceiverClientId: " + response.getReceiverClientId());
-            System.out.println("TransactionId: " + response.getTransactionId());
-            response.getMessages().forEach(msg -> {
+       QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
+       
+        System.out.println("Received Message: {}" + pollResponse);
+
+            System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
+            System.out.println("ReceiverClientId: " + pollResponse.getReceiverClientId());
+            System.out.println("TransactionId: " + pollResponse.getTransactionId());
+            pollResponse.getMessages().forEach(msg -> {
                 System.out.println("Message  Id: " + msg.getId());
                 System.out.println("Message Body: "+ByteString.copyFrom(msg.getBody()).toStringUtf8());
                // Acknowledge message
@@ -95,22 +96,6 @@ public class Send_ReceiveMessageUsingStreamExample {
                // *** ReQueue message
               // msg.reQueue(channelName);
             });
-        };
-
-        // Define the onErrorCallback
-        Consumer<String> onErrorCallback = (errorMsg) -> {
-            System.err.println("Error: " + errorMsg);
-        };
-
-        QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
-                .channel(channelName)
-                .pollMaxMessages(1)
-                .pollWaitTimeoutInSeconds(10)
-                .onReceiveMessageCallback(onReceiveMessageCallback)
-                .onErrorCallback(onErrorCallback)
-                .build();
-
-        queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
 
     }
 
