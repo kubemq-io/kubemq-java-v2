@@ -1,6 +1,5 @@
 package io.kubemq.sdk.queues;
 
-import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.KubeMQUtils;
 import kubemq.Kubemq;
@@ -51,7 +50,7 @@ public class QueuesClient {
      * @throws IllegalArgumentException if the channel name is null or empty.
      */
     public QueuesDetailInfo getQueuesInfo(String channelName) {
-        log.trace("Sending getQueuesInfo");
+        log.debug("Sending getQueuesInfo");
         if (channelName == null || channelName.isEmpty()) {
             throw new IllegalArgumentException("Channel name is required");
         }
@@ -62,7 +61,7 @@ public class QueuesClient {
                 .build();
 
         Kubemq.QueuesInfoResponse result = kubeMQClient.getClient().queuesInfo(request);
-        log.trace("QueueInfo Received: {}", result);
+        log.debug("QueueInfo Received: {}", result);
 
         QueuesDetailInfo detailInfo = QueuesDetailInfo.builder()
                 .refRequestID(result.getRefRequestID())
@@ -101,12 +100,12 @@ public class QueuesClient {
      * @param message The message to be sent.
      * @return QueueSendResult The result of the message send operation.
      */
-    public QueueSendResult sendQueuesMessage(QueueMessageWrapper message) {
-        log.trace("Sending queues message");
+    public QueueSendResult sendQueuesMessage(QueueMessage message) {
+        log.debug("Sending queues message");
         message.validate();
         Kubemq.QueueMessage queueMessage = message.encodeMessage(kubeMQClient.getClientId());
         SendQueueMessageResult result = kubeMQClient.getClient().sendQueueMessage(queueMessage);
-        log.trace("Queue message sent: {}", result);
+        log.debug("Queue message sent: {}", result);
         return new QueueSendResult().decode(result);
     }
 
@@ -117,11 +116,11 @@ public class QueuesClient {
      * @param batchId  The batch ID, if null a new UUID will be generated.
      * @return QueueMessagesBatchSendResult The result of the batch send operation.
      */
-    public QueueMessagesBatchSendResult sendQueuesMessageInBatch(List<QueueMessageWrapper> queueMessages, String batchId) {
-        log.trace("Sending queues messages in batch");
+    public QueueMessagesBatchSendResult sendQueuesMessageInBatch(List<QueueMessage> queueMessages, String batchId) {
+        log.debug("Sending queues messages in batch");
         // Converts a list of QueueMessageWrapper objects to a list of Kubemq.QueueMessage objects.
         List<Kubemq.QueueMessage> messages = new ArrayList<>();
-        for (QueueMessageWrapper msg : queueMessages) {
+        for (QueueMessage msg : queueMessages) {
             msg.validate();
             messages.add(msg.encodeMessage(kubeMQClient.getClientId()));
         }
@@ -131,7 +130,7 @@ public class QueuesClient {
                 .build();
 
         Kubemq.QueueMessagesBatchResponse batchMessageResponse = kubeMQClient.getClient().sendQueueMessagesBatch(queueMessagesBatchRequest);
-        log.trace("Batch queue messages sent: {}", batchMessageResponse);
+        log.debug("Batch queue messages sent: {}", batchMessageResponse);
         QueueMessagesBatchSendResult batchSendResult = QueueMessagesBatchSendResult.builder().build();
         batchSendResult.setBatchId(batchMessageResponse.getBatchID());
         batchSendResult.setHaveErrors(batchMessageResponse.getHaveErrors());
@@ -149,9 +148,9 @@ public class QueuesClient {
      * @param queueMessage message to send in queue
      * @return UpstreamResponse The stream from the upstream.
      */
-    public QueueSendResult sendQueuesMessageUpStream(QueueMessageWrapper queueMessage) {
+    public QueueSendResult sendQueuesMessageUpStream(QueueMessage queueMessage) {
         queueMessage.validate();
-      return new UpstreamSender().sendMessage(kubeMQClient, queueMessage.encode(kubeMQClient.getClientId()));
+      return new QueueStreamHelper().sendMessage(kubeMQClient, queueMessage.encode(kubeMQClient.getClientId()));
     }
 
     /**
@@ -160,45 +159,9 @@ public class QueuesClient {
      * @param queuesPollRequest Queues Poll request to poll the messages from queue
 
      */
-    public void receiveQueuesMessagesDownStream(QueuesPollRequest queuesPollRequest) {
-
-        final StreamObserver<Kubemq.QueuesDownstreamRequest>[] responseHandler = new StreamObserver[1];
-        StreamObserver<Kubemq.QueuesDownstreamResponse> request = new StreamObserver<Kubemq.QueuesDownstreamResponse>() {
-
-            @Override
-            public void onNext(Kubemq.QueuesDownstreamResponse messageReceive) {
-                log.trace("QueuesDownstreamResponse Received Metadata: '{}'", messageReceive);
-                // Send the received message to the consumer
-                QueuesPollResponse qpResp = QueuesPollResponse.builder()
-                        .refRequestId(messageReceive.getRefRequestId())
-                        .activeOffsets(messageReceive.getActiveOffsetsList())
-                        .receiverClientId(messageReceive.getTransactionId())
-                        .isTransactionCompleted(messageReceive.getTransactionComplete())
-                        .transactionId(messageReceive.getTransactionId())
-                        .error(messageReceive.getError())
-                        .isError(messageReceive.getIsError())
-                        .build();
-                for (Kubemq.QueueMessage queueMessage : messageReceive.getMessagesList()) {
-                    qpResp.getMessages().add(QueueMessageReceived.decode(queueMessage, qpResp.getTransactionId(),
-                            qpResp.isTransactionCompleted(), qpResp.getReceiverClientId(), responseHandler[0]));
-                }
-                queuesPollRequest.raiseOnReceiveMessage(qpResp);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                log.error("Error in QueuesDownstreamResponse StreamObserver: ", t);
-                queuesPollRequest.raiseOnError(t.getMessage());
-            }
-
-            @Override
-            public void onCompleted() {
-                log.trace("QueuesDownstreamResponse StreamObserver completed.");
-            }
-        };
-
-        responseHandler[0] = kubeMQClient.getAsyncClient().queuesDownstream(request);
-        responseHandler[0].onNext(queuesPollRequest.encode(kubeMQClient.getClientId()));
+    public QueuesPollResponse receiveQueuesMessagesDownStream(QueuesPollRequest queuesPollRequest) {
+        queuesPollRequest.validate();
+        return new QueueStreamHelper().receiveMessage(kubeMQClient, queuesPollRequest);
     }
 
     /**

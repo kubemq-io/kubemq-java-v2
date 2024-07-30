@@ -18,7 +18,7 @@ import java.util.UUID;
 @Data
 @Builder
 @AllArgsConstructor
-public class QueueMessageWrapper {
+public class QueueMessage {
 
     /**
      * The unique identifier for the message.
@@ -140,9 +140,9 @@ public class QueueMessageWrapper {
      * @param pbMessage the protocol buffer message to decode.
      * @return the decoded QueueMessageWrapper object.
      */
-    public static QueueMessageWrapper decode(Kubemq.QueueMessage pbMessage) {
+    public static QueueMessage decode(Kubemq.QueueMessage pbMessage) {
         QueueMessagePolicy policy = pbMessage.getPolicy();
-        return QueueMessageWrapper.builder()
+        return QueueMessage.builder()
                 .id(pbMessage.getMessageID())
                 .channel(pbMessage.getChannel())
                 .metadata(pbMessage.getMetadata())

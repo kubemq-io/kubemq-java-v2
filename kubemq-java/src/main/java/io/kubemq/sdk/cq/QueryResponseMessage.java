@@ -25,7 +25,9 @@ public class QueryResponseMessage {
     private LocalDateTime timestamp;
     private String error;
     private String metadata;
-    private byte[] body;
+    @Builder.Default
+    private byte[] body = new byte[0];
+    @Builder.Default
     private Map<String, String> tags = new HashMap<>();
 
     public QueryResponseMessage validate() {
@@ -55,10 +57,10 @@ public class QueryResponseMessage {
         pbResponseBuilder.setRequestID(this.queryReceived.getId());
         pbResponseBuilder.setReplyChannel(this.queryReceived.getReplyChannel());
         pbResponseBuilder.setExecuted(this.isExecuted);
-        pbResponseBuilder.setError(this.error);
-        pbResponseBuilder.setTimestamp(this.timestamp.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() * 1_000_000);
+        pbResponseBuilder.setError(this.error !=null ? this.error:"");
+        pbResponseBuilder.setTimestamp(this.timestamp != null ? (this.timestamp.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() * 1_000_000):Instant.now().toEpochMilli());
         pbResponseBuilder.setMetadata(this.queryReceived.getMetadata());
-        pbResponseBuilder.setBody(com.google.protobuf.ByteString.copyFrom(this.queryReceived.getBody()));
+        pbResponseBuilder.setBody(com.google.protobuf.ByteString.copyFrom(this.body));
         pbResponseBuilder.putAllTags(this.tags);
         return pbResponseBuilder.build();
     }
