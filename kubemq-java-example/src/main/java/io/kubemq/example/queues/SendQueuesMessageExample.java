@@ -2,7 +2,7 @@ package io.kubemq.example.queues;
 
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
-import io.kubemq.sdk.queues.QueueMessageWrapper;
+import io.kubemq.sdk.queues.QueueMessage;
 import io.kubemq.sdk.queues.QueueMessagesBatchSendResult;
 import io.kubemq.sdk.queues.QueueSendResult;
 import io.kubemq.sdk.queues.QueuesClient;
@@ -59,7 +59,7 @@ public class SendQueuesMessageExample {
             tags.put("tag1", "kubemq");
             tags.put("tag2", "kubemq2");
 
-            QueueMessageWrapper message = QueueMessageWrapper.builder()
+            QueueMessage message = QueueMessage.builder()
                     .id(UUID.randomUUID().toString())
                     .body("Hello KubeMQ!".getBytes())
                     .channel(queueChannelName)
@@ -89,20 +89,20 @@ public class SendQueuesMessageExample {
             tags.put("tag1", "kubemq");
             tags.put("tag2", "kubemq2");
 
-            QueueMessageWrapper message1 = QueueMessageWrapper.builder()
+            QueueMessage message1 = QueueMessage.builder()
                     .body("Message 1".getBytes())
                     .channel(queueChannelName)
                     .id(UUID.randomUUID().toString())
                     .tags(tags)
                     .build();
 
-            QueueMessageWrapper message2 = QueueMessageWrapper.builder()
+            QueueMessage message2 = QueueMessage.builder()
                     .body("Message 2".getBytes())
                     .channel(queueChannelName)
                     .id(UUID.randomUUID().toString())
                     .build();
 
-            List<QueueMessageWrapper> messages = Arrays.asList(message1, message2);
+            List<QueueMessage> messages = Arrays.asList(message1, message2);
             String batchId = UUID.randomUUID().toString();
             QueueMessagesBatchSendResult batchSendResult = queuesClient.sendQueuesMessageInBatch(messages, batchId);
             System.out.println("Batch messages sent result: " + batchSendResult);

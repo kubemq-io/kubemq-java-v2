@@ -26,6 +26,8 @@ import static org.mockito.Mockito.*;
 public class CQClientTest {
 
     private static final String CLIENT_ID = "TestsClientID";
+
+    //private static final MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class);
     @Mock
     private kubemqGrpc.kubemqBlockingStub client;
 
@@ -38,6 +40,8 @@ public class CQClientTest {
     @InjectMocks
     private CQClient cqClient;
 
+    private MockedStatic<KubeMQUtils> mockedStatic;
+
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -47,69 +51,77 @@ public class CQClientTest {
         cqClient = CQClient.builder().kubeMQClient(kubeMQClient).build(); // Manually inject the initialized kubeMQClient
     }
 
+    @AfterEach
+    public void tearDown() {
+        if (mockedStatic != null) {
+            mockedStatic.close();
+        }
+    }
+
     @Test
     @Order(1)
     public void testCreateCommandsChannel() throws Exception {
         log.info("Testing createCommandsChannel");
-        try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {
-            mockedStatic.when(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("commands")))
-                    .thenReturn(true);
 
-            boolean result = cqClient.createCommandsChannel("channelName");
+        mockedStatic = mockStatic(KubeMQUtils.class);
+        mockedStatic.when(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("commands")))
+                .thenReturn(true);
 
-            assertTrue(result);
-            mockedStatic.verify(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("commands")));
-            log.info("createCommandsChannel test passed");
-        }
+        boolean result = cqClient.createCommandsChannel("channelName");
+
+        assertTrue(result);
+        mockedStatic.verify(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("commands")));
+        log.info("createCommandsChannel test passed");
     }
 
     @Test
     @Order(5)
     public void testCreateQueriesChannel() throws Exception {
         log.info("Testing createQueriesChannel");
-        try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {
-            mockedStatic.when(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("queries")))
-                    .thenReturn(true);
 
-            boolean result = cqClient.createQueriesChannel("channelName");
+        mockedStatic = mockStatic(KubeMQUtils.class);
+        mockedStatic.when(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("queries")))
+                .thenReturn(true);
 
-            assertTrue(result);
-            mockedStatic.verify(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("queries")));
-            log.info("createQueriesChannel test passed");
-        }
+        boolean result = cqClient.createQueriesChannel("channelName");
+
+        assertTrue(result);
+        mockedStatic.verify(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("queries")));
+        log.info("createQueriesChannel test passed");
     }
 
     @Test
     @Order(10)
     public void testDeleteCommandsChannel() throws Exception {
         log.info("Testing deleteCommandsChannel");
-        try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {
-            mockedStatic.when(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("commands")))
-                    .thenReturn(true);
 
-            boolean result = cqClient.deleteCommandsChannel("channelName");
+        mockedStatic = mockStatic(KubeMQUtils.class);
+        mockedStatic.when(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("commands")))
+                .thenReturn(true);
 
-            assertTrue(result);
-            mockedStatic.verify(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("commands")));
-            log.info("deleteCommandsChannel test passed");
-        }
+        boolean result = cqClient.deleteCommandsChannel("channelName");
+
+        assertTrue(result);
+        mockedStatic.verify(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("commands")));
+        log.info("deleteCommandsChannel test passed");
     }
 
     @Test
     @Order(15)
     public void testDeleteQueriesChannel() throws Exception {
         log.info("Testing deleteQueriesChannel");
-        try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {
-            mockedStatic.when(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("queries")))
-                    .thenReturn(true);
 
-            boolean result = cqClient.deleteQueriesChannel("channelName");
+        mockedStatic = mockStatic(KubeMQUtils.class);
+        mockedStatic.when(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("queries")))
+                .thenReturn(true);
 
-            assertTrue(result);
-            mockedStatic.verify(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("queries")));
-            log.info("deleteQueriesChannel test passed");
-        }
+        boolean result = cqClient.deleteQueriesChannel("channelName");
+
+        assertTrue(result);
+        mockedStatic.verify(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("queries")));
+        log.info("deleteQueriesChannel test passed");
     }
+
 
     @Test
     @Order(20)
@@ -118,8 +130,8 @@ public class CQClientTest {
         List<CQChannel> expectedChannels = Collections.singletonList(
                 new CQChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new CQStats(100, 200, 0),
-                        new CQStats(150, 300, 0)
+                        new CQStats(100, 200, 0,0,0,0),
+                        new CQStats(150, 300, 0,0,0,0)
                 ));
 
         try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {
@@ -142,8 +154,8 @@ public class CQClientTest {
         List<CQChannel> expectedChannels = Collections.singletonList(
                 new CQChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new CQStats(100, 200, 0),
-                        new CQStats(150, 300, 0)
+                        new CQStats(100, 200, 0,0,0,0),
+                        new CQStats(150, 300, 0,0,0,0)
                 ));
 
         try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {

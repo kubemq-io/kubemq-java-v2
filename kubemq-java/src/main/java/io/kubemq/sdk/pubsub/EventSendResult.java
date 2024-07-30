@@ -1,16 +1,14 @@
 package io.kubemq.sdk.pubsub;
 
 import kubemq.Kubemq;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 /**
  * Represents the result of sending an event message to KubeMQ.
  */
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventSendResult {
@@ -54,5 +52,7 @@ public class EventSendResult {
         return String.format("EventSendResult: id=%s, sent=%s, error=%s",
                 id, sent, error);
     }
+
+
 }
 

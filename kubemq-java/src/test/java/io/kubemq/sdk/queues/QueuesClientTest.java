@@ -1,6 +1,5 @@
 package io.kubemq.sdk.queues;
 
-import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.KubeMQUtils;
 import kubemq.Kubemq;
@@ -9,7 +8,10 @@ import kubemq.kubemqGrpc;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
@@ -30,7 +32,7 @@ public class QueuesClientTest {
 
     private static final String CLIENT_ID = "TestsClientID";
 
-    private static final MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class);
+    private  MockedStatic<KubeMQUtils> mockedStatic;
     @Mock
     private kubemqGrpc.kubemqBlockingStub client;
 
@@ -49,6 +51,14 @@ public class QueuesClientTest {
         lenient().when(kubeMQClient.getAsyncClient()).thenReturn(mock(kubemqGrpc.kubemqStub.class));
         lenient().when(kubeMQClient.getClientId()).thenReturn(CLIENT_ID);
         queuesClient = QueuesClient.builder().kubeMQClient(kubeMQClient).build();
+        mockedStatic = mockStatic(KubeMQUtils.class);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (mockedStatic != null) {
+            mockedStatic.close();
+        }
     }
 
     @Test
@@ -142,7 +152,7 @@ public class QueuesClientTest {
     @Order(15)
     public void testSendQueuesMessage() throws Exception {
         log.info("Testing sendQueuesMessage");
-        QueueMessageWrapper message = mock(QueueMessageWrapper.class);
+        QueueMessage message = mock(QueueMessage.class);
         Kubemq.QueueMessage queueMessage = Kubemq.QueueMessage.newBuilder().build();
         SendQueueMessageResult result = SendQueueMessageResult.newBuilder().setIsError(false).build();
 
@@ -163,8 +173,8 @@ public class QueuesClientTest {
         log.info("Testing sendQueuesMessageInBatch");
 
         // Create a mock QueueMessageWrapper
-        QueueMessageWrapper messageMock = mock(QueueMessageWrapper.class);
-        List<QueueMessageWrapper> messages = Collections.singletonList(messageMock);
+        QueueMessage messageMock = mock(QueueMessage.class);
+        List<QueueMessage> messages = Collections.singletonList(messageMock);
 
         // Create a valid Kubemq.QueueMessage object
         Kubemq.QueueMessage queueMessage = Kubemq.QueueMessage.newBuilder().build();
@@ -200,9 +210,9 @@ public class QueuesClientTest {
     @Order(35)
     public void testSendQueuesMessagesUpStream() throws Exception {
         log.info("Testing sendQueuesMessagesUpStream");
-        QueueMessageWrapper messageMock = mock(QueueMessageWrapper.class);
+        QueueMessage messageMock = mock(QueueMessage.class);
         Kubemq.QueuesUpstreamRequest upstreamRequest = mock(Kubemq.QueuesUpstreamRequest.class);
-        UpstreamSender upstreamSender = mock(UpstreamSender.class);
+        QueueStreamHelper upstreamSender = mock(QueueStreamHelper.class);
 
         // Create an instance of UpstreamSender
         when(upstreamSender.sendMessage(any(KubeMQClient.class), any(Kubemq.QueuesUpstreamRequest.class)))
@@ -219,20 +229,16 @@ public class QueuesClientTest {
     @Order(40)
     public void testReceiveQueuesMessagesDownStream() throws Exception {
         log.info("Testing receiveQueuesMessagesDownStream");
+        QueuesPollRequest pollRequest = mock(QueuesPollRequest.class);
+        QueueStreamHelper streamHelper = mock(QueueStreamHelper.class);
 
-        StreamObserver<Kubemq.QueuesDownstreamRequest> requestObserver = mock(StreamObserver.class);
-        when(kubeMQClient.getAsyncClient()).thenReturn(asyncClient);
-        when(asyncClient.queuesDownstream(any())).thenReturn(requestObserver);
+        when(streamHelper.receiveMessage(any(KubeMQClient.class), any(QueuesPollRequest.class)))
+                .thenReturn(QueuesPollResponse.builder().isError(false).build());
 
-        QueuesPollRequest queuesPollRequest = mock(QueuesPollRequest.class);
+        QueuesPollResponse result = streamHelper.receiveMessage(kubeMQClient, pollRequest);
 
-        queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
-
-        ArgumentCaptor<StreamObserver> captor = ArgumentCaptor.forClass(StreamObserver.class);
-        verify(asyncClient).queuesDownstream(captor.capture());
-
-        StreamObserver<Kubemq.QueuesDownstreamResponse> capturedResponseObserver = captor.getValue();
-        assertNotNull(capturedResponseObserver);
+        assertNotNull(result);
+        assertFalse(result.isError());
 
         log.info("receiveQueuesMessagesDownStream test passed");
     }

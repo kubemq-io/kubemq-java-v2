@@ -72,8 +72,8 @@ public class ChannelDecoderTest {
         List<CQChannel> expectedChannels = Collections.singletonList(
                 new CQChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new CQStats(100, 200, 1),
-                        new CQStats(150, 300, 1)
+                        new CQStats(100, 200, 10,0,0,0),
+                        new CQStats(150, 300, 10,0,0,0)
                 )
         );
 

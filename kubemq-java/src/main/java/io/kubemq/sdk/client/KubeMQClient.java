@@ -106,7 +106,7 @@ public class KubeMQClient implements AutoCloseable {
             metadata.put(key, authToken);
         }
 
-        log.trace("Constructing channel to KubeMQ on {}", address);
+        log.debug("Constructing channel to KubeMQ on {}", address);
         if (tls) {
             try {
                 SslContext sslContext = SslContextBuilder.forClient()
@@ -189,9 +189,9 @@ public class KubeMQClient implements AutoCloseable {
      */
     public ServerInfo ping() {
         try {
-            log.trace("Pinging KubeMQ server at {}", address);
+            log.debug("Pinging KubeMQ server at {}", address);
             Kubemq.PingResult pingResult = blockingStub.ping(null);
-            log.trace("Ping successful. Response: {}", pingResult);
+            log.debug("Ping successful. Response: {}", pingResult);
             return ServerInfo.builder()
                     .host(pingResult.getHost())
                     .version(pingResult.getVersion())

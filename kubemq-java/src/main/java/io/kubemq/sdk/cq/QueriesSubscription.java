@@ -43,7 +43,7 @@ public class QueriesSubscription {
     public Subscribe encode(String clientId) {
         Subscribe request = Subscribe.newBuilder()
                 .setChannel(this.channel)
-                .setGroup(this.group)
+                .setGroup(this.group != null ? this.group :"")
                 .setClientID(clientId)
                 .setSubscribeTypeData(Subscribe.SubscribeType.Queries)
                 .setSubscribeTypeDataValue(Subscribe.SubscribeType.Queries_VALUE)
