@@ -1,7 +1,6 @@
 package io.kubemq.example.cq;
 
 import io.kubemq.sdk.cq.*;
-import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.exception.GRPCException;
 import java.util.HashMap;
@@ -10,7 +9,6 @@ import java.util.function.Consumer;
 
 public class CommandsExample {
 
-    private static KubeMQClient kubeMQClient;
     private static CQClient cqClient;
 
     private static String commandChannel = "my_commands_channel";
@@ -18,20 +16,16 @@ public class CommandsExample {
     private final String clientId = "kueMQClientId";
 
     public CommandsExample() {
-        // Setup KubeMQ client
-        kubeMQClient = KubeMQClient.builder()
-                .address(address)
+         // Create a CQClient
+        cqClient = CQClient.builder()
+                 .address(address)
                 .clientId(clientId)
                 .build();
 
         // Ping to test Connection is successful
-        ServerInfo pingResult = kubeMQClient.ping();
+        ServerInfo pingResult = cqClient.ping();
         System.out.println("Ping Response: " + pingResult.toString());
 
-        // Create a CQClient
-        cqClient = CQClient.builder()
-                .kubeMQClient(kubeMQClient)
-                .build();
     }
     
     private void subscribeToCommands(String channel) {
