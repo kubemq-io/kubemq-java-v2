@@ -5,14 +5,14 @@ import kubemq.Kubemq.QueuesDownstreamRequest;
 import kubemq.Kubemq.QueuesDownstreamRequestType;
 import kubemq.Kubemq.QueuesDownstreamResponse;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Data
+@Getter
 @Builder
 @Slf4j
 public class QueuesPollResponse {
@@ -101,5 +101,50 @@ public class QueuesPollResponse {
                 "QueuesPollResponse: refRequestId=%s, transactionId=%s, error=%s, isError=%s, " +
                         "isTransactionCompleted=%s, activeOffsets=%s, messages=%s",
                 refRequestId, transactionId, error, isError, isTransactionCompleted, activeOffsets, messages);
+    }
+
+
+    public void setRefRequestId(String refRequestId) {
+        this.refRequestId = refRequestId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public void setMessages(List<QueueMessageReceived> messages) {
+        this.messages = messages;
+    }
+
+    public void setError(String error) {
+        this.error = error;
+    }
+
+    public void setIsError(boolean error) {
+        this.isError = error;
+    }
+
+    public boolean getIsError(){
+        return this.isError;
+    }
+
+    public boolean isError(){
+        return this.isError;
+    }
+
+    public void setTransactionCompleted(boolean transactionCompleted) {
+        isTransactionCompleted = transactionCompleted;
+    }
+
+    public void setActiveOffsets(List<Long> activeOffsets) {
+        this.activeOffsets = activeOffsets;
+    }
+
+    public void setResponseHandler(StreamObserver<QueuesDownstreamRequest> responseHandler) {
+        this.responseHandler = responseHandler;
+    }
+
+    public void setReceiverClientId(String receiverClientId) {
+        this.receiverClientId = receiverClientId;
     }
 }

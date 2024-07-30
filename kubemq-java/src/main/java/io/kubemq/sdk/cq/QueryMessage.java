@@ -20,6 +20,7 @@ public class QueryMessage {
     private String channel;
     private String metadata;
     private byte[] body;
+    @Builder.Default
     private Map<String, String> tags = new HashMap<>();
     private int timeoutInSeconds;
     private String cacheKey;
@@ -41,6 +42,7 @@ public class QueryMessage {
 
     public Request encode(String clientId) {
         Request.Builder pbQueryBuilder = Request.newBuilder();
+        tags.put("x-kubemq-client-id", clientId);
         pbQueryBuilder.setRequestID(id != null ? id : UUID.randomUUID().toString())
                 .setClientID(clientId)
                 .setChannel(channel)
@@ -49,7 +51,7 @@ public class QueryMessage {
                 .setTimeout(timeoutInSeconds * 1000)
                 .setRequestTypeData(Request.RequestType.Query)
                 .putAllTags(tags)
-                .setCacheKey(cacheKey)
+                .setCacheKey(cacheKey != null ? cacheKey : "")
                 .setCacheTTL(cacheTtlInSeconds * 1000);
 
         return pbQueryBuilder.build();
