@@ -1,6 +1,5 @@
 package io.kubemq.example.pubsub;
 
-import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.pubsub.*;
 
@@ -10,7 +9,6 @@ import io.kubemq.sdk.pubsub.*;
  */
 public class DeleteChannelExample {
 
-    private final KubeMQClient kubeMQClient;
     private final PubSubClient pubSubClient;
     private final String eventChannelName = "mytest-channel";
     private final String eventStoreChannelName = "mytest-channel-eventstore";
@@ -21,19 +19,14 @@ public class DeleteChannelExample {
      * Constructs a PubSubClientExample instance, initializing the KubeMQClient and PubSubClient.
      */
     public DeleteChannelExample() {
-        // Setup KubeMQ client
-        kubeMQClient = KubeMQClient.builder()
+       // Create PubSubClient using the builder pattern
+        pubSubClient = PubSubClient.builder()
                 .address(address)
                 .clientId(clientId)
                 .build();
         // Ping to test Connection is succesffull
-        ServerInfo pingResult = kubeMQClient.ping();
+        ServerInfo pingResult = pubSubClient.ping();
         System.out.println("Ping Response: "+pingResult.toString());
-
-        // Create PubSubClient using the builder pattern
-        pubSubClient = PubSubClient.builder()
-                .kubeMQClient(kubeMQClient)
-                .build();
     }
 
     /**
@@ -65,7 +58,7 @@ public class DeleteChannelExample {
      */
     public void shutdown() {
         try {
-            kubeMQClient.close();
+            pubSubClient.close();
         } catch (RuntimeException e) {
             System.err.println("Failed to close KubeMQ client: " + e.getMessage());
         }

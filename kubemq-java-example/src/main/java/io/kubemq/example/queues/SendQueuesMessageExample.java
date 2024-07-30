@@ -19,7 +19,6 @@ import java.util.UUID;
  */
 public class SendQueuesMessageExample {
 
-    private final KubeMQClient kubeMQClient;
     private final QueuesClient queuesClient;
     private final String queueChannelName = "mytest-channel";
     private final String address = "localhost:50000";
@@ -30,20 +29,15 @@ public class SendQueuesMessageExample {
      * It also tests the connection to the KubeMQ server by pinging it.
      */
     public SendQueuesMessageExample() {
-        // Setup KubeMQ client
-        kubeMQClient = KubeMQClient.builder()
-                .address(address)
+     // Create QueuesClient using the builder pattern
+        queuesClient = QueuesClient.builder()
+                  .address(address)
                 .clientId(clientId)
                 .build();
 
         // Ping to test connection is successful
-        ServerInfo pingResult = kubeMQClient.ping();
-        System.out.println("Ping Response: " + pingResult);
-
-        // Create QueuesClient using the builder pattern
-        queuesClient = QueuesClient.builder()
-                .kubeMQClient(kubeMQClient)
-                .build();
+        ServerInfo pingResult = queuesClient.ping();
+        System.out.println("Ping Response: " + pingResult.toString());
     }
 
     /**

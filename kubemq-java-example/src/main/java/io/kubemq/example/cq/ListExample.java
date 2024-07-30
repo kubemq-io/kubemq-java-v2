@@ -9,7 +9,6 @@ import java.util.List;
 
 public class ListExample {
 
-    private static KubeMQClient kubeMQClient;
     private static CQClient cqClient;
 
     private static String commandChannel = "my_commands_channel";
@@ -18,20 +17,15 @@ public class ListExample {
     private final String clientId = "kueMQClientId";
 
     public ListExample() {
-        // Setup KubeMQ client
-        kubeMQClient = KubeMQClient.builder()
-                .address(address)
+   // Create a CQClient
+        cqClient = CQClient.builder()
+                 .address(address)
                 .clientId(clientId)
                 .build();
 
         // Ping to test Connection is successful
-        ServerInfo pingResult = kubeMQClient.ping();
+        ServerInfo pingResult = cqClient.ping();
         System.out.println("Ping Response: " + pingResult.toString());
-
-        // Create a CQClient
-        cqClient = CQClient.builder()
-                .kubeMQClient(kubeMQClient)
-                .build();
     }
 
 

@@ -12,7 +12,6 @@ import io.kubemq.sdk.queues.QueuesDetailInfo;
  */
 public class GetQueuesInfoExample {
 
-    private final KubeMQClient kubeMQClient;
     private final QueuesClient queuesClient;
     private final String channelName = "mytest-channel";
     private final String address = "localhost:50000";
@@ -22,20 +21,15 @@ public class GetQueuesInfoExample {
      * Constructs a GetQueuesInfoExample instance, initializing the {@link KubeMQClient} and {@link QueuesClient}.
      */
     public GetQueuesInfoExample() {
-        // Setup KubeMQ client
-        kubeMQClient = KubeMQClient.builder()
-                .address(address)
+        // Create QueuesClient using the builder pattern
+        queuesClient = QueuesClient.builder()
+                  .address(address)
                 .clientId(clientId)
                 .build();
 
         // Ping to test connection is successful
-        ServerInfo pingResult = kubeMQClient.ping();
+        ServerInfo pingResult = queuesClient.ping();
         System.out.println("Ping Response: " + pingResult.toString());
-
-        // Create QueuesClient using the builder pattern
-        queuesClient = QueuesClient.builder()
-                .kubeMQClient(kubeMQClient)
-                .build();
     }
 
     /**
