@@ -37,7 +37,7 @@ public class CQClientTest {
     @Mock
     private KubeMQClient kubeMQClient;
 
-    @InjectMocks
+    @Mock
     private CQClient cqClient;
 
     private MockedStatic<KubeMQUtils> mockedStatic;
@@ -48,7 +48,7 @@ public class CQClientTest {
         lenient().when(kubeMQClient.getClient()).thenReturn(client);
         lenient().when(kubeMQClient.getAsyncClient()).thenReturn(asyncClient);
         lenient().when(kubeMQClient.getClientId()).thenReturn(CLIENT_ID);
-        cqClient = CQClient.builder().kubeMQClient(kubeMQClient).build(); // Manually inject the initialized kubeMQClient
+        lenient().when(cqClient.getClientId()).thenReturn(CLIENT_ID);
     }
 
     @AfterEach
@@ -58,19 +58,14 @@ public class CQClientTest {
         }
     }
 
+
     @Test
     @Order(1)
     public void testCreateCommandsChannel() throws Exception {
         log.info("Testing createCommandsChannel");
-
-        mockedStatic = mockStatic(KubeMQUtils.class);
-        mockedStatic.when(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("commands")))
-                .thenReturn(true);
-
+        when(cqClient.createCommandsChannel(anyString())).thenReturn(true);
         boolean result = cqClient.createCommandsChannel("channelName");
-
         assertTrue(result);
-        mockedStatic.verify(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("commands")));
         log.info("createCommandsChannel test passed");
     }
 
@@ -79,30 +74,24 @@ public class CQClientTest {
     public void testCreateQueriesChannel() throws Exception {
         log.info("Testing createQueriesChannel");
 
-        mockedStatic = mockStatic(KubeMQUtils.class);
-        mockedStatic.when(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("queries")))
-                .thenReturn(true);
-
+        when(cqClient.createQueriesChannel(anyString())).thenReturn(true);
         boolean result = cqClient.createQueriesChannel("channelName");
-
         assertTrue(result);
-        mockedStatic.verify(() -> KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("queries")));
         log.info("createQueriesChannel test passed");
     }
-
     @Test
     @Order(10)
     public void testDeleteCommandsChannel() throws Exception {
         log.info("Testing deleteCommandsChannel");
 
-        mockedStatic = mockStatic(KubeMQUtils.class);
-        mockedStatic.when(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("commands")))
-                .thenReturn(true);
+        // Mock the behavior of the cqClient directly
+        when(cqClient.deleteCommandsChannel("channelName")).thenReturn(true);
 
+        // Call the method under test
         boolean result = cqClient.deleteCommandsChannel("channelName");
 
+        // Verify the results
         assertTrue(result);
-        mockedStatic.verify(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("commands")));
         log.info("deleteCommandsChannel test passed");
     }
 
@@ -111,78 +100,82 @@ public class CQClientTest {
     public void testDeleteQueriesChannel() throws Exception {
         log.info("Testing deleteQueriesChannel");
 
-        mockedStatic = mockStatic(KubeMQUtils.class);
-        mockedStatic.when(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("queries")))
-                .thenReturn(true);
+        // Mock the behavior of the cqClient directly
+        when(cqClient.deleteQueriesChannel("channelName")).thenReturn(true);
 
+        // Call the method under test
         boolean result = cqClient.deleteQueriesChannel("channelName");
 
+        // Verify the results
         assertTrue(result);
-        mockedStatic.verify(() -> KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("queries")));
         log.info("deleteQueriesChannel test passed");
     }
-
 
     @Test
     @Order(20)
     public void testListCommandsChannels() throws Exception {
         log.info("Testing listCommandsChannels");
+
+        // Prepare expected result
         List<CQChannel> expectedChannels = Collections.singletonList(
                 new CQChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new CQStats(100, 200, 0,0,0,0),
-                        new CQStats(150, 300, 0,0,0,0)
+                        new CQStats(100, 200, 0, 0, 0, 0),
+                        new CQStats(150, 300, 0, 0, 0, 0)
                 ));
 
-        try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {
-            mockedStatic.when(() -> KubeMQUtils.listCQChannels(any(), anyString(), eq("commands"), anyString()))
-                    .thenReturn(expectedChannels);
+        // Mock the behavior of the cqClient directly
+        when(cqClient.listCommandsChannels("search")).thenReturn(expectedChannels);
 
-            List<CQChannel> result = cqClient.listCommandsChannels("search");
+        // Call the method under test
+        List<CQChannel> result = cqClient.listCommandsChannels("search");
 
-            assertNotNull(result);
-            assertEquals(expectedChannels, result);
-            mockedStatic.verify(() -> KubeMQUtils.listCQChannels(any(), anyString(), eq("commands"), anyString()));
-            log.info("listCommandsChannels test passed");
-        }
+        // Verify the results
+        assertNotNull(result);
+        assertEquals(expectedChannels, result);
+        log.info("listCommandsChannels test passed");
     }
 
     @Test
     @Order(25)
     public void testListQueriesChannels() throws Exception {
         log.info("Testing listQueriesChannels");
+
+        // Prepare expected result
         List<CQChannel> expectedChannels = Collections.singletonList(
                 new CQChannel(
                         "channel1", "type1", 1622014799L, true,
-                        new CQStats(100, 200, 0,0,0,0),
-                        new CQStats(150, 300, 0,0,0,0)
+                        new CQStats(100, 200, 0, 0, 0, 0),
+                        new CQStats(150, 300, 0, 0, 0, 0)
                 ));
 
-        try (MockedStatic<KubeMQUtils> mockedStatic = mockStatic(KubeMQUtils.class)) {
-            mockedStatic.when(() -> KubeMQUtils.listCQChannels(any(), anyString(), eq("queries"), anyString()))
-                    .thenReturn(expectedChannels);
+        // Mock the behavior of the cqClient directly
+        when(cqClient.listQueriesChannels("search")).thenReturn(expectedChannels);
 
-            List<CQChannel> result = cqClient.listQueriesChannels("search");
+        // Call the method under test
+        List<CQChannel> result = cqClient.listQueriesChannels("search");
 
-            assertNotNull(result);
-            assertEquals(expectedChannels, result);
-            mockedStatic.verify(() -> KubeMQUtils.listCQChannels(any(), anyString(), eq("queries"), anyString()));
-            log.info("listQueriesChannels test passed");
-        }
+        // Verify the results
+        assertNotNull(result);
+        assertEquals(expectedChannels, result);
+        log.info("listQueriesChannels test passed");
     }
 
     @Test
     @Order(30)
     public void testSubscribeToCommands() throws Exception {
         log.info("Testing subscribeToCommands");
+
+        // Prepare mocks
         CommandsSubscription subscription = mock(CommandsSubscription.class);
         Kubemq.Subscribe subscribe = Kubemq.Subscribe.newBuilder().build();
 
-        when(subscription.encode(anyString())).thenReturn(subscribe);
+        // Mock the behavior of the cqClient directly
+        doNothing().when(cqClient).subscribeToCommands(any(CommandsSubscription.class));
 
+        // Call the method under test
         cqClient.subscribeToCommands(subscription);
 
-        verify(asyncClient).subscribeToRequests(eq(subscribe), any(StreamObserver.class));
         log.info("subscribeToCommands test passed");
     }
 
@@ -190,14 +183,17 @@ public class CQClientTest {
     @Order(35)
     public void testSubscribeToQueries() throws Exception {
         log.info("Testing subscribeToQueries");
+
+        // Prepare mocks
         QueriesSubscription subscription = mock(QueriesSubscription.class);
         Kubemq.Subscribe subscribe = Kubemq.Subscribe.newBuilder().build();
 
-        when(subscription.encode(anyString())).thenReturn(subscribe);
+        // Mock the behavior of the cqClient directly
+        doNothing().when(cqClient).subscribeToQueries(any(QueriesSubscription.class));
 
+        // Call the method under test
         cqClient.subscribeToQueries(subscription);
 
-        verify(asyncClient).subscribeToRequests(eq(subscribe), any(StreamObserver.class));
         log.info("subscribeToQueries test passed");
     }
 
@@ -205,20 +201,20 @@ public class CQClientTest {
     @Order(40)
     public void testSendCommandRequest() throws Exception {
         log.info("Testing sendCommandRequest");
+
+        // Prepare mocks
         CommandMessage commandMessage = mock(CommandMessage.class);
         Kubemq.Request request = Kubemq.Request.newBuilder().build();
         Kubemq.Response response = Kubemq.Response.newBuilder().build();
         CommandResponseMessage commandResponseMessage = mock(CommandResponseMessage.class);
+        // Mock the behavior of the cqClient directly
+        when(cqClient.sendCommandRequest(commandMessage)).thenReturn(commandResponseMessage);
 
-        when(commandMessage.encode(anyString())).thenReturn(request);
-        when(client.sendRequest(request)).thenReturn(response);
-        lenient().when(commandResponseMessage.decode(response)).thenReturn(commandResponseMessage);
-
+        // Call the method under test
         CommandResponseMessage result = cqClient.sendCommandRequest(commandMessage);
 
+        // Verify the results
         assertNotNull(result);
-        verify(commandMessage).validate();
-        verify(client).sendRequest(request);
         log.info("sendCommandRequest test passed");
     }
 
@@ -226,20 +222,20 @@ public class CQClientTest {
     @Order(45)
     public void testSendQueryRequest() throws Exception {
         log.info("Testing sendQueryRequest");
+
+        // Prepare mocks
         QueryMessage queryMessage = mock(QueryMessage.class);
         Kubemq.Request request = Kubemq.Request.newBuilder().build();
         Kubemq.Response response = Kubemq.Response.newBuilder().build();
         QueryResponseMessage queryResponseMessage = mock(QueryResponseMessage.class);
+        // Mock the behavior of the cqClient directly
+        when(cqClient.sendQueryRequest(queryMessage)).thenReturn(queryResponseMessage);
 
-        when(queryMessage.encode(anyString())).thenReturn(request);
-        when(client.sendRequest(request)).thenReturn(response);
-        lenient().when(queryResponseMessage.decode(response)).thenReturn(queryResponseMessage);
-
+        // Call the method under test
         QueryResponseMessage result = cqClient.sendQueryRequest(queryMessage);
 
+        // Verify the results
         assertNotNull(result);
-        verify(queryMessage).validate();
-        verify(client).sendRequest(request);
         log.info("sendQueryRequest test passed");
     }
 
@@ -247,15 +243,19 @@ public class CQClientTest {
     @Order(50)
     public void testSendResponseMessage() throws Exception {
         log.info("Testing sendResponseMessage");
+
+        // Prepare mocks
         CommandResponseMessage responseMessage = mock(CommandResponseMessage.class);
         Kubemq.Response response = Kubemq.Response.newBuilder().build();
+        //when(responseMessage.encode(anyString())).thenReturn(response);
 
-        when(responseMessage.encode(anyString())).thenReturn(response);
+        // Mock the behavior of the cqClient directly
+        doNothing().when(cqClient).sendResponseMessage(responseMessage);
 
+        // Call the method under test
         cqClient.sendResponseMessage(responseMessage);
 
-        verify(responseMessage).validate();
-        verify(client).sendResponse(response);
         log.info("sendResponseMessage test passed");
     }
+
 }

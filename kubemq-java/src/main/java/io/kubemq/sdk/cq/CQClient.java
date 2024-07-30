@@ -14,13 +14,14 @@ import java.util.List;
  * CQClient class represents a client for connecting to the KubeMQ server for command and query operations.
  */
 @Slf4j
-@Builder
-public class CQClient {
+public class CQClient extends KubeMQClient {
 
-    /**
-     * The KubeMQ client used for communication.
-     */
-    private final KubeMQClient kubeMQClient;
+    @Builder
+    public CQClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
+                        int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, KubeMQClient.Level logLevel) {
+        super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
+    }
+
 
     /**
      * Sends a command request to the KubeMQ server.
@@ -31,8 +32,8 @@ public class CQClient {
      */
     public CommandResponseMessage sendCommandRequest(CommandMessage message) {
             message.validate();
-            Kubemq.Request request = message.encode(kubeMQClient.getClientId());
-            Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            Kubemq.Request request = message.encode(this.getClientId());
+            Kubemq.Response response = this.getClient().sendRequest(request);
             log.debug("sendCommandRequest -> response: {}",response);
             return  CommandResponseMessage.builder().build().decode(response);
     }
@@ -46,8 +47,8 @@ public class CQClient {
      */
     public QueryResponseMessage sendQueryRequest(QueryMessage message) {
             message.validate();
-            Kubemq.Request request = message.encode(kubeMQClient.getClientId());
-            Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            Kubemq.Request request = message.encode(this.getClientId());
+            Kubemq.Response response = this.getClient().sendRequest(request);
             log.debug("sendQueryRequest -> response: {}",response);
             return  QueryResponseMessage.builder().build().decode(response);
     }
@@ -60,7 +61,7 @@ public class CQClient {
      */
     public void sendResponseMessage(CommandResponseMessage message) {
             message.validate();
-            kubeMQClient.getClient().sendResponse(message.encode(kubeMQClient.getClientId()));
+        this.getClient().sendResponse(message.encode(this.getClientId()));
     }
 
     /**
@@ -71,7 +72,7 @@ public class CQClient {
      */
     public void sendResponseMessage(QueryResponseMessage message) {
             message.validate();
-            kubeMQClient.getClient().sendResponse(message.encode(kubeMQClient.getClientId()));
+        this.getClient().sendResponse(message.encode(this.getClientId()));
     }
 
     /**
@@ -81,7 +82,7 @@ public class CQClient {
      * @return true if the channel was created successfully, false otherwise
      */
     public boolean createCommandsChannel(String channel) {
-        return KubeMQUtils.createChannelRequest(kubeMQClient, kubeMQClient.getClientId(), channel, "commands");
+        return KubeMQUtils.createChannelRequest(this, this.getClientId(), channel, "commands");
     }
 
     /**
@@ -91,7 +92,7 @@ public class CQClient {
      * @return true if the channel was created successfully, false otherwise
      */
     public boolean createQueriesChannel(String channel) {
-        return KubeMQUtils.createChannelRequest(kubeMQClient, kubeMQClient.getClientId(), channel, "queries");
+        return KubeMQUtils.createChannelRequest(this, this.getClientId(), channel, "queries");
     }
 
     /**
@@ -101,7 +102,7 @@ public class CQClient {
      * @return true if the channel was deleted successfully, false otherwise
      */
     public boolean deleteCommandsChannel(String channel) {
-        return KubeMQUtils.deleteChannelRequest(kubeMQClient, kubeMQClient.getClientId(), channel, "commands");
+        return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), channel, "commands");
     }
 
     /**
@@ -111,7 +112,7 @@ public class CQClient {
      * @return true if the channel was deleted successfully, false otherwise
      */
     public boolean deleteQueriesChannel(String channel) {
-        return KubeMQUtils.deleteChannelRequest(kubeMQClient, kubeMQClient.getClientId(), channel, "queries");
+        return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), channel, "queries");
     }
 
     /**
@@ -121,7 +122,7 @@ public class CQClient {
      * @return a list of CQChannel objects representing the commands channels
      */
     public List<CQChannel> listCommandsChannels(String channelSearch) {
-        return KubeMQUtils.listCQChannels(kubeMQClient, kubeMQClient.getClientId(), "commands", channelSearch);
+        return KubeMQUtils.listCQChannels(this, this.getClientId(), "commands", channelSearch);
     }
 
     /**
@@ -131,7 +132,7 @@ public class CQClient {
      * @return a list of CQChannel objects representing the queries channels
      */
     public List<CQChannel> listQueriesChannels(String channelSearch) {
-        return KubeMQUtils.listCQChannels(kubeMQClient, kubeMQClient.getClientId(), "queries", channelSearch);
+        return KubeMQUtils.listCQChannels(this, this.getClientId(), "queries", channelSearch);
     }
 
     /**
@@ -160,8 +161,8 @@ public class CQClient {
             }
         };
 
-        Kubemq.Subscribe subscribe = commandsSubscription.encode(kubeMQClient.getClientId());
-        kubeMQClient.getAsyncClient().subscribeToRequests(subscribe, commandSubscriptionObserver);
+        Kubemq.Subscribe subscribe = commandsSubscription.encode(this.getClientId());
+        this.getAsyncClient().subscribeToRequests(subscribe, commandSubscriptionObserver);
     }
 
     /**
@@ -190,7 +191,7 @@ public class CQClient {
             }
         };
 
-        Kubemq.Subscribe subscribe = queriesSubscription.encode(kubeMQClient.getClientId());
-        kubeMQClient.getAsyncClient().subscribeToRequests(subscribe, querySubscriptionObserver);
+        Kubemq.Subscribe subscribe = queriesSubscription.encode(this.getClientId());
+        this.getAsyncClient().subscribeToRequests(subscribe, querySubscriptionObserver);
     }
 }
