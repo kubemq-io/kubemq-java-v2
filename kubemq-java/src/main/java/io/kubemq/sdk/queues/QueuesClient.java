@@ -25,12 +25,13 @@ import java.util.UUID;
  * Note: Make sure to set the connection attributes correctly before connecting to the server.
  */
 @Slf4j
-@Builder
-public class QueuesClient {
-    /**
-     * The KubeMQ client used for communication.
-     */
-    private final KubeMQClient kubeMQClient;
+public class QueuesClient extends KubeMQClient {
+
+    @Builder
+    public QueuesClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
+                    int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, KubeMQClient.Level logLevel) {
+        super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
+    }
 
     /**
      * Creates a queues channel.
@@ -39,7 +40,7 @@ public class QueuesClient {
      * @return boolean True if the channel is created successfully, otherwise false.
      */
     public boolean createQueuesChannel(String channel) {
-        return KubeMQUtils.createChannelRequest(kubeMQClient, kubeMQClient.getClientId(), channel, "queues");
+        return KubeMQUtils.createChannelRequest(this, this.getClientId(), channel, "queues");
     }
 
     /**
@@ -60,7 +61,7 @@ public class QueuesClient {
                 .setQueueName(channelName)
                 .build();
 
-        Kubemq.QueuesInfoResponse result = kubeMQClient.getClient().queuesInfo(request);
+        Kubemq.QueuesInfoResponse result = this.getClient().queuesInfo(request);
         log.debug("QueueInfo Received: {}", result);
 
         QueuesDetailInfo detailInfo = QueuesDetailInfo.builder()
@@ -81,7 +82,7 @@ public class QueuesClient {
      * @return boolean True if the channel was successfully deleted, otherwise false.
      */
     public boolean deleteQueuesChannel(String channel) {
-        return KubeMQUtils.deleteChannelRequest(kubeMQClient, kubeMQClient.getClientId(), channel, "queues");
+        return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), channel, "queues");
     }
 
     /**
@@ -91,7 +92,7 @@ public class QueuesClient {
      * @return List<QueuesChannel> A list of queues channels that match the search term.
      */
     public List<QueuesChannel> listQueuesChannels(String channelSearch) {
-        return KubeMQUtils.listQueuesChannels(kubeMQClient, kubeMQClient.getClientId(), channelSearch);
+        return KubeMQUtils.listQueuesChannels(this, this.getClientId(), channelSearch);
     }
 
     /**
@@ -103,8 +104,8 @@ public class QueuesClient {
     public QueueSendResult sendQueuesMessage(QueueMessage message) {
         log.debug("Sending queues message");
         message.validate();
-        Kubemq.QueueMessage queueMessage = message.encodeMessage(kubeMQClient.getClientId());
-        SendQueueMessageResult result = kubeMQClient.getClient().sendQueueMessage(queueMessage);
+        Kubemq.QueueMessage queueMessage = message.encodeMessage(this.getClientId());
+        SendQueueMessageResult result = this.getClient().sendQueueMessage(queueMessage);
         log.debug("Queue message sent: {}", result);
         return new QueueSendResult().decode(result);
     }
@@ -122,14 +123,14 @@ public class QueuesClient {
         List<Kubemq.QueueMessage> messages = new ArrayList<>();
         for (QueueMessage msg : queueMessages) {
             msg.validate();
-            messages.add(msg.encodeMessage(kubeMQClient.getClientId()));
+            messages.add(msg.encodeMessage(this.getClientId()));
         }
         Kubemq.QueueMessagesBatchRequest queueMessagesBatchRequest = Kubemq.QueueMessagesBatchRequest.newBuilder()
                 .setBatchID(batchId != null ? batchId : UUID.randomUUID().toString())
                 .addAllMessages(messages)
                 .build();
 
-        Kubemq.QueueMessagesBatchResponse batchMessageResponse = kubeMQClient.getClient().sendQueueMessagesBatch(queueMessagesBatchRequest);
+        Kubemq.QueueMessagesBatchResponse batchMessageResponse = this.getClient().sendQueueMessagesBatch(queueMessagesBatchRequest);
         log.debug("Batch queue messages sent: {}", batchMessageResponse);
         QueueMessagesBatchSendResult batchSendResult = QueueMessagesBatchSendResult.builder().build();
         batchSendResult.setBatchId(batchMessageResponse.getBatchID());
@@ -150,7 +151,7 @@ public class QueuesClient {
      */
     public QueueSendResult sendQueuesMessageUpStream(QueueMessage queueMessage) {
         queueMessage.validate();
-      return new QueueStreamHelper().sendMessage(kubeMQClient, queueMessage.encode(kubeMQClient.getClientId()));
+      return new QueueStreamHelper().sendMessage(this, queueMessage.encode(this.getClientId()));
     }
 
     /**
@@ -161,7 +162,7 @@ public class QueuesClient {
      */
     public QueuesPollResponse receiveQueuesMessagesDownStream(QueuesPollRequest queuesPollRequest) {
         queuesPollRequest.validate();
-        return new QueueStreamHelper().receiveMessage(kubeMQClient, queuesPollRequest);
+        return new QueueStreamHelper().receiveMessage(this, queuesPollRequest);
     }
 
     /**
@@ -176,10 +177,10 @@ public class QueuesClient {
         Kubemq.AckAllQueueMessagesRequest ackRequest = Kubemq.AckAllQueueMessagesRequest.newBuilder()
                 .setRequestID(requestId)
                 .setChannel(queueName)
-                .setClientID(kubeMQClient.getClientId())
+                .setClientID(this.getClientId())
                 .setWaitTimeSeconds(waitTimeInSeconds)
                 .build();
-        Kubemq.AckAllQueueMessagesResponse ackResp = kubeMQClient.getClient().ackAllQueueMessages(ackRequest);
+        Kubemq.AckAllQueueMessagesResponse ackResp = this.getClient().ackAllQueueMessages(ackRequest);
         return QueueMessageAcknowledgment.decode(ackResp);
     }
 

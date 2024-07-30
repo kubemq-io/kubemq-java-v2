@@ -9,9 +9,7 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import io.kubemq.sdk.common.ServerInfo;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 
@@ -27,20 +25,22 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Getter
-public class KubeMQClient implements AutoCloseable {
+@NoArgsConstructor
+@AllArgsConstructor
+public abstract class KubeMQClient implements AutoCloseable {
 
-    private final String address;
-    private final String clientId;
-    private final String authToken;
-    private final boolean tls;
-    private final String tlsCertFile;
-    private final String tlsKeyFile;
-    private final int maxReceiveSize;
-    private final int reconnectIntervalSeconds;
-    private final boolean keepAlive;
-    private final int pingIntervalInSeconds;
-    private final int pingTimeoutInSeconds;
-    private final Level logLevel;
+    private  String address;
+    private  String clientId;
+    private  String authToken;
+    private  boolean tls;
+    private  String tlsCertFile;
+    private  String tlsKeyFile;
+    private  int maxReceiveSize;
+    private  int reconnectIntervalSeconds;
+    private  boolean keepAlive;
+    private  int pingIntervalInSeconds;
+    private  int pingTimeoutInSeconds;
+    private  Level logLevel;
 
     @Setter
     private ManagedChannel managedChannel;
@@ -66,7 +66,6 @@ public class KubeMQClient implements AutoCloseable {
      * @param pingTimeoutInSeconds    The timeout for ping messages (in seconds).
      * @param logLevel                The logging level to use.
      */
-    @Builder
     public KubeMQClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
                         int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
         if (address == null || clientId == null) {
