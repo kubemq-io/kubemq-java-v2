@@ -6,8 +6,7 @@ import io.kubemq.sdk.pubsub.*;
 
 /**
  * Example class demonstrating the use of PubSubClient to send and receive messages using KubeMQ.
- * This class covers operations such as sending and receiving messages, creating and deleting channels,
- * and subscribing to different types of event stores.
+ * This class covers operations deleting channels
  */
 public class DeleteChannelExample {
 
