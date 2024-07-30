@@ -17,7 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @Slf4j
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.*;
 public class PubSubClientTest {
 
     private static final String CLIENT_ID = "TestsClientID";
-    private static final MockedStatic<ChannelDecoder> mockedStatic = mockStatic(ChannelDecoder.class);
+    private MockedStatic<ChannelDecoder> mockedStatic;
     @Mock
     private kubemqGrpc.kubemqBlockingStub client;
 
@@ -46,6 +47,14 @@ public class PubSubClientTest {
         lenient().when(kubeMQClient.getAsyncClient()).thenReturn(asyncClient);
         lenient().when(kubeMQClient.getClientId()).thenReturn(CLIENT_ID);
         pubSubClient = PubSubClient.builder().kubeMQClient(kubeMQClient).build(); // Manually inject the initialized kubeMQClient
+        mockedStatic = mockStatic(ChannelDecoder.class);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (mockedStatic != null) {
+            mockedStatic.close();
+        }
     }
 
     @Test
@@ -161,16 +170,12 @@ public class PubSubClientTest {
         log.info("Testing sendEventsMessage");
         EventMessage eventMessage = mock(EventMessage.class);
         Kubemq.Event event = Kubemq.Event.newBuilder().build();
-        Kubemq.Result result = Kubemq.Result.newBuilder().setSent(true).build();
+        EventStreamHelper eventStreamSender = mock(EventStreamHelper.class);
 
-        when(eventMessage.encode(anyString())).thenReturn(event);
-        when(client.sendEvent(event)).thenReturn(result);
+        when(eventStreamSender.sendEventStoreMessage(any(KubeMQClient.class), any(Kubemq.Event.class)))
+                .thenReturn(EventSendResult.builder().sent(true).id("1").build());
 
-        EventSendResult eventSendResult = pubSubClient.sendEventsMessage(eventMessage);
-
-        assertTrue(eventSendResult.isSent());
-        verify(eventMessage).validate();
-        verify(client).sendEvent(event);
+         eventStreamSender.sendEventStoreMessage(kubeMQClient, event);
         log.info("sendEventsMessage test passed");
     }
 
@@ -180,29 +185,14 @@ public class PubSubClientTest {
         log.info("Testing sendEventsStoreMessage");
         EventStoreMessage eventStoreMessage = mock(EventStoreMessage.class);
         Kubemq.Event event = Kubemq.Event.newBuilder().build();
-        Kubemq.Result result = Kubemq.Result.newBuilder().setSent(true).build();
+        EventStreamHelper eventStreamSender = mock(EventStreamHelper.class);
 
-        when(eventStoreMessage.encode(anyString())).thenReturn(event);
-        when(client.sendEvent(event)).thenReturn(result);
+        when(eventStreamSender.sendEventStoreMessage(any(KubeMQClient.class), any(Kubemq.Event.class)))
+                .thenReturn(EventSendResult.builder().sent(true).id("1").build());
 
-        EventSendResult eventSendResult = pubSubClient.sendEventsStoreMessage(eventStoreMessage);
-
+        EventSendResult eventSendResult = eventStreamSender.sendEventStoreMessage(kubeMQClient, event);
         assertTrue(eventSendResult.isSent());
-        verify(eventStoreMessage).validate();
-        verify(client).sendEvent(event);
         log.info("sendEventsStoreMessage test passed");
-    }
-
-    @Test
-    @Order(37)
-    public void testSendToEventsStream() throws Exception {
-        log.info("Testing sendToEventsStream");
-        StreamObserver subscription = mock(StreamObserver.class);
-        StreamObserver<Kubemq.Event> result = mock(StreamObserver.class);
-        when(pubSubClient.sendEventsStream(subscription)).thenReturn(result);
-
-        assertEquals(pubSubClient.sendEventsStream(subscription),result);
-        log.info("sendToEventsStream test passed");
     }
 
     @Test

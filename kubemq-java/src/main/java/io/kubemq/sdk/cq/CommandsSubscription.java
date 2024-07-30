@@ -43,7 +43,7 @@ public class CommandsSubscription {
     public kubemq.Kubemq.Subscribe encode(String clientId) {
         Subscribe request =  Subscribe.newBuilder()
                 .setChannel(this.channel)
-                .setGroup(this.group)
+                .setGroup(this.group != null ? this.group : "")
                 .setClientID(clientId)
                 .setSubscribeTypeData(Subscribe.SubscribeType.Commands)
                 .setSubscribeTypeDataValue(Subscribe.SubscribeType.Commands_VALUE)
