@@ -8,9 +8,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Example class demonstrating the use of PubSubClient to send and receive messages using KubeMQ.
- * This class covers operations such as sending and receiving messages, creating and deleting channels,
- * and subscribing to different types of event stores.
+ * Example class demonstrating the use of PubSubClient to send messages using KubeMQ.
+ * This class covers operations such as sending
  */
 public class SendEventMessageExample {
 
@@ -59,8 +58,8 @@ public class SendEventMessageExample {
                     .tags(tags)
                     .build();
             
-            EventSendResult result = pubSubClient.sendEventsMessage(eventMessage);
-            System.out.println("Send event result: " + result);
+            pubSubClient.sendEventsMessage(eventMessage);
+            System.out.println("Event message sent ");
         } catch (RuntimeException e) {
             System.err.println("Failed to send event message: " + e.getMessage());
         }
