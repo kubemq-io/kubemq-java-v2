@@ -6,7 +6,7 @@ import io.kubemq.sdk.queues.QueuesClient;
 
 /**
  * Example class demonstrating the use of QueuesClient to delete a queue channel using KubeMQ.
- * This class covers operations such as initializing the KubeMQClient, creating the QueuesClient,
+ * This class covers operations such as initializing the KubeMQClient,
  * and deleting a specified queue channel.
  */
 public class DeleteQueuesChannelExample {
