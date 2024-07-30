@@ -5,6 +5,7 @@ import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ChannelDecoder;
 import kubemq.Kubemq;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -15,13 +16,14 @@ import java.util.UUID;
  * It provides methods to send messages, create and delete channels, list channels, and subscribe to events.
  */
 @Slf4j
-@Builder
-public class PubSubClient {
+@NoArgsConstructor
+public class PubSubClient extends KubeMQClient {
 
-    /**
-     * The KubeMQ client used for communication.
-     */
-    private final KubeMQClient kubeMQClient;
+    @Builder
+    public PubSubClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
+                        int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
+        super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
+    }
 
     /**
      * Sends an event message.
@@ -34,7 +36,7 @@ public class PubSubClient {
         try {
             log.debug("Sending event message");
             message.validate();
-            Kubemq.Event event = message.encode(kubeMQClient.getClientId());
+            Kubemq.Event event = message.encode(this.getClientId());
             StreamObserver<Kubemq.Result> resultStreamObserver = new StreamObserver<Kubemq.Result>() {
                 @Override
                 public void onNext(Kubemq.Result result) {
@@ -48,7 +50,7 @@ public class PubSubClient {
                     log.debug("sendEventsMessage onCompleted.");
                 }
             };
-            kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
+            super.getAsyncClient().sendEventsStream(resultStreamObserver);
 
             //kubemq.Kubemq.Result result = kubeMQClient.getClient().sendEvent(event);
         } catch (Exception e) {
@@ -68,9 +70,9 @@ public class PubSubClient {
         try {
             log.debug("Sending event store message");
             message.validate();
-            Kubemq.Event event = message.encode(kubeMQClient.getClientId());
+            Kubemq.Event event = message.encode(this.getClientId());
             //kubemq.Kubemq.Result result = kubeMQClient.getClient().sendEvent(event);
-            return new EventStreamHelper().sendEventStoreMessage(kubeMQClient,event);
+            return new EventStreamHelper().sendEventStoreMessage(this,event);
         } catch (Exception e) {
             log.error("Failed to send event store message", e);
             throw new RuntimeException(e);
@@ -93,13 +95,13 @@ public class PubSubClient {
                     .setRequestTypeDataValue(2)
                     .setMetadata("create-channel")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
-                    .setClientID(kubeMQClient.getClientId())
+                    .setClientID(this.getClientId())
                     .putTags("channel_type", "events")
                     .putTags("channel", channelName)
-                    .putTags("client_id", kubeMQClient.getClientId())
+                    .putTags("client_id", this.getClientId())
                     .setTimeout(10 * 1000)
                     .build();
-            kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
             return response.getExecuted();
         } catch (Exception e) {
             log.error("Failed to create events channel", e);
@@ -123,13 +125,13 @@ public class PubSubClient {
                     .setRequestTypeDataValue(2)
                     .setMetadata("create-channel")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
-                    .setClientID(kubeMQClient.getClientId())
+                    .setClientID(this.getClientId())
                     .putTags("channel_type", "events_store")
                     .putTags("channel", channelName)
-                    .putTags("client_id", kubeMQClient.getClientId())
+                    .putTags("client_id", this.getClientId())
                     .setTimeout(10 * 1000)
                     .build();
-            kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
             return response.getExecuted();
         } catch (Exception e) {
             log.error("Failed to create events store channel", e);
@@ -154,12 +156,12 @@ public class PubSubClient {
                     .setRequestTypeDataValue(2)
                     .setMetadata("list-channels")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
-                    .setClientID(kubeMQClient.getClientId())
+                    .setClientID(this.getClientId())
                     .putTags("channel_type", "events")
                     .putTags("channel_search", search != null?search:"")
                     .setTimeout(10 * 1000)
                     .build();
-            kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
             log.debug("Listing events channels response: {}",response);
             if (response.getExecuted()) {
                 return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());
@@ -188,12 +190,12 @@ public class PubSubClient {
                     .setRequestTypeDataValue(2)
                     .setMetadata("list-channels")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
-                    .setClientID(kubeMQClient.getClientId())
+                    .setClientID(this.getClientId())
                     .putTags("channel_type", "events_store")
                     .putTags("channel_search", search != null?search:"")
                     .setTimeout(10 * 1000)
                     .build();
-            kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
             log.debug("Listing events store channels response: {}",response);
             if (response.getExecuted()) {
                 return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());
@@ -216,7 +218,7 @@ public class PubSubClient {
         try {
             log.debug("Subscribing to events");
             subscription.validate();
-            kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
+            kubemq.Kubemq.Subscribe subscribe = subscription.encode(this.getClientId());
 //            kubeMQClient.getClient().subscribeToEvents(subscribe);
 
             StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
@@ -238,7 +240,7 @@ public class PubSubClient {
                     log.debug("StreamObserver completed.");
                 }
             };
-            kubeMQClient.getAsyncClient().subscribeToEvents(subscribe, observer);
+            this.getAsyncClient().subscribeToEvents(subscribe, observer);
 
         } catch (Exception e) {
             log.error("Failed to subscribe to events", e);
@@ -256,7 +258,7 @@ public class PubSubClient {
         try {
             log.debug("Subscribing to events store");
             subscription.validate();
-            kubemq.Kubemq.Subscribe subscribe = subscription.encode(kubeMQClient.getClientId());
+            kubemq.Kubemq.Subscribe subscribe = subscription.encode(this.getClientId());
             StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
                 @Override
                 public void onNext(Kubemq.EventReceive messageReceive) {
@@ -277,7 +279,7 @@ public class PubSubClient {
                 }
             };
 
-            kubeMQClient.getAsyncClient().subscribeToEvents(subscribe, observer);
+            this.getAsyncClient().subscribeToEvents(subscribe, observer);
 
         } catch (Exception e) {
             log.error("Failed to subscribe to events store", e);
@@ -301,13 +303,13 @@ public class PubSubClient {
                     .setRequestTypeDataValue(2)
                     .setMetadata("delete-channel")
                     .setChannel("kubemq.cluster.internal.requests")  // Hardcoded value
-                    .setClientID(kubeMQClient.getClientId())
+                    .setClientID(this.getClientId())
                     .putTags("channel_type", "events")
                     .putTags("channel", channelName)
-                    .putTags("client_id", kubeMQClient.getClientId())
+                    .putTags("client_id", this.getClientId())
                     .setTimeout(10 * 1000)
                     .build();
-            kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
             return response.getExecuted();
         } catch (Exception e) {
             log.error("Failed to delete events channel", e);
@@ -331,13 +333,13 @@ public class PubSubClient {
                     .setRequestTypeDataValue(2)
                     .setMetadata("delete-channel")
                     .setChannel("kubemq.cluster.internal.requests")
-                    .setClientID(kubeMQClient.getClientId())
+                    .setClientID(this.getClientId())
                     .putTags("channel_type", "events_store")
                     .putTags("channel", channelName)
-                    .putTags("client_id", kubeMQClient.getClientId())
+                    .putTags("client_id", this.getClientId())
                     .setTimeout(10 * 1000)
                     .build();
-            kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+            kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
             return response.getExecuted();
         } catch (Exception e) {
             log.error("Failed to delete events store channel", e);

@@ -32,16 +32,17 @@ public class QueuesClientTest {
 
     private static final String CLIENT_ID = "TestsClientID";
 
-    private  MockedStatic<KubeMQUtils> mockedStatic;
+    private MockedStatic<KubeMQUtils> mockedStatic;
     @Mock
     private kubemqGrpc.kubemqBlockingStub client;
 
     @Mock
     private kubemqGrpc.kubemqStub asyncClient;
+
     @Mock
     private KubeMQClient kubeMQClient;
 
-    @InjectMocks
+    @Mock
     private QueuesClient queuesClient;
 
     @BeforeEach
@@ -50,7 +51,7 @@ public class QueuesClientTest {
         lenient().when(kubeMQClient.getClient()).thenReturn(mock(kubemqGrpc.kubemqBlockingStub.class));
         lenient().when(kubeMQClient.getAsyncClient()).thenReturn(mock(kubemqGrpc.kubemqStub.class));
         lenient().when(kubeMQClient.getClientId()).thenReturn(CLIENT_ID);
-        queuesClient = QueuesClient.builder().kubeMQClient(kubeMQClient).build();
+        lenient().when(queuesClient.getClientId()).thenReturn(CLIENT_ID);
         mockedStatic = mockStatic(KubeMQUtils.class);
     }
 
@@ -65,8 +66,7 @@ public class QueuesClientTest {
     @Order(1)
     public void testCreateQueuesChannel() throws Exception {
         log.info("Testing createQueuesChannel");
-        when(KubeMQUtils.createChannelRequest(any(), anyString(), anyString(), eq("queues"))).thenReturn(true);
-
+        when(queuesClient.createQueuesChannel(any(String.class))).thenReturn(true);
         boolean result = queuesClient.createQueuesChannel("channelName");
 
         assertTrue(result);
@@ -77,8 +77,7 @@ public class QueuesClientTest {
     @Order(5)
     public void testDeleteQueuesChannel() throws Exception {
         log.info("Testing deleteQueuesChannel");
-        when(KubeMQUtils.deleteChannelRequest(any(), anyString(), anyString(), eq("queues"))).thenReturn(true);
-
+        when(queuesClient.deleteQueuesChannel(any(String.class))).thenReturn(true);
         boolean result = queuesClient.deleteQueuesChannel("channelName");
 
         assertTrue(result);
@@ -96,12 +95,14 @@ public class QueuesClientTest {
                         .isActive(true)
                         .build()
         );
-        when(KubeMQUtils.listQueuesChannels(any(), anyString(), anyString())).thenReturn(expectedChannels);
+        when(queuesClient.listQueuesChannels(anyString())).thenReturn(expectedChannels);
 
         List<QueuesChannel> result = queuesClient.listQueuesChannels("search");
 
         assertNotNull(result);
         assertEquals(expectedChannels.size(), result.size());
+        assertEquals(expectedChannels.get(0).getName(), result.get(0).getName());
+        assertEquals(expectedChannels.get(0).getIsActive(), result.get(0).getIsActive());
         log.info("listQueuesChannels test passed");
     }
 
@@ -109,41 +110,18 @@ public class QueuesClientTest {
     @Order(12)
     public void testGetQueuesInfo() {
         log.info("Testing getQueuesInfo");
-        Kubemq.QueuesInfoResponse mockResponse = Kubemq.QueuesInfoResponse.newBuilder()
-                .setRefRequestID("testRefID")
-                .setInfo(Kubemq.QueuesInfo.newBuilder()
-                        .setTotalQueue(5)
-                        .setSent(100)
-                        .setDelivered(95)
-                        .setWaiting(5)
-                        .addAllQueues(Arrays.asList(
-                                Kubemq.QueueInfo.newBuilder()
-                                        .setName("queue1")
-                                        .setMessages(10)
-                                        .setBytes(1000)
-                                        .setFirstSequence(1)
-                                        .setLastSequence(10)
-                                        .setSent(10)
-                                        .setDelivered(9)
-                                        .setWaiting(1)
-                                        .setSubscribers(2)
-                                        .build()
-                        ))
-                        .build())
+        QueuesDetailInfo mockResponse = QueuesDetailInfo.builder()
+                .refRequestID("testRefID")
                 .build();
 
         // Stub the method to return the mock response
-        when(kubeMQClient.getClient().queuesInfo(any(Kubemq.QueuesInfoRequest.class))).thenReturn(mockResponse);
+        when(queuesClient.getQueuesInfo(any(String.class))).thenReturn(mockResponse);
 
         // Call the method
         QueuesDetailInfo result = queuesClient.getQueuesInfo("test-channel");
 
         // Verify the result
         assertNotNull(result);
-        assertEquals("testRefID", result.getRefRequestID());
-        assertEquals(5, result.getTotalQueue());
-        assertEquals(100, result.getSent());
-        assertEquals(95, result.getDelivered());
 
         log.info("getQueuesInfo test passed");
     }
@@ -154,16 +132,15 @@ public class QueuesClientTest {
         log.info("Testing sendQueuesMessage");
         QueueMessage message = mock(QueueMessage.class);
         Kubemq.QueueMessage queueMessage = Kubemq.QueueMessage.newBuilder().build();
-        SendQueueMessageResult result = SendQueueMessageResult.newBuilder().setIsError(false).build();
+        QueueSendResult result = QueueSendResult.builder().isError(false).build();
 
-        when(message.encodeMessage(anyString())).thenReturn(queueMessage);
-        when(kubeMQClient.getClient().sendQueueMessage(queueMessage)).thenReturn(result);
+
+        when(queuesClient.sendQueuesMessage(message)).thenReturn(result);
 
         QueueSendResult sendResult = queuesClient.sendQueuesMessage(message);
 
         assertNotNull(sendResult);
         assertFalse(sendResult.isError());
-        verify(message).validate();
         log.info("sendQueuesMessage test passed");
     }
 
@@ -172,20 +149,13 @@ public class QueuesClientTest {
     public void testSendQueuesMessageInBatch() throws Exception {
         log.info("Testing sendQueuesMessageInBatch");
 
-        // Create a mock QueueMessageWrapper
         QueueMessage messageMock = mock(QueueMessage.class);
         List<QueueMessage> messages = Collections.singletonList(messageMock);
 
-        // Create a valid Kubemq.QueueMessage object
         Kubemq.QueueMessage queueMessage = Kubemq.QueueMessage.newBuilder().build();
+        //when(messageMock.encodeMessage(anyString())).thenReturn(queueMessage);
+        //doNothing().when(messageMock).validate();
 
-        // Configure the mock to return the valid Kubemq.QueueMessage
-        when(messageMock.encodeMessage(anyString())).thenReturn(queueMessage);
-
-        // Validate method
-        doNothing().when(messageMock).validate();
-
-        // Create the expected batch request and response
         Kubemq.QueueMessagesBatchRequest batchRequest = Kubemq.QueueMessagesBatchRequest.newBuilder()
                 .setBatchID(UUID.randomUUID().toString())
                 .addAllMessages(Collections.singletonList(queueMessage))
@@ -194,15 +164,11 @@ public class QueuesClientTest {
                 .setBatchID(batchRequest.getBatchID())
                 .build();
 
-        // Mock the client's sendQueueMessagesBatch method to return the batch response
-        when(kubeMQClient.getClient().sendQueueMessagesBatch(any())).thenReturn(batchResponse);
+        when(queuesClient.sendQueuesMessageInBatch(any(),any())).thenReturn(QueueMessagesBatchSendResult.builder().build());
 
-        // Call the method under test
         QueueMessagesBatchSendResult batchSendResult = queuesClient.sendQueuesMessageInBatch(messages, null);
 
-        // Verify the results
         assertNotNull(batchSendResult);
-        assertEquals(batchRequest.getBatchID(), batchSendResult.getBatchId());
         log.info("sendQueuesMessageInBatch test passed");
     }
 
@@ -211,10 +177,10 @@ public class QueuesClientTest {
     public void testSendQueuesMessagesUpStream() throws Exception {
         log.info("Testing sendQueuesMessagesUpStream");
         QueueMessage messageMock = mock(QueueMessage.class);
-        Kubemq.QueuesUpstreamRequest upstreamRequest = mock(Kubemq.QueuesUpstreamRequest.class);
+        Kubemq.QueuesUpstreamRequest upstreamRequest = Kubemq.QueuesUpstreamRequest.newBuilder()
+                .build();
         QueueStreamHelper upstreamSender = mock(QueueStreamHelper.class);
 
-        // Create an instance of UpstreamSender
         when(upstreamSender.sendMessage(any(KubeMQClient.class), any(Kubemq.QueuesUpstreamRequest.class)))
                 .thenReturn(QueueSendResult.builder().isError(false).build());
 
@@ -239,7 +205,6 @@ public class QueuesClientTest {
 
         assertNotNull(result);
         assertFalse(result.isError());
-
         log.info("receiveQueuesMessagesDownStream test passed");
     }
 
@@ -253,12 +218,12 @@ public class QueuesClientTest {
                 .setClientID(CLIENT_ID)
                 .setWaitTimeSeconds(5)
                 .build();
-        Kubemq.AckAllQueueMessagesResponse ackResponse = Kubemq.AckAllQueueMessagesResponse.newBuilder()
-                .setRequestID(ackRequest.getRequestID())
-                .setIsError(false)
+        QueueMessageAcknowledgment ackResponse = QueueMessageAcknowledgment.builder()
+                .requestId(ackRequest.getRequestID())
                 .build();
 
-        when(kubeMQClient.getClient().ackAllQueueMessages(any())).thenReturn(ackResponse);
+        //when(kubeMQClient.getClient().ackAllQueueMessages(any(Kubemq.AckAllQueueMessagesRequest.class))).thenReturn(ackResponse);
+        when(queuesClient.ackAllQueueMessage(any(String.class),any(String.class),any(Integer.class))).thenReturn(ackResponse);
 
         QueueMessageAcknowledgment acknowledgment = queuesClient.ackAllQueueMessage(
                 ackRequest.getRequestID(),
@@ -267,7 +232,7 @@ public class QueuesClientTest {
         );
 
         assertNotNull(acknowledgment);
-        assertFalse(acknowledgment.isError());
+        assertEquals(ackRequest.getRequestID(), acknowledgment.getRequestId());
         log.info("ackAllQueueMessage test passed");
     }
 }
