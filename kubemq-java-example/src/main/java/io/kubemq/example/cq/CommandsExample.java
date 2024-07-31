@@ -47,13 +47,20 @@ public class CommandsExample {
             System.err.println("Error in Command Subscription: " + errorMessage);
         };
 
-        CommandsSubscription commandsSubscription = CommandsSubscription.builder()
+        CommandsSubscription subscription = CommandsSubscription.builder()
                 .channel(channel)
                 .onReceiveCommandCallback(onReceiveCommandCallback)
                 .onErrorCallback(onErrorCallback)
                 .build();
 
-        cqClient.subscribeToCommands(commandsSubscription);
+        cqClient.subscribeToCommands(subscription);
+        System.out.println("");
+        
+        // Wait for 20 seconds and call the cancel subscription
+            try{
+                Thread.sleep(10 * 1000);
+                subscription.cancel();
+            }catch(Exception ex){}
     }
 
    private void sendCommandRequest(String channel) {
@@ -81,9 +88,12 @@ public class CommandsExample {
         CommandsExample cqClientExample = new CommandsExample();
         try {
 
-            cqClientExample.subscribeToCommands(commandChannel);
+            // Run in sperate thread
+            new Thread(() -> {
+              cqClientExample.subscribeToCommands(commandChannel);
+            }).start();
+          
             cqClientExample.sendCommandRequest(commandChannel);
-
 
         } catch (GRPCException e) {
             System.err.println("gRPC error: " + e.getMessage());
