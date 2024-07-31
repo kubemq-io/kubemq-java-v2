@@ -27,7 +27,7 @@ public class QueriesExample {
         System.out.println("Ping Response: " + pingResult.toString());
     }
     
-
+   
     private void subscribeToQueries(String channel) {
          System.out.println("Executing subscribeToQueries...");
         // Consumer for handling received events
@@ -48,13 +48,23 @@ public class QueriesExample {
         Consumer<String> onErrorCallback = errorMessage -> {
             System.err.println("Error in Query Subscription: " + errorMessage);
         };
-        QueriesSubscription queriesSubscription = QueriesSubscription.builder()
+        
+        QueriesSubscription subscription = QueriesSubscription.builder()
                 .channel(channel)
                 .onReceiveQueryCallback(onReceiveQueryCallback)
                 .onErrorCallback(onErrorCallback)
                 .build();
 
-        cqClient.subscribeToQueries(queriesSubscription);
+        cqClient.subscribeToQueries(subscription);
+        
+        System.out.println("Queries Subscribed");
+        
+         // Wait for 10 seconds and call the cancel subscription
+            try{
+                Thread.sleep(10 * 1000);
+                subscription.cancel();
+            }catch(Exception ex){}
+        
     }
     
       private void sendQueryRequest(String channel) {
@@ -79,7 +89,11 @@ public class QueriesExample {
     public static void main(String[] args) {
         QueriesExample cqClientExample = new QueriesExample();
         try {
-            cqClientExample.subscribeToQueries(queryChannel);
+            
+              // Run in sperate thread
+            new Thread(() -> {
+              cqClientExample.subscribeToQueries(queryChannel);
+            }).start();
             cqClientExample.sendQueryRequest(queryChannel);
 
         } catch (GRPCException e) {
