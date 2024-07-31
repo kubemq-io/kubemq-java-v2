@@ -1,7 +1,9 @@
 package io.kubemq.sdk.pubsub;
 
+import io.grpc.stub.StreamObserver;
 import kubemq.Kubemq;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.function.Consumer;
 
@@ -13,6 +15,7 @@ import java.util.function.Consumer;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Slf4j
 public class EventsSubscription {
 
     /**
@@ -34,6 +37,13 @@ public class EventsSubscription {
      * Callback function to be called when an error occurs.
      */
     private Consumer<String> onErrorCallback;
+
+    /**
+     * Observer for the subscription.
+     * This field is excluded from the builder and setter.
+     */
+    @Setter(onMethod_ = @__(@java.lang.SuppressWarnings("unused")))
+    private transient StreamObserver<Kubemq.EventReceive> observer;
 
     /**
      * Raises the onReceiveEventCallback with the given event message.
@@ -58,6 +68,17 @@ public class EventsSubscription {
     }
 
     /**
+     * Cancel the subscription
+     */
+    public void cancel() {
+        if (observer != null) {
+            observer.onCompleted();
+            log.error("Subscription Cancelled");
+        }
+    }
+
+
+    /**
      * Validates the subscription, ensuring that the required fields are set.
      *
      * @throws IllegalArgumentException if the channel or onReceiveEventCallback is not set.
@@ -78,13 +99,34 @@ public class EventsSubscription {
      * @return The encoded KubeMQ Subscribe object.
      */
     public Kubemq.Subscribe encode(String clientId) {
-        return Kubemq.Subscribe.newBuilder()
+        Kubemq.Subscribe subscribe = Kubemq.Subscribe.newBuilder()
                 .setChannel(channel)
                 .setGroup(group != null ?group :"")
                 .setClientID(clientId)
                 .setSubscribeTypeData(Kubemq.Subscribe.SubscribeType.Events)
                 .setSubscribeTypeDataValue(1)
                 .build();
+
+        observer = new StreamObserver<Kubemq.EventReceive>() {
+            @Override
+            public void onNext(Kubemq.EventReceive messageReceive) {
+                log.debug("Event Received Event: EventID:'{}', Channel:'{}', Metadata: '{}'", messageReceive.getEventID(), messageReceive.getChannel(), messageReceive.getMetadata());
+                // Send the received message to the consumer
+               raiseOnReceiveMessage(EventMessageReceived.decode(messageReceive));
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error in StreamObserver: ", t);
+                raiseOnError(t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                log.debug("StreamObserver completed.");
+            }
+        };
+        return subscribe;
     }
 
     @Override
