@@ -1,11 +1,13 @@
 package io.kubemq.sdk.pubsub;
 
+import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.common.SubscribeType;
 import kubemq.Kubemq;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -19,6 +21,7 @@ import java.util.function.Consumer;
 @Setter
 @Builder
 @AllArgsConstructor
+@Slf4j
 public class EventsStoreSubscription {
 
     /**
@@ -57,6 +60,13 @@ public class EventsStoreSubscription {
     private Consumer<String> onErrorCallback;
 
     /**
+     * Observer for the subscription.
+     * This field is excluded from the builder and setter.
+     */
+    @Setter(onMethod_ = @__(@java.lang.SuppressWarnings("unused")))
+    private transient StreamObserver<Kubemq.EventReceive> observer;
+
+    /**
      * Default constructor initializing default values.
      */
     public EventsStoreSubscription() {
@@ -85,6 +95,17 @@ public class EventsStoreSubscription {
             onErrorCallback.accept(msg);
         }
     }
+
+    /**
+     * Cancel the subscription
+     */
+    public void cancel() {
+        if (observer != null) {
+            observer.onCompleted();
+            log.error("Subscription Cancelled");
+        }
+    }
+
 
     /**
      * Validates the subscription configuration.
@@ -124,15 +145,27 @@ public class EventsStoreSubscription {
                 .setEventsStoreTypeData(Kubemq.Subscribe.EventsStoreType.forNumber(eventsStoreType == null ? 0 : eventsStoreType.getValue()))
                 .setEventsStoreTypeValue(eventsStoreStartTime != null?(int) eventsStoreStartTime.getEpochSecond() : eventsStoreSequenceValue)
                 .build();
-//        switch (eventsStoreType) {
-//            case StartAtSequence:
-//                subscribe.setEventsStoreTypeValue(eventsStoreSequenceValue);
-//                break;
-//            case StartAtTime:
-//                subscribe.newBuilderForType().setEventsStoreTypeValue((int) eventsStoreStartTime.getEpochSecond());
-//                break;
-//            default:
-//        }
+
+         observer = new StreamObserver<Kubemq.EventReceive>() {
+            @Override
+            public void onNext(Kubemq.EventReceive messageReceive) {
+                log.debug("Event Received Event: EventID:'{}', Channel:'{}', Metadata: '{}'", messageReceive.getEventID(), messageReceive.getChannel(), messageReceive.getMetadata());
+                // Send the received message to the consumer
+                raiseOnReceiveMessage(EventStoreMessageReceived.decode(messageReceive));
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error in StreamObserver: ", t);
+                raiseOnError(t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                log.debug("StreamObserver completed.");
+            }
+        };
+
         return subscribe;
     }
 
