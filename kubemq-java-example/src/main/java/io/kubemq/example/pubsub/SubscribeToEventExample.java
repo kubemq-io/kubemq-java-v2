@@ -50,6 +50,7 @@ public class SubscribeToEventExample {
                 System.out.println("Body: " + new String(event.getBody()));
                 System.out.println("Tags: " + event.getTags());
             };
+            
 
             // Consumer for handling errors
             Consumer<String> onErrorCallback = error -> {
@@ -64,6 +65,13 @@ public class SubscribeToEventExample {
 
             pubSubClient.subscribeToEvents(subscription);
             System.out.println("Events Subscribed");
+            
+            // Wait for 20 seconds and call the cancel subscription
+            try{
+                Thread.sleep(10 * 1000);
+                subscription.cancel();
+            }catch(Exception ex){}
+            
         } catch (RuntimeException e) {
             System.err.println("Failed to subscribe to events: " + e.getMessage());
         }
@@ -100,6 +108,13 @@ public class SubscribeToEventExample {
 
             pubSubClient.subscribeToEventsStore(subscription);
             System.out.println("EventsStore Subscribed");
+            
+            // Wait for 20 seconds and call the cancel subscription
+            try{
+                Thread.sleep(20 * 1000);
+                subscription.cancel();
+            }catch(Exception ex){}
+            
         } catch (RuntimeException e) {
             System.err.println("Failed to subscribe to events store: " + e.getMessage());
         }
@@ -108,12 +123,8 @@ public class SubscribeToEventExample {
     public static void main(String[] args) throws InterruptedException {
         
         SubscribeToEventExample example = new SubscribeToEventExample();
-        example.subscribeToEvents();
+        //example.subscribeToEvents();
         example.subscribeToEventsStore();
-        
-        // Keep listening for events from channel
-        CountDownLatch latch = new CountDownLatch(1);
-        latch.await();  // This will keep the main thread alive
         
     }
 

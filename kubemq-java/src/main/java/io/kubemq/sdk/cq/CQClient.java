@@ -1,6 +1,5 @@
 package io.kubemq.sdk.cq;
 
-import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.KubeMQUtils;
 import io.kubemq.sdk.exception.GRPCException;
@@ -142,27 +141,27 @@ public class CQClient extends KubeMQClient {
      */
     public void subscribeToCommands(CommandsSubscription commandsSubscription) {
         commandsSubscription.validate();
-        StreamObserver<Kubemq.Request> commandSubscriptionObserver = new StreamObserver<Kubemq.Request>() {
-            @Override
-            public void onNext(Kubemq.Request messageReceive) {
-                log.debug("CommandsSubscription-> CommandMessageReceived Received: '{}'", messageReceive);
-                commandsSubscription.raiseOnReceiveMessage(CommandMessageReceived.decode(messageReceive));
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                log.error("Error in CommandsSubscription: ", t);
-                commandsSubscription.raiseOnError(t.getMessage());
-            }
-
-            @Override
-            public void onCompleted() {
-                log.debug("CommandsSubscription Stream completed.");
-            }
-        };
+//        StreamObserver<Kubemq.Request> commandSubscriptionObserver = new StreamObserver<Kubemq.Request>() {
+//            @Override
+//            public void onNext(Kubemq.Request messageReceive) {
+//                log.debug("CommandsSubscription-> CommandMessageReceived Received: '{}'", messageReceive);
+//                commandsSubscription.raiseOnReceiveMessage(CommandMessageReceived.decode(messageReceive));
+//            }
+//
+//            @Override
+//            public void onError(Throwable t) {
+//                log.error("Error in CommandsSubscription: ", t);
+//                commandsSubscription.raiseOnError(t.getMessage());
+//            }
+//
+//            @Override
+//            public void onCompleted() {
+//                log.debug("CommandsSubscription Stream completed.");
+//            }
+//        };
 
         Kubemq.Subscribe subscribe = commandsSubscription.encode(this.getClientId());
-        this.getAsyncClient().subscribeToRequests(subscribe, commandSubscriptionObserver);
+        this.getAsyncClient().subscribeToRequests(subscribe, commandsSubscription.getObserver());
     }
 
     /**
@@ -172,26 +171,26 @@ public class CQClient extends KubeMQClient {
      */
     public void subscribeToQueries(QueriesSubscription queriesSubscription) {
         queriesSubscription.validate();
-        StreamObserver<Kubemq.Request> querySubscriptionObserver = new StreamObserver<Kubemq.Request>() {
-            @Override
-            public void onNext(Kubemq.Request messageReceive) {
-                log.debug("QueriesSubscription-> QueryMessageReceived Received: '{}'", messageReceive);
-                queriesSubscription.raiseOnReceiveMessage(QueryMessageReceived.decode(messageReceive));
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                log.error("Error in QueriesSubscription: ", t);
-                queriesSubscription.raiseOnError(t.getMessage());
-            }
-
-            @Override
-            public void onCompleted() {
-                log.debug("QueriesSubscription Stream completed.");
-            }
-        };
+//        StreamObserver<Kubemq.Request> observer = new StreamObserver<Kubemq.Request>() {
+//            @Override
+//            public void onNext(Kubemq.Request messageReceive) {
+//                log.debug("QueriesSubscription-> QueryMessageReceived Received: '{}'", messageReceive);
+//                queriesSubscription.raiseOnReceiveMessage(QueryMessageReceived.decode(messageReceive));
+//            }
+//
+//            @Override
+//            public void onError(Throwable t) {
+//                log.error("Error in QueriesSubscription: ", t);
+//                queriesSubscription.raiseOnError(t.getMessage());
+//            }
+//
+//            @Override
+//            public void onCompleted() {
+//                log.debug("QueriesSubscription Stream completed.");
+//            }
+//        };
 
         Kubemq.Subscribe subscribe = queriesSubscription.encode(this.getClientId());
-        this.getAsyncClient().subscribeToRequests(subscribe, querySubscriptionObserver);
+        this.getAsyncClient().subscribeToRequests(subscribe, queriesSubscription.getObserver());
     }
 }

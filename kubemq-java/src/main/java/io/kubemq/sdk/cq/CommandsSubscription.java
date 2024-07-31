@@ -1,10 +1,10 @@
 package io.kubemq.sdk.cq;
 
+import io.grpc.stub.StreamObserver;
+import kubemq.Kubemq;
 import kubemq.Kubemq.Subscribe;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.function.Consumer;
 
@@ -12,12 +12,19 @@ import java.util.function.Consumer;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Slf4j
 public class CommandsSubscription {
 
     private String channel;
     private String group;
     private Consumer<CommandMessageReceived> onReceiveCommandCallback;
     private Consumer<String> onErrorCallback;
+    /**
+     * Observer for the subscription.
+     * This field is excluded from the builder and setter.
+     */
+    @Setter(onMethod_ = @__(@java.lang.SuppressWarnings("unused")))
+    private transient StreamObserver<Kubemq.Request> observer;
 
     public void raiseOnReceiveMessage(CommandMessageReceived receivedCommand) {
         if (onReceiveCommandCallback != null) {
@@ -28,6 +35,16 @@ public class CommandsSubscription {
     public void raiseOnError(String msg) {
         if (onErrorCallback != null) {
             onErrorCallback.accept(msg);
+        }
+    }
+
+    /**
+     * Cancel the subscription
+     */
+    public void cancel() {
+        if (observer != null) {
+            observer.onCompleted();
+            log.error("Subscription Cancelled");
         }
     }
 
@@ -48,6 +65,26 @@ public class CommandsSubscription {
                 .setSubscribeTypeData(Subscribe.SubscribeType.Commands)
                 .setSubscribeTypeDataValue(Subscribe.SubscribeType.Commands_VALUE)
                 .build();
+
+        observer = new StreamObserver<Kubemq.Request>() {
+            @Override
+            public void onNext(Kubemq.Request messageReceive) {
+                log.debug("CommandsSubscription-> CommandMessageReceived Received: '{}'", messageReceive);
+                raiseOnReceiveMessage(CommandMessageReceived.decode(messageReceive));
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error in CommandsSubscription: ", t);
+                raiseOnError(t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                log.debug("CommandsSubscription Stream completed.");
+            }
+        };
+
         return request;
     }
 

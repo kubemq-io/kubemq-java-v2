@@ -9,7 +9,10 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import io.kubemq.sdk.common.ServerInfo;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 
@@ -131,7 +134,9 @@ public abstract class KubeMQClient implements AutoCloseable {
                     .keepAliveTime(pingIntervalInSeconds == 0 ? 180 : pingIntervalInSeconds, TimeUnit.SECONDS)
                     .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 20 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                     .keepAliveWithoutCalls(keepAlive)
-                    .usePlaintext().build();
+                    .usePlaintext()
+                    .enableRetry()
+                    .build();
         }
 
         if (metadata != null) {
@@ -143,7 +148,32 @@ public abstract class KubeMQClient implements AutoCloseable {
             this.blockingStub = kubemqGrpc.newBlockingStub(managedChannel);
             this.asyncStub = kubemqGrpc.newStub(managedChannel);
         }
+
+        // Add listener to handle reconnections
+        addChannelStateListener();
+
         log.info("Client initialized for KubeMQ address: {}", address);
+    }
+
+    private void addChannelStateListener() {
+        managedChannel.notifyWhenStateChanged(ConnectivityState.TRANSIENT_FAILURE, this::handleStateChange);
+        managedChannel.notifyWhenStateChanged(ConnectivityState.SHUTDOWN, this::handleStateChange);
+    }
+
+    private void handleStateChange() {
+        ConnectivityState state = managedChannel.getState(false);
+        //log.debug("Channel state changed to: {}", state);
+        switch (state) {
+            case TRANSIENT_FAILURE:
+                // Trigger reconnection logic as it's connection failure
+                log.debug("Channel is disconnected, Reconnecting...");
+                managedChannel.resetConnectBackoff();
+                addChannelStateListener();
+                break;
+            case SHUTDOWN:
+                log.debug("Channel is shutdown.");
+                break;
+        }
     }
 
     /**
@@ -165,8 +195,7 @@ public abstract class KubeMQClient implements AutoCloseable {
     }
 
     /**
-     * Closes the gRPC channel and shuts down the client.
-     * This method should be called to release resources when the client is no longer needed.
+     * Closes the gRPC channel and releases any resources associated with it.
      */
     @Override
     public void close() {
@@ -174,10 +203,19 @@ public abstract class KubeMQClient implements AutoCloseable {
             try {
                 managedChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                log.error("Failed to shut down the channel", e);
-                Thread.currentThread().interrupt();
+                log.error("Channel shutdown interrupted", e);
             }
         }
+    }
+
+    /**
+     * Sets the logging level for the client.
+     * This method configures the log level based on the specified Level enum.
+     */
+    private void setLogLevel() {
+        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+        ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("ROOT");
+        rootLogger.setLevel(ch.qos.logback.classic.Level.valueOf(logLevel.name()));
     }
 
     /**
@@ -196,7 +234,7 @@ public abstract class KubeMQClient implements AutoCloseable {
                     .version(pingResult.getVersion())
                     .serverStartTime(pingResult.getServerStartTime())
                     .serverUpTimeSeconds(pingResult.getServerUpTimeSeconds())
-                            .build();
+                    .build();
         } catch (StatusRuntimeException e) {
             log.error("Ping failed", e);
             throw new RuntimeException(e);
@@ -204,19 +242,33 @@ public abstract class KubeMQClient implements AutoCloseable {
     }
 
     /**
-     * Sets the logging level for the client.
-     * This method configures the log level based on the specified Level enum.
-     */
-    private void setLogLevel() {
-        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-        ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("ROOT");
-        rootLogger.setLevel(ch.qos.logback.classic.Level.valueOf(logLevel.name()));
-    }
-
-    /**
      * Enum representing the log levels supported by the KubeMQClient.
      */
     public enum Level {
         TRACE, DEBUG, INFO, WARN, ERROR
+    }
+
+    /**
+     * MetadataInterceptor is a gRPC client interceptor for adding metadata (such as authorization tokens) to outgoing requests.
+     * This class is used internally by KubeMQClient to ensure secure communication with the KubeMQ server.
+     */
+    @AllArgsConstructor
+    public class MetadataInterceptor implements ClientInterceptor {
+
+        private Metadata metadata;
+
+        @Override
+        public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
+                MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
+            return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
+                    next.newCall(method, callOptions)) {
+
+                @Override
+                public void start(Listener<RespT> responseListener, Metadata headers) {
+                    headers.merge(metadata);
+                    super.start(responseListener, headers);
+                }
+            };
+        }
     }
 }
