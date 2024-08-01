@@ -245,7 +245,7 @@ public abstract class KubeMQClient implements AutoCloseable {
      * Enum representing the log levels supported by the KubeMQClient.
      */
     public enum Level {
-        TRACE, DEBUG, INFO, WARN, ERROR
+        TRACE, DEBUG, INFO, WARN, ERROR, OFF
     }
 
     /**

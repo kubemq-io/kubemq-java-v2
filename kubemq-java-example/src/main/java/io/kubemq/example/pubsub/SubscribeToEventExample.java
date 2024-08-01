@@ -9,7 +9,6 @@ import io.kubemq.sdk.pubsub.EventsSubscription;
 import io.kubemq.sdk.pubsub.PubSubClient;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 
