@@ -3,18 +3,15 @@ package io.kubemq.sdk.queues;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.KubeMQUtils;
 import kubemq.Kubemq;
-import kubemq.Kubemq.SendQueueMessageResult;
 import kubemq.kubemqGrpc;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
