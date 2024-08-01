@@ -84,8 +84,8 @@ public abstract class KubeMQClient implements AutoCloseable {
         this.tls = tls;
         this.tlsCertFile = tlsCertFile;
         this.tlsKeyFile = tlsKeyFile;
-        this.maxReceiveSize = maxReceiveSize;
-        this.reconnectIntervalSeconds = reconnectIntervalSeconds;
+        this.maxReceiveSize = maxReceiveSize <=0 ?(1024 * 1024 * 100):maxReceiveSize; // 100MB
+        this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0?5:reconnectIntervalSeconds;
         this.keepAlive = keepAlive;
         this.pingIntervalInSeconds = pingIntervalInSeconds;
         this.pingTimeoutInSeconds = pingTimeoutInSeconds;
@@ -118,7 +118,7 @@ public abstract class KubeMQClient implements AutoCloseable {
                 managedChannel = NettyChannelBuilder.forTarget(address)
                         .sslContext(sslContext)
                         .negotiationType(NegotiationType.TLS)
-                        .maxInboundMessageSize(maxReceiveSize == 0 ? 4194304 : maxReceiveSize) // Default 4MIB
+                        .maxInboundMessageSize(maxReceiveSize)
                         .keepAliveTime(pingIntervalInSeconds == 0 ? 180 : pingIntervalInSeconds, TimeUnit.SECONDS)
                         .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 20 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                         .keepAliveWithoutCalls(keepAlive)
@@ -130,7 +130,7 @@ public abstract class KubeMQClient implements AutoCloseable {
             }
         } else {
             managedChannel = ManagedChannelBuilder.forTarget(address)
-                    .maxInboundMessageSize(maxReceiveSize == 0 ? 4194304 : maxReceiveSize) // Default 4MIB
+                    .maxInboundMessageSize(maxReceiveSize)
                     .keepAliveTime(pingIntervalInSeconds == 0 ? 180 : pingIntervalInSeconds, TimeUnit.SECONDS)
                     .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 20 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                     .keepAliveWithoutCalls(keepAlive)

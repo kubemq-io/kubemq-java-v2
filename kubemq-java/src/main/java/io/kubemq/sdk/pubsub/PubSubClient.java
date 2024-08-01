@@ -218,28 +218,7 @@ public class PubSubClient extends KubeMQClient {
         try {
             log.debug("Subscribing to events");
             subscription.validate();
-            kubemq.Kubemq.Subscribe subscribe = subscription.encode(this.getClientId());
-//            kubeMQClient.getClient().subscribeToEvents(subscribe);
-
-//            StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
-//                @Override
-//                public void onNext(Kubemq.EventReceive messageReceive) {
-//                    log.debug("Event Received Event: EventID:'{}', Channel:'{}', Metadata: '{}'", messageReceive.getEventID(), messageReceive.getChannel(), messageReceive.getMetadata());
-//                    // Send the received message to the consumer
-//                    subscription.raiseOnReceiveMessage(EventMessageReceived.decode(messageReceive));
-//                }
-//
-//                @Override
-//                public void onError(Throwable t) {
-//                    log.error("Error in StreamObserver: ", t);
-//                    subscription.raiseOnError(t.getMessage());
-//                }
-//
-//                @Override
-//                public void onCompleted() {
-//                    log.debug("StreamObserver completed.");
-//                }
-//            };
+            kubemq.Kubemq.Subscribe subscribe = subscription.encode(this.getClientId(),this);
             this.getAsyncClient().subscribeToEvents(subscribe, subscription.getObserver());
 
         } catch (Exception e) {
@@ -258,27 +237,7 @@ public class PubSubClient extends KubeMQClient {
         try {
             log.debug("Subscribing to events store");
             subscription.validate();
-            kubemq.Kubemq.Subscribe subscribe = subscription.encode(this.getClientId());
-//            StreamObserver<Kubemq.EventReceive> observer = new StreamObserver<Kubemq.EventReceive>() {
-//                @Override
-//                public void onNext(Kubemq.EventReceive messageReceive) {
-//                    log.debug("Event Received Event: EventID:'{}', Channel:'{}', Metadata: '{}'", messageReceive.getEventID(), messageReceive.getChannel(), messageReceive.getMetadata());
-//                    // Send the received message to the consumer
-//                    subscription.raiseOnReceiveMessage(EventStoreMessageReceived.decode(messageReceive));
-//                }
-//
-//                @Override
-//                public void onError(Throwable t) {
-//                    log.error("Error in StreamObserver: ", t);
-//                    subscription.raiseOnError(t.getMessage());
-//                }
-//
-//                @Override
-//                public void onCompleted() {
-//                    log.debug("StreamObserver completed.");
-//                }
-//            };
-
+            kubemq.Kubemq.Subscribe subscribe = subscription.encode(this.getClientId(),this);
             this.getAsyncClient().subscribeToEvents(subscribe, subscription.getObserver());
 
         } catch (Exception e) {
