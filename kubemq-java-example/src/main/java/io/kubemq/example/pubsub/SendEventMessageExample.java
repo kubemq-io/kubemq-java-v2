@@ -1,5 +1,6 @@
 package io.kubemq.example.pubsub;
 
+import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.pubsub.*;
 import java.util.HashMap;
