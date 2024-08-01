@@ -1,7 +1,6 @@
 package io.kubemq.example.cq;
 
 import io.kubemq.sdk.cq.*;
-import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.exception.GRPCException;
 
