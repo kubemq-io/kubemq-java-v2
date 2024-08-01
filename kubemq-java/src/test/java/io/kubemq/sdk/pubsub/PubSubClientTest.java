@@ -1,6 +1,5 @@
 package io.kubemq.sdk.pubsub;
 
-import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ChannelDecoder;
 import kubemq.Kubemq;
@@ -8,7 +7,6 @@ import kubemq.kubemqGrpc;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
