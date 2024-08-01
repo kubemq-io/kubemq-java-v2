@@ -5,6 +5,7 @@ import kubemq.Kubemq;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -73,7 +74,7 @@ public class EventsSubscription {
     public void cancel() {
         if (observer != null) {
             observer.onCompleted();
-            log.error("Subscription Cancelled");
+            log.debug("Subscription Cancelled");
         }
     }
 
@@ -98,7 +99,7 @@ public class EventsSubscription {
      * @param clientId The client ID to use for the subscription.
      * @return The encoded KubeMQ Subscribe object.
      */
-    public Kubemq.Subscribe encode(String clientId) {
+    public Kubemq.Subscribe encode(String clientId, PubSubClient pubSubClient) {
         Kubemq.Subscribe subscribe = Kubemq.Subscribe.newBuilder()
                 .setChannel(channel)
                 .setGroup(group != null ?group :"")
@@ -117,16 +118,51 @@ public class EventsSubscription {
 
             @Override
             public void onError(Throwable t) {
-                log.error("Error in StreamObserver: ", t);
+                log.error("Error:-- > "+t.getMessage());
                 raiseOnError(t.getMessage());
+                // IF gRPC exception attempt to retry
+                if(t instanceof io.grpc.StatusRuntimeException){
+                    io.grpc.StatusRuntimeException se =(io.grpc.StatusRuntimeException)t;
+                    reconnect(pubSubClient);
+                }
             }
-
             @Override
             public void onCompleted() {
                 log.debug("StreamObserver completed.");
             }
         };
         return subscribe;
+    }
+
+    private AtomicInteger retryCount = new AtomicInteger(0);
+    private void reconnect(PubSubClient pubSubClient) {
+
+        int maxRetries = 50000;  // Set your maximum retry attempts
+        long retryInterval = 1000 * pubSubClient.getReconnectIntervalSeconds();
+
+        while (retryCount.get() < maxRetries) {
+            try {
+                log.debug("Attempting to re-subscribe... Attempt #" + retryCount.incrementAndGet());
+                // Your method to subscribe again
+                pubSubClient.subscribeToEvents(this);
+                log.debug("Re-subscribed successfully");
+                break;
+            } catch (Exception e) {
+                log.error("Re-subscribe attempt failed", e);
+                try {
+                    Thread.sleep(retryInterval);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.error("Re-subscribe sleep interrupted", ie);
+                    break;
+                }
+            }
+        }
+
+        if (retryCount.get() >= maxRetries) {
+            log.error("Max retries reached. Could not re-subscribe to events.");
+            raiseOnError("Max retries reached. Could not re-subscribe to events.");
+        }
     }
 
     @Override

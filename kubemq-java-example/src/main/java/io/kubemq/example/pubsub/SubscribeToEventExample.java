@@ -1,5 +1,6 @@
 package io.kubemq.example.pubsub;
 
+import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.pubsub.EventMessageReceived;
 import io.kubemq.sdk.pubsub.EventStoreMessageReceived;
@@ -9,6 +10,7 @@ import io.kubemq.sdk.pubsub.EventsSubscription;
 import io.kubemq.sdk.pubsub.PubSubClient;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 
@@ -28,6 +30,7 @@ public class SubscribeToEventExample {
         pubSubClient = PubSubClient.builder()
                 .address(address)
                 .clientId(clientId)
+                .logLevel(KubeMQClient.Level.DEBUG)
                 .build();
         // Ping to test Connection is succesffull
         ServerInfo pingResult = pubSubClient.ping();
@@ -108,9 +111,9 @@ public class SubscribeToEventExample {
             pubSubClient.subscribeToEventsStore(subscription);
             System.out.println("EventsStore Subscribed");
             
-            // Wait for 20 seconds and call the cancel subscription
+            // Wait for 10 seconds and call the cancel subscription
             try{
-                Thread.sleep(20 * 1000);
+                Thread.sleep(10 * 1000);
                 subscription.cancel();
             }catch(Exception ex){}
             
@@ -122,8 +125,12 @@ public class SubscribeToEventExample {
     public static void main(String[] args) throws InterruptedException {
         
         SubscribeToEventExample example = new SubscribeToEventExample();
-        //example.subscribeToEvents();
+        example.subscribeToEvents();
         example.subscribeToEventsStore();
+        
+          // Keep the main thread running to handle responses
+//        CountDownLatch latch = new CountDownLatch(1);
+//        latch.await();  // This will keep the main thread alive
         
     }
 

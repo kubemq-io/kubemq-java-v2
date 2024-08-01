@@ -6,6 +6,7 @@ import kubemq.Kubemq.Subscribe;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 @Data
@@ -57,7 +58,7 @@ public class CommandsSubscription {
         }
     }
 
-    public kubemq.Kubemq.Subscribe encode(String clientId) {
+    public kubemq.Kubemq.Subscribe encode(String clientId, CQClient cQClient) {
         Subscribe request =  Subscribe.newBuilder()
                 .setChannel(this.channel)
                 .setGroup(this.group != null ? this.group : "")
@@ -75,9 +76,15 @@ public class CommandsSubscription {
 
             @Override
             public void onError(Throwable t) {
-                log.error("Error in CommandsSubscription: ", t);
+                log.error("Error:-- > "+t.getMessage());
                 raiseOnError(t.getMessage());
+                // IF gRPC exception attempt to retry
+                if(t instanceof io.grpc.StatusRuntimeException){
+                    io.grpc.StatusRuntimeException se =(io.grpc.StatusRuntimeException)t;
+                    reconnect(cQClient);
+                }
             }
+
 
             @Override
             public void onCompleted() {
@@ -86,6 +93,37 @@ public class CommandsSubscription {
         };
 
         return request;
+    }
+
+    private AtomicInteger retryCount = new AtomicInteger(0);
+    private void reconnect(CQClient cQClient) {
+
+        int maxRetries = 50000;  // Set your maximum retry attempts
+        long retryInterval = 1000 * cQClient.getReconnectIntervalSeconds();
+
+        while (retryCount.get() < maxRetries) {
+            try {
+                log.debug("Attempting to re-subscribe... Attempt #" + retryCount.incrementAndGet());
+                // Your method to subscribe again
+                cQClient.subscribeToCommands(this);
+                log.debug("Re-subscribed successfully");
+                break;
+            } catch (Exception e) {
+                log.error("Re-subscribe attempt failed", e);
+                try {
+                    Thread.sleep(retryInterval);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.error("Re-subscribe sleep interrupted", ie);
+                    break;
+                }
+            }
+        }
+
+        if (retryCount.get() >= maxRetries) {
+            log.error("Max retries reached. Could not re-subscribe to commands.");
+            raiseOnError("Max retries reached. Could not re-subscribe to commands.");
+        }
     }
 
     @Override
