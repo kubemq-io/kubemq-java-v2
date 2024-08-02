@@ -1,211 +1,429 @@
-# Java
+# KubeMQ Java SDK
 
-The **KubeMQ SDK for Java** enables Java developers to communicate with [KubeMQ](https://kubemq.io/) server.
-
+The **KubeMQ SDK for Java** enables Java developers to seamlessly communicate with the [KubeMQ](https://kubemq.io/) server, implementing various communication patterns such as Events, EventStore, Commands, Queries, and Queues.
+<!-- TOC -->
+* [KubeMQ Java SDK](#kubemq-java-sdk)
+  * [Prerequisites](#prerequisites)
+  * [Installation](#installation)
+  * [Running Examples](#running-examples)
+  * [Building from Source](#building-from-source)
+  * [SDK Overview](#sdk-overview)
+  * [KubeMQ Client Configuration](#kubemq-client-configuration)
+    * [Configuration Parameters](#configuration-parameters)
+    * [Example Usage](#example-usage)
+    * [Notes](#notes)
+  * [Optional Ping Operation](#optional-ping-operation)
+    * [Ping Method](#ping-method)
+      * [Return Value: `ServerInfo`](#return-value-serverinfo)
+      * [Example Usage](#example-usage-1)
+    * [When to Use Ping](#when-to-use-ping)
+    * [Important Notes](#important-notes)
+  * [KubeMQ Message Payload Parameters](#kubemq-message-payload-parameters)
+    * [Notes:](#notes-1)
+    * [Example Usage (PubSub):](#example-usage-pubsub)
+  * [PubSub Events Operations](#pubsub-events-operations)
+    * [Create Channel](#create-channel)
+      * [Request Parameters](#request-parameters)
+      * [Response](#response)
+      * [Example](#example)
+    * [Delete Channel](#delete-channel)
+      * [Request Parameters](#request-parameters-1)
+      * [Response](#response-1)
+      * [Example](#example-1)
+    * [List Channels](#list-channels)
+      * [Request Parameters](#request-parameters-2)
+      * [Response](#response-2)
+      * [Example](#example-2)
+    * [Send Event Message](#send-event-message)
+      * [Request: `EventMessage` Class Attributes](#request-eventmessage-class-attributes)
+      * [Response](#response-3)
+      * [Example](#example-3)
+    * [Subscribe To Events Messages](#subscribe-to-events-messages)
+      * [Request: `EventsSubscription` Class Attributes](#request-eventssubscription-class-attributes)
+      * [Response](#response-4)
+      * [Callback: `EventMessageReceived` Class Detail](#callback-eventmessagereceived-class-details)
+      * [Example](#example-4)
+  * [PubSub EventsStore Operations](#pubsub-eventsstore-operations)
+    * [Create Channel](#create-channel-1)
+      * [Request Parameters](#request-parameters-3)
+      * [Response](#response-5)
+      * [Example](#example-5)
+    * [Delete Channel](#delete-channel-1)
+      * [Request Parameters](#request-parameters-4)
+      * [Response](#response-6)
+      * [Example](#example-6)
+    * [List Channels](#list-channels-1)
+      * [Request Parameters](#request-parameters-5)
+      * [Response](#response-7)
+      * [Example](#example-7)
+    * [Send EventStore Message](#send-eventstore-message)
+      * [Request: `EventStoreMessage` Class Attributes](#request-eventstoremessage-class-attributes)
+      * [Response](#response-8)
+      * [Example](#example-8)
+    * [Subscribe To EventsStore Messages](#subscribe-to-eventsstore-messages)
+      * [Request: `EventsStoreSubscription` Class Attributes](#request-eventsstoresubscription-class-attributes)
+      * [Response](#response-9)
+      * [Callback: `EventStoreMessageReceived` Class Detail](#callback-eventstoremessagereceived-class-details)
+      * [Example](#example-9)
+  * [Commands & Queries – Commands Operations](#commands--queries--commands-operations)
+    * [Create Channel](#create-channel-2)
+      * [Request Parameters](#request-parameters-6)
+      * [Response](#response-10)
+      * [Example](#example-10)
+    * [Delete Channel](#delete-channel-2)
+      * [Request Parameters](#request-parameters-7)
+      * [Response](#response-11)
+      * [Example](#example-11)
+    * [List Channels](#list-channels-2)
+      * [Request Parameters](#request-parameters-8)
+      * [Response](#response-12)
+      * [Example](#example-12)
+    * [Send Command Request](#send-command-request)
+      * [Request: `CommandMessage` Class Attributes](#request-commandmessage-class-attributes)
+      * [Response: `CommandResponseMessage` Class Attributes](#response-commandresponsemessage-class-attributes)
+      * [Example](#example-13)
+    * [Subscribe To Commands](#subscribe-to-commands)
+      * [Request: `CommandsSubscription` Class Attributes](#request-commandssubscription-class-attributes)
+      * [Response](#response-13)
+      * [Callback: `CommandMessageReceived` Class Attributes](#callback-commandmessagereceived-class-attributes)
+      * [Command Response: `CommandResponseMessage` Class Attributes](#command-response-commandresponsemessage-class-attributes)
+      * [Example](#example-14)
+  * [Commands & Queries – Queries Operations](#commands--queries--queries-operations)
+    * [Create Channel](#create-channel-3)
+      * [Request Parameters](#request-parameters-9)
+      * [Response](#response-14)
+      * [Example](#example-15)
+    * [Delete Channel](#delete-channel-3)
+      * [Request Parameters](#request-parameters-10)
+      * [Response](#response-15)
+      * [Example](#example-16)
+    * [List Channels](#list-channels-3)
+      * [Request Parameters](#request-parameters-11)
+      * [Response](#response-16)
+      * [Example](#example-17)
+    * [Send Query Request](#send-query-request)
+      * [Request: `QueryMessage` Class Attributes](#request-querymessage-class-attributes)
+      * [Response: `QueryResponseMessage` Class Attributes](#response-queryresponsemessage-class-attributes)
+      * [Example](#example-18)
+    * [Subscribe To Queries](#subscribe-to-queries)
+      * [Request: `QueriesSubscription` Class Attributes](#request-queriessubscription-class-attributes)
+      * [Response](#response-17)
+      * [Callback: `QueryMessageReceived` Class Attributes](#callback-querymessagereceived-class-attributes)
+      * [Query Response: `QueryResponseMessage` Class Attributes](#query-response-queryresponsemessage-class-attributes)
+      * [Example](#example-19)
+  * [Queues Operations](#queues-operations)
+    * [Create Channel](#create-channel-4)
+      * [Request Parameters](#request-parameters-12)
+      * [Response](#response-18)
+      * [Example](#example-20)
+    * [Delete Channel](#delete-channel-4)
+      * [Request Parameters](#request-parameters-13)
+      * [Response](#response-19)
+      * [Example](#example-21)
+    * [List Channels](#list-channels-4)
+      * [Request Parameters](#request-parameters-14)
+      * [Response](#response-20)
+      * [Example](#example-22)
+    * [Send Queue Message](#send-queue-message)
+      * [Request: `QueueMessage` Class Attributes](#request-queuemessage-class-attributes)
+      * [Response: `QueueSendResult` Class Attributes](#response-queuesendresult-class-attributes)
+      * [Example](#example-23)
+    * [Receive Queue Messages](#receive-queue-messages)
+      * [Request: `QueuesPollRequest` Class Attributes](#request-queuespollrequest-class-attributes)
+      * [Response: `QueuesPollResponse` Class Attributes](#response-queuespollresponse-class-attributes)
+      * [Example](#example-24)
+      * [Message Handling Options:](#message-handling-options)
+      * [Additional Example: Bulk Message Handling](#additional-example-bulk-message-handling)
+<!-- TOC -->
 ## Prerequisites
 
 - Java Development Kit (JDK) 8 or higher
 - Maven
 - KubeMQ server running locally or accessible over the network
 
-## Install KubeMQ Community Edition
-Please visit [KubeMQ Community](https://github.com/kubemq-io/kubemq-community) for intallation steps.
 
-## General SDK description
-The SDK implements all communication patterns available through the KubeMQ server:
-- Events
-- EventStore
-- Command
-- Query
-- Queue
+## Installation
 
-### Installing
+The recommended way to use the SDK for Java in your project is to add it as a dependency in Maven:
 
-The recommended way to use the SDK for Java in your project is to consume it from Maven.
+```xml
+<dependency>
+   <groupId>io.kubemq.sdk</groupId>
+   <artifactId>kubemq-sdk-Java</artifactId>
+   <version>2.0.0</version>
+</dependency>
+```
 
-    <dependency>
-       <groupId>io.kubemq.sdk</groupId>
-       <artifactId>kubemq-sdk-Java</artifactId>
-       <version>2.0.0</version>
-    </dependency>
+To build with Gradle, add the dependency to your `build.gradle` file:
 
-To build with Gradle, add the dependency below to your build.gradle file.
-
-``` java
+```java
 compile group: 'io.kubemq.sdk', name: 'kubemq-sdk-Java', version: '2.0.0'
 ```
 
-## Running the examples
+## Running Examples
 
-The [examples](https://github.com/kubemq-io/kubemq-java-example)
-are standalone projects that showcase the usage of the SDK.
+The [examples](https://github.com/kubemq-io/kubemq-java-example) are standalone projects that showcase the usage of the SDK. To run the examples, ensure you have a running instance of KubeMQ. Import the project into any IDE of your choice (e.g., IntelliJ, Eclipse, NetBeans). The example project contains three packages demonstrating different implementations:
 
-To run the examples, you need to have a running instance of KubeMQ.
-Import the project in any IDE of choice like IntelliJ , Eclipse or Netbeans .
-You will see three packages in example project which contains files to showing
-implementation.
-Packages are:
+- `io.kubemq.example.cq`: Examples related to Commands and Queries
+- `io.kubemq.example.pubsub`: Examples related to Events and EventStore
+- `io.kubemq.example.queues`: Examples related to Queues
 
-    io.kubemq.example.cq
-    io.kubemq.example.pubsub
-    io.kubemq.example.queues
-**cq** package contains the example related to Command and Query
-**pubsub** package contains the example related to Event and EventStore
-**queues** package contains the example related to Queues
+## Building from Source
 
+Once you check out the code from GitHub, you can build it using Maven:
 
-## Building from source
-
-Once you check out the code from GitHub, you can build it using Maven.
-
-``` bash
+```bash
 mvn clean install
 ```
-Above command will runt the test and install the jar file to your local maven repository.
-If you wish to skip the test then use below command to build.
+
+This command will run the tests and install the JAR file to your local Maven repository. To skip the tests, use the following command:
+
 ```bash
-mvn clean install -DskipTests=true
+mvn clean install -D skipTests=true
 ```
 
-## Payload Details
+## SDK Overview
 
-- **Metadata:** The metadata allows us to pass additional information with the event. Can be in any form that can be presented as a string, i.e., struct, JSON, XML and many more.
-- **Body:** The actual content of the event. Can be in any form that is serializable into a byte array, i.e., string, struct, JSON, XML, Collection, binary file and many more.
-- **ClientID:** Displayed in logs, tracing, and KubeMQ dashboard(When using Events Store, it must be unique).
-- **Tags:** Set of Key value pair that help categorize the message
+The SDK implements all communication patterns available through the KubeMQ server:
+- PubSub
+  - Events
+  - EventStore
+- Commands & Queries (CQ)
+  - Commands
+  - Queries
+- Queues
 
-# KubeMQ PubSub Client Examples
-Below examples demonstrating the usage of KubeMQ PubSub (Event and EventStore) client. The examples include creating, deleting, listing channels, and sending/subscribing event messages.
+## KubeMQ Client Configuration
 
-## Project Structure
+All KubeMQ clients (PubSubClient, QueuesClient, and CQClient) share the same configuration parameters. To create any client instance, you need to use the respective builder with at least two mandatory parameters: `address` (KubeMQ server address) and `clientId`.
 
-- `CreateChannelExample.java`: Demonstrates creating event & eventStore channels.
-- `DeleteChannelExample.java`: Demonstrates deleting event & eventStore channels.
-- `ListEventsChanneExample.java`: Demonstrates listing event & eventStore channels.
-- `SendEventMessageExample.java`: Demonstrates sending message in event & eventStore channels.
-- `SubscribeToEventExample.java`: Demonstrates subscribing to event & eventStore channels.
+### Configuration Parameters
 
-## Getting Started
+The table below describes all available configuration parameters:
 
-### Construct the PubSubClient
-For executing PubSub operation we have to create the instance of PubSubClient, it's instance can created with minimum two parameter `address` (KubeMQ server address) & `clientId` . With these two parameter plainText connection are established. Below Table Describe the Parameters available for establishing connection.
-### PubSubClient Accepted Configuration
+| Name                     | Type     | Description                                                   | Default Value     | Mandatory |
+|--------------------------|----------|---------------------------------------------------------------|-------------------|-----------|
+| address                  | String   | The address of the KubeMQ server.                             | None              | Yes       |
+| clientId                 | String   | The client ID used for authentication.                        | None              | Yes       |
+| authToken                | String   | The authorization token for secure communication.             | None              | No        |
+| tls                      | boolean  | Indicates if TLS (Transport Layer Security) is enabled.       | false             | No        |
+| tlsCertFile              | String   | The path to the TLS certificate file.                         | None              | No (Yes if `tls` is true) |
+| tlsKeyFile               | String   | The path to the TLS key file.                                 | None              | No (Yes if `tls` is true) |
+| maxReceiveSize           | int      | The maximum size of the messages to receive (in bytes).       | 104857600 (100MB) | No        |
+| reconnectIntervalSeconds | int      | The interval in seconds between reconnection attempts.        | 5                 | No        |
+| keepAlive                | boolean  | Indicates if the connection should be kept alive.             | false             | No        |
+| pingIntervalInSeconds    | int      | The interval in seconds between ping messages.                | None              | No        |
+| pingTimeoutInSeconds     | int      | The timeout in seconds for ping messages.                     | None              | No        |
+| logLevel                 | Level    | The logging level to use.                                     | Level.INFO        | No        |
 
-| Name                     | Type     | Description                                                   | Default Value           | Mandatory |
-|--------------------------|----------|---------------------------------------------------------------|-------------------------|-----------|
-| address                  | String   | The address of the KubeMQ server.                             | None                    | Yes       |
-| clientId                 | String   | The client ID used for authentication.                        | None                    | Yes       |
-| authToken                | String   | The authorization token for secure communication.             | None                    | No        |
-| tls                      | boolean  | Indicates if TLS (Transport Layer Security) is enabled.       | None                    | No        |
-| tlsCertFile              | String   | The path to the TLS certificate file.                         | None                    | No (Yes if `tls` is true) |
-| tlsKeyFile               | String   | The path to the TLS key file.                                 | None                    | No (Yes if `tls` is true) |
-| maxReceiveSize           | int      | The maximum size of the messages to receive (in bytes).       | 104857600 (100MB)       | No        |
-| reconnectIntervalSeconds | int      | The interval in seconds between reconnection attempts.        | 5                       | No        |
-| keepAlive                | boolean  | Indicates if the connection should be kept alive.             | None                    | No        |
-| pingIntervalInSeconds    | int      | The interval in seconds between ping messages.                | None                    | No        |
-| pingTimeoutInSeconds     | int      | The timeout in seconds for ping messages.                     | None                    | No        |
-| logLevel                 | Level    | The logging level to use.                                     | Level. INFO              | No        |
+### Example Usage
 
-### PubSubClient connection establishment example code
-
- ```java
- PubSubClient pubSubClient = PubSubClient.builder()
-                 .address(address)
-                 .clientId(clientId)
-                 .build();
-```              
-
-Below example demonstrate to construct PubSubClient with ssl and other configurations:
- ```java
- PubSubClient pubSubClient = PubSubClient.builder()
-                 .address(address)
-                 .clientId(clientId)
-                 .authToken("authToken") 
-                 .tls(true) 
-                 .tlsCertFile("path/to/cert/file") 
-                 .tlsKeyFile("path/to/key/file") 
-                 .maxReceiveSize(4 * 1048576)  // 4 MB
-                 .reconnectIntervalSeconds(10)
-                 .keepAlive(true) 
-                 .pingIntervalInSeconds(5) 
-                 .pingTimeoutInSeconds(10) 
-                 .logLevel(Level.INFO)
-                 .build();
-```    
-
-**Ping To KubeMQ server**
-You can ping the server to check connection is established or not.
-#### Request: `NONE`
-
-
-#### Response: `ServerInfo` Class Attributes
-
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| host                | String | The host of the server.                    |
-| version             | String | The version of the server.                 |
-| serverStartTime     | long   | The start time of the server (in seconds). |
-| serverUpTimeSeconds | long   | The uptime of the server (in seconds).     |
+Here's an example of how to create a client instance (using PubSubClient as an example):
 
 ```java
-ServerInfo pingResult = pubSubClient.ping();
-System.out.println("Ping Response: " + pingResult.toString());
-
+PubSubClient pubSubClient = PubSubClient.builder()
+    .address("localhost:50000")
+    .clientId("test-client-id")
+    .authToken("your-auth-token")
+    .tls(true)
+    .tlsCertFile("/path/to/cert.pem")
+    .tlsKeyFile("/path/to/key.pem")
+    .maxReceiveSize(5 * 1024 * 1024)  // 5 MB
+    .reconnectIntervalSeconds(10)
+    .keepAlive(true)
+    .pingIntervalInSeconds(30)
+    .pingTimeoutInSeconds(10)
+    .logLevel(Level.DEBUG)
+    .build();
 ```
-**PubSub CreateEventsChannel Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to subscribe   | None          | Yes       |
 
+Replace `PubSubClient` with `QueuesClient` or `CQClient` to create instances of other client types. The configuration parameters remain the same for all client types.
 
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelCreated    | boolean| Channel created true/false|    
+### Notes
+
+- For secure connections, set `tls` to `true` and provide the paths to your TLS certificate and key files.
+- Adjust `maxReceiveSize` based on your expected message sizes to optimize performance.
+- Fine-tune `reconnectIntervalSeconds`, `keepAlive`, `pingIntervalInSeconds`, and `pingTimeoutInSeconds` based on your network conditions and requirements.
+- Choose an appropriate `logLevel` for your development or production environment.
+
+Remember to handle any exceptions that might be thrown during client creation, such as connection errors or invalid configuration parameters.
+
+## Optional Ping Operation
+
+All KubeMQ clients (PubSubClient, QueuesClient, and CQClient) provide an optional `ping()` method to verify connectivity with the KubeMQ server. This method is not required for normal operations and should be used sparingly.
+
+### Ping Method
 
 ```java
-public void createEventsChannel() {
-        try {
-            boolean isChannelCreated = pubSubClient.createEventsChannel(eventChannelName);
-            System.out.println("EventsChannel created: " + isChannelCreated);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to create events channel: " + e.getMessage());
-        }
-    }
+ServerInfo ping() throws IOException
 ```
-**PubSub CreateEventsStoreChannel Example:**
 
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to subscribe   | None          | Yes       |
+#### Return Value: `ServerInfo`
 
+The `ping()` method returns a `ServerInfo` object with the following attributes:
 
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelCreated    | boolean| Channel created true/false|    
-----------------------------------------------------------------------------
-```java 
-    public void createEventsStoreChannel() {
-        try {
-            boolean isChannelCreated = pubSubClient.createEventsStoreChannel(eventStoreChannelName);
-            System.out.println("EventsStoreChannel created: " + isChannelCreated);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to create events store channel: " + e.getMessage());
-        }
-    }
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| host | String | The host address of the KubeMQ server |
+| version | String | The version of the KubeMQ server |
+| serverStartTime | long | The start time of the server (in seconds since epoch) |
+| serverUpTimeSeconds | long | The uptime of the server in seconds |
+
+#### Example Usage
+
+```java
+try {
+    ServerInfo serverInfo = client.ping();
+    System.out.println("Successfully connected to KubeMQ server: " + serverInfo.getHost());
+} catch (IOException e) {
+    System.err.println("Failed to ping KubeMQ server: " + e.getMessage());
+}
 ```
-**PubSub ListEventsChannel Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to search   | None          | No       |
+
+### When to Use Ping
+
+The ping operation is optional and should be used judiciously. Here are some appropriate scenarios for using ping:
+
+1. **Initial Connection Verification**: You may use ping once after creating the client to verify the initial connection.
+
+2. **Troubleshooting**: If you suspect connectivity issues, ping can help diagnose if the problem is with the connection to the KubeMQ server.
+
+3. **Long Periods of Inactivity**: In applications with long periods of inactivity, you might use ping to check if the connection is still alive before performing an operation.
+
+### Important Notes
+
+- **Not Required for Regular Operations**: The ping operation is not needed for regular message sending or receiving operations. The client handles connection management internally.
+
+- **Performance Consideration**: Excessive use of ping can introduce unnecessary network traffic and potential performance overhead.
+
+- **Not a Guarantee**: A successful ping doesn't guarantee that all server functionalities are working correctly. It only verifies basic connectivity.
+
+- **Error Handling**: Always handle potential IOException when using ping, as network issues can occur.
+
+Remember, the KubeMQ client is designed to handle connection management efficiently. In most cases, you can rely on the client to maintain the connection without explicit ping operations.
 
 
+## KubeMQ Message Payload Parameters
 
-#### Response:  `List<PubSubChannel>`  `PubSubChannel` Class Attributes
+The following table describes the common payload parameters used in all sending and receiving messages across different KubeMQ client types (PubSub, Queues, and Command & Query):
+
+| Parameter | Type | Description | Format | Mandatory |
+|-----------|------|-------------|--------|-----------|
+| Id | String | Unique identifier for the message | UUID or any unique string | No (auto-generated if not provided) |
+| Channel | String | The channel name for sending/receiving the message | Any string | Yes |
+| Metadata | String | Additional information associated with the message | Any string (e.g., JSON, XML) | No |
+| Body | byte[] | The actual content of the message | Byte array (can be serialized from various formats) | No |
+| Tags | Map<String, String> | Key-value pairs for message categorization | Map of strings | No |
+| ClientID | String | Identifier of the client sending the message | Any string (must be unique for EventStore) | Yes (set during client creation) |
+
+### Notes:
+
+1. **Id**: If not provided, KubeMQ will auto-generate a unique identifier for the message.
+
+2. **Channel**: This is crucial for routing messages to the correct subscribers or receivers.
+
+3. **Metadata**: Use this field to include any additional information about the message that doesn't fit into the main body or tags. It's often used for things like message type, version, or other metadata.
+
+4. **Body**: This can be any data serialized into a byte array. Common formats include JSON, Protocol Buffers, or custom binary formats. Make sure to use consistent serialization/deserialization methods on both sender and receiver sides.
+
+5. **Tags**: Useful for adding searchable or filterable attributes to your messages without modifying the main body content.
+
+6. **ClientID**: This is typically set when creating the client and is used in all messages sent by that client. It's particularly important for tracing and debugging.
+
+### Example Usage (PubSub):
+
+```java
+Map<String, String> tags = new HashMap<>();
+tags.put("priority", "high");
+tags.put("department", "finance");
+
+EventMessage message = EventMessage.builder()
+    .id(UUID.randomUUID().toString())
+    .channel("finance-updates")
+    .metadata("{\"version\": \"1.0\", \"type\": \"monthly-report\"}")
+    .body(serializeToJsonBytes(monthlyReport))
+    .tags(tags)
+    .build();
+
+pubSubClient.sendEventsMessage(message);
+```
+
+Remember that while these parameters are common across all message types, some specific message types (like Queue messages or Command/Query messages) might have additional parameters or slightly different usage patterns.
+
+
+## PubSub Events Operations
+
+### Create Channel
+
+Creates a new Events channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to create  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelCreated  | boolean | Indicates if channel was created |
+
+#### Example
+
+```java
+public void createEventsChannel(String eventChannelName) {
+    try {
+        boolean isChannelCreated = pubSubClient.createEventsChannel(eventChannelName);
+        System.out.println("Events Channel created: " + isChannelCreated);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to create events channel: " + e.getMessage());
+    }
+}
+```
+
+### Delete Channel
+
+Deletes an existing Events channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to delete  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelDeleted  | boolean | Indicates if channel was deleted |
+
+#### Example
+
+```java
+public void deleteEventsChannel(String eventChannelName) {
+    try {
+        boolean isChannelDeleted = pubSubClient.deleteEventsChannel(eventChannelName);
+        System.out.println("Events Channel deleted: " + isChannelDeleted);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to delete events channel: " + e.getMessage());
+    }
+}
+```
+
+### List Channels
+
+Retrieves a list of Events channels.
+
+#### Request Parameters
+
+| Name         | Type   | Description                                | Default Value | Mandatory |
+|--------------|--------|--------------------------------------------|---------------|-----------|
+| searchQuery  | String | Search query to filter channels (optional) | None          | No        |
+
+#### Response
+
+Returns a `List<PubSubChannel>` where each `PubSubChannel` has the following attributes:
 
 | Name         | Type        | Description                                                                                   |
 |--------------|-------------|-----------------------------------------------------------------------------------------------|
@@ -216,31 +434,213 @@ public void createEventsChannel() {
 | incoming     | PubSubStats | The statistics related to incoming messages for this channel.                                 |
 | outgoing     | PubSubStats | The statistics related to outgoing messages for this channel.                                 |
 
+#### Example
 
-```java   
-  public void listEventsChannel() {
-        try {
-           System.out.println("Events Channel listing");
-           List<PubSubChannel> eventChannel = pubSubClient.listEventsChannels(searchQuery);
-           eventChannel.forEach(  evt -> {
-               System.out.println("Name: "+evt.getName()+" ChannelTYpe: "+evt.getType()+" isActive: "+evt.getIsActive());
-           });
-           
-        } catch (RuntimeException e) {
-            System.err.println("Failed to list event channel: " + e.getMessage());
-        }
+```java
+public void listEventsChannels(String searchQuery) {
+    try {
+        System.out.println("Listing Events Channels");
+        List<PubSubChannel> eventChannels = pubSubClient.listEventsChannels(searchQuery);
+        eventChannels.forEach(channel -> {
+            System.out.println("Name: " + channel.getName() + 
+                               " Channel Type: " + channel.getType() + 
+                               " Is Active: " + channel.getIsActive());
+        });
+    } catch (RuntimeException e) {
+        System.err.println("Failed to list event channels: " + e.getMessage());
     }
+}
 ```
-**PubSub ListEventsStoreChannel Example:**
 
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to search   | None          | No       |
+### Send Event Message
+
+Sends a message to an Events channel.
+
+#### Request: `EventMessage` Class Attributes
+
+| Name      | Type               | Description                                                   | Default Value   | Mandatory |
+|-----------|--------------------|------------------------------------------------------------|-----------------|-----------|
+| id        | String             | Unique identifier for the event message.                    | None            | No        |
+| channel   | String             | The channel to which the event message is sent.             | None            | Yes       |
+| metadata  | String             | Metadata associated with the event message.                 | None            | No        |
+| body      | byte[]             | Body of the event message in bytes.                         | Empty byte array| No        |
+| tags      | Map<String, String>| Tags associated with the event message as key-value pairs.  | Empty Map       | No        |
+
+**Note:** At least one of `metadata`, `body`, or `tags` is required.
+
+#### Response
+
+This method doesn't return a value. Successful execution implies the message was sent.
+
+#### Example
+
+```java
+public void sendEventMessage(String eventChannelName) {
+    try {
+        String data = "Sample event data";
+        Map<String, String> tags = new HashMap<>();
+        tags.put("tag1", "value1");
+        tags.put("tag2", "value2");
+
+        EventMessage eventMessage = EventMessage.builder()
+                .id(UUID.randomUUID().toString())
+                .channel(eventChannelName)
+                .metadata("Sample metadata")
+                .body(data.getBytes())
+                .tags(tags)
+                .build();
+        
+        pubSubClient.sendEventsMessage(eventMessage);
+        System.out.println("Event message sent successfully");
+    } catch (RuntimeException e) {
+        System.err.println("Failed to send event message: " + e.getMessage());
+    }
+}
+```
+
+### Subscribe To Events Messages
+
+Subscribes to receive messages from an Events channel.
+
+#### Request: `EventsSubscription` Class Attributes
+
+| Name                    | Type                           | Description                                                          | Default Value | Mandatory |
+|-------------------------|--------------------------------|----------------------------------------------------------------------|---------------|-----------|
+| channel                 | String                         | The channel to subscribe to.                                         | None          | Yes       |
+| group                   | String                         | The group to subscribe with.                                         | None          | No        |
+| onReceiveEventCallback  | Consumer<EventMessageReceived> | Callback function to be called when an event message is received.    | None          | Yes       |
+| onErrorCallback         | Consumer<String>               | Callback function to be called when an error occurs.                 | None          | No        |
+
+#### Response
+
+This method doesn't return a value. It sets up a subscription that will invoke the provided callbacks.
+
+#### Callback: `EventMessageReceived` Class Detail
+
+| Name         | Type                | Description                                            |
+|--------------|---------------------|--------------------------------------------------------|
+| id           | String              | The unique identifier of the message.                  |
+| fromClientId | String              | The ID of the client that sent the message.            |
+| timestamp    | long                | The timestamp when the message was received, in seconds.|
+| channel      | String              | The channel to which the message belongs.              |
+| metadata     | String              | The metadata associated with the message.              |
+| body         | byte[]              | The body of the message.                               |
+| sequence     | long                | The sequence number of the message.                    |
+| tags         | Map<String, String> | The tags associated with the message.                  |
+
+#### Example
+
+```java
+public void subscribeToEvents(String eventChannelName) {
+    try {
+        // Callback for handling received events
+        Consumer<EventMessageReceived> onReceiveEventCallback = event -> {
+            System.out.println("Received event:");
+            System.out.println("ID: " + event.getId());
+            System.out.println("Channel: " + event.getChannel());
+            System.out.println("Metadata: " + event.getMetadata());
+            System.out.println("Body: " + new String(event.getBody()));
+            System.out.println("Tags: " + event.getTags());
+        };
+        
+        // Callback for handling errors
+        Consumer<String> onErrorCallback = error -> {
+            System.err.println("Subscription Error: " + error);
+        };
+
+        EventsSubscription subscription = EventsSubscription.builder()
+                .channel(eventChannelName)
+                .onReceiveEventCallback(onReceiveEventCallback)
+                .onErrorCallback(onErrorCallback)
+                .build();
+
+        pubSubClient.subscribeToEvents(subscription);
+        System.out.println("Successfully subscribed to Events channel");
+        
+        // To cancel the subscription later:
+        // subscription.cancel();
+    } catch (RuntimeException e) {
+        System.err.println("Failed to subscribe to events: " + e.getMessage());
+    }
+}
+```
+
+Note: Remember to handle the subscription lifecycle appropriately in your application. You may want to store the subscription object to cancel it when it's no longer needed.
 
 
+## PubSub EventsStore Operations
 
-#### Response:  `List<PubSubChannel>`  `PubSubChannel` Class Attributes
+### Create Channel
+
+Creates a new EventsStore channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to create  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelCreated  | boolean | Indicates if channel was created |
+
+#### Example
+
+```java
+public void createEventsStoreChannel(String eventStoreChannelName) {
+    try {
+        boolean isChannelCreated = pubSubClient.createEventsStoreChannel(eventStoreChannelName);
+        System.out.println("EventsStore Channel created: " + isChannelCreated);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to create events store channel: " + e.getMessage());
+    }
+}
+```
+
+### Delete Channel
+
+Deletes an existing EventsStore channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to delete  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelDeleted  | boolean | Indicates if channel was deleted |
+
+#### Example
+
+```java
+public void deleteEventsStoreChannel(String eventStoreChannelName) {
+    try {
+        boolean isChannelDeleted = pubSubClient.deleteEventsStoreChannel(eventStoreChannelName);
+        System.out.println("EventsStore Channel deleted: " + isChannelDeleted);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to delete events store channel: " + e.getMessage());
+    }
+}
+```
+
+### List Channels
+
+Retrieves a list of EventsStore channels.
+
+#### Request Parameters
+
+| Name         | Type   | Description                                | Default Value | Mandatory |
+|--------------|--------|--------------------------------------------|---------------|-----------|
+| searchQuery  | String | Search query to filter channels (optional) | None          | No        |
+
+#### Response
+
+Returns a `List<PubSubChannel>` where each `PubSubChannel` has the following attributes:
 
 | Name         | Type        | Description                                                                                   |
 |--------------|-------------|-----------------------------------------------------------------------------------------------|
@@ -249,937 +649,280 @@ public void createEventsChannel() {
 | lastActivity | long        | The timestamp of the last activity on the channel, represented in milliseconds since epoch.   |
 | isActive     | boolean     | Indicates whether the channel is active or not.                                               |
 | incoming     | PubSubStats | The statistics related to incoming messages for this channel.                                 |
-| outgoing     | PubSubStats | The statistics related to outgoing messages for this channel.          
-```java 
-    public void listEventsStoreChannel() {
-        try {
-           System.out.println("Events Channel listing");
-           List<PubSubChannel> eventChannel = pubSubClient.listEventsStoreChannels(searchQuery);
-           eventChannel.forEach(  evt -> {
-               System.out.println("Name: "+evt.getName()+" ChannelTYpe: "+evt.getType()+" isActive: "+evt.getIsActive());
-           });
-        } catch (RuntimeException e) {
-            System.err.println("Failed to list events store channel: " + e.getMessage());
-        }
+| outgoing     | PubSubStats | The statistics related to outgoing messages for this channel.                                 |
+
+#### Example
+
+```java
+public void listEventsStoreChannels(String searchQuery) {
+    try {
+        System.out.println("Listing EventsStore Channels");
+        List<PubSubChannel> eventStoreChannels = pubSubClient.listEventsStoreChannels(searchQuery);
+        eventStoreChannels.forEach(channel -> {
+            System.out.println("Name: " + channel.getName() + 
+                               " Channel Type: " + channel.getType() + 
+                               " Is Active: " + channel.getIsActive());
+        });
+    } catch (RuntimeException e) {
+        System.err.println("Failed to list events store channels: " + e.getMessage());
     }
+}
 ```
-**PubSub SendEventMessage Example:**
-#### Request: `EventMessage` Class Attributes
 
-| Name      | Type               | Description                                                                         | Default Value   | Mandatory |
-|-----------|--------------------|-------------------------------------------------------------------------------------|-----------------|-----------|
-| id        | String             | Unique identifier for the event message.                                            | None            | No        |
-| channel   | String             | The channel to which the event message is sent.                                     | None            | Yes       |
-| metadata  | String             | Metadata associated with the event message.                                         | None            | No        |
-| body      | byte[]             | Body of the event message in bytes.                                                 | Empty byte array   | No        |
-| tags      | Map<String, String>| Tags associated with the event message as key-value pairs.                          | Empty Map | No        |
-**Note:-**  `metadata` or `body` or `tags` any one is required
+### Send EventStore Message
 
-#### Response:  `NONE`
-
-```java 
-public void sendEventMessage() {
-        try {
-            String data = "Any data can be passed in byte, JSON or anything";
-            Map<String, String> tags = new HashMap<>();
-            tags.put("tag1", "kubemq");
-            tags.put("tag2", "kubemq2");
-
-            EventMessage eventMessage = EventMessage.builder()
-                    .id(UUID.randomUUID().toString())
-                    .channel(eventChannelName)
-                    .metadata("something you want to describe")
-                    .body(data.getBytes())
-                    .tags(tags)
-                    .build();
-            
-            pubSubClient.sendEventsMessage(eventMessage);
-            System.out.println("Event message sent ");
-        } catch (RuntimeException e) {
-            System.err.println("Failed to send event message: " + e.getMessage());
-        }
-    }
-```
-**PubSub SendEventStoreMessage Example:**
+Sends a message to an EventsStore channel.
 
 #### Request: `EventStoreMessage` Class Attributes
 
-| Name      | Type               | Description                                                                         | Default Value   | Mandatory |
-|-----------|--------------------|-------------------------------------------------------------------------------------|-----------------|-----------|
-| id        | String             | Unique identifier for the event message.                                            | None            | No        |
-| channel   | String             | The channel to which the event message is sent.                                     | None            | Yes       |
-| metadata  | String             | Metadata associated with the event message.                                         | None            | No        |
-| body      | byte[]             | Body of the event message in bytes.                                                 | Empty byte array   | No        |
-| tags      | Map<String, String>| Tags associated with the event message as key-value pairs.                          | Empty Map | No        |
-**Note:-**  `metadata` or `body` or `tags` any one is required
+| Name      | Type               | Description                                                   | Default Value   | Mandatory |
+|-----------|--------------------|------------------------------------------------------------|-----------------|-----------|
+| id        | String             | Unique identifier for the event message.                    | None            | No        |
+| channel   | String             | The channel to which the event message is sent.             | None            | Yes       |
+| metadata  | String             | Metadata associated with the event message.                 | None            | No        |
+| body      | byte[]             | Body of the event message in bytes.                         | Empty byte array| No        |
+| tags      | Map<String, String>| Tags associated with the event message as key-value pairs.  | Empty Map       | No        |
 
-#### Response:  `NONE`
-```java 
-    public void sendEventStoreMessage() {
-        try {
-            String data = "Any data can be passed in byte, JSON or anything";
-            Map<String, String> tags = new HashMap<>();
-            tags.put("tag1", "kubemq");
-            tags.put("tag2", "kubemq2");
+**Note:** At least one of `metadata`, `body`, or `tags` is required.
 
-            EventStoreMessage eventStoreMessage = EventStoreMessage.builder()
-                    .id(UUID.randomUUID().toString())
-                    .channel(eventStoreChannelName)
-                    .metadata("something you want to describe")
-                    .body(data.getBytes())
-                    .tags(tags)
-                    .build();
-            
-            EventSendResult result = pubSubClient.sendEventsStoreMessage(eventStoreMessage);
-            System.out.println("Send event result: " + result);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to send event store message: " + e.getMessage());
-        }
+#### Response
+
+Returns an `EventSendResult` object (details not provided in the original content).
+
+#### Example
+
+```java
+public void sendEventStoreMessage(String eventStoreChannelName) {
+    try {
+        String data = "Sample event store data";
+        Map<String, String> tags = new HashMap<>();
+        tags.put("tag1", "value1");
+        tags.put("tag2", "value2");
+
+        EventStoreMessage eventStoreMessage = EventStoreMessage.builder()
+                .id(UUID.randomUUID().toString())
+                .channel(eventStoreChannelName)
+                .metadata("Sample metadata")
+                .body(data.getBytes())
+                .tags(tags)
+                .build();
+        
+        EventSendResult result = pubSubClient.sendEventsStoreMessage(eventStoreMessage);
+        System.out.println("Event store message sent. Result: " + result);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to send event store message: " + e.getMessage());
     }
+}
 ```
-**PubSub SubscribeEvents Example:**
-#### Request: `EventsSubscription` Class Attributes
 
-| Name                    | Type                      | Description                                                          | Default Value | Mandatory |
-|-------------------------|---------------------------|----------------------------------------------------------------------|---------------|-----------|
-| channel                 | String                    | The channel to subscribe to.                                         | None          | Yes       |
-| group                   | String                    | The group to subscribe with.                                         | None          | No        |
-| onReceiveEventCallback  | Consumer<EventMessageReceived> | Callback function to be called when an event message is received.   | None          | Yes       |
-| onErrorCallback         | Consumer<String>          | Callback function to be called when an error occurs.                 | None          | No        |
+### Subscribe To EventsStore Messages
 
+Subscribes to receive messages from an EventsStore channel.
 
-#### Response: `NONE`
-#### Callback: `EventMessageReceived` class details
-| Name        | Type                  | Description                                            |
-|-------------|-----------------------|--------------------------------------------------------|
-| id          | String                | The unique identifier of the message.                 |
-| fromClientId| String                | The ID of the client that sent the message.           |
-| timestamp   | long                  | The timestamp when the message was received, in seconds. |
-| channel     | String                | The channel to which the message belongs.             |
-| metadata    | String                | The metadata associated with the message.             |
-| body        | byte[]                | The body of the message.                              |
-| sequence    | long                  | The sequence number of the message.                   |
-| tags        | Map<String, String>   | The tags associated with the message.                 |
-
-```java 
-public void subscribeToEvents() {
-        try {
-            // Consumer for handling received events
-            Consumer<EventMessageReceived> onReceiveEventCallback = event -> {
-                System.out.println("Received event:");
-                System.out.println("ID: " + event.getId());
-                System.out.println("Channel: " + event.getChannel());
-                System.out.println("Metadata: " + event.getMetadata());
-                System.out.println("Body: " + new String(event.getBody()));
-                System.out.println("Tags: " + event.getTags());
-            };
-            
-            // Consumer for handling errors
-            Consumer<String> onErrorCallback = error -> {
-                System.err.println("Error Received: " + error);
-            };
-
-            EventsSubscription subscription = EventsSubscription.builder()
-                    .channel(eventChannelName)
-                    .onReceiveEventCallback(onReceiveEventCallback)
-                    .onErrorCallback(onErrorCallback)
-                    .build();
-
-            pubSubClient.subscribeToEvents(subscription);
-            System.out.println("Events Subscribed");
-            
-            // *** When you want to cancel subscrtipn call cancel function
-                subscription.cancel();
-            
-        } catch (RuntimeException e) {
-            System.err.println("Failed to subscribe to events: " + e.getMessage());
-        }
-    }
-```
-**PubSub SubscribeEventsStore Example:**
 #### Request: `EventsStoreSubscription` Class Attributes
 
-| Name                    | Type                      | Description                                                          | Default Value | Mandatory |
-|-------------------------|---------------------------|----------------------------------------------------------------------|---------------|-----------|
-| channel                 | String                    | The channel to subscribe to.                                         | None          | Yes       |
-| group                   | String                    | The group to subscribe with.                                         | None          | No        |
-| onReceiveEventCallback  | Consumer<EventStoreMessageReceived> | Callback function to be called when an event message is received.   | None          | Yes       |
-| onErrorCallback         | Consumer<String>          | Callback function to be called when an error occurs. 
+| Name                    | Type                                | Description                                                          | Default Value | Mandatory |
+|-------------------------|-------------------------------------|----------------------------------------------------------------------|---------------|-----------|
+| channel                 | String                              | The channel to subscribe to.                                         | None          | Yes       |
+| group                   | String                              | The group to subscribe with.                                         | None          | No        |
+| onReceiveEventCallback  | Consumer<EventStoreMessageReceived> | Callback function to be called when an event message is received.    | None          | Yes       |
+| onErrorCallback         | Consumer<String>                    | Callback function to be called when an error occurs.                 | None          | No        |
+| eventsStoreType         | EventsStoreType                     | Type of EventsStore subscription (e.g., StartAtTime, StartAtSequence)| None          | Yes       |
+| eventsStoreStartTime    | Instant                             | Start time for EventsStore subscription (if applicable)              | None          | Conditional |
 
+#### Response
 
-#### Response: `None`
-#### Callback: `EventStoreMessageReceived` class details
-| Name        | Type                  | Description                                            |
-|-------------|-----------------------|--------------------------------------------------------|
-| id          | String                | The unique identifier of the message.                 |
-| fromClientId| String                | The ID of the client that sent the message.           |
-| timestamp   | long                  | The timestamp when the message was received, in seconds. |
-| channel     | String                | The channel to which the message belongs.             |
-| metadata    | String                | The metadata associated with the message.             |
-| body        | byte[]                | The body of the message.                              |
-| sequence    | long                  | The sequence number of the message.                   |
-| tags        | Map<String, String>   | The tags associated with the message.                 |
+This method doesn't return a value. It sets up a subscription that will invoke the provided callbacks.
 
-```java 
-    public void subscribeToEventsStore() {
-        try {
-            // Consumer for handling received event store messages
-            Consumer<EventStoreMessageReceived> onReceiveEventCallback = event -> {
-                System.out.println("Received event store:");
-                System.out.println("ID: " + event.getId());
-                System.out.println("Channel: " + event.getChannel());
-                System.out.println("Metadata: " + event.getMetadata());
-                System.out.println("Body: " + new String(event.getBody()));
-                System.out.println("Tags: " + event.getTags());
-            };
+#### Callback: `EventStoreMessageReceived` Class Detail
 
-            // Consumer for handling errors
-            Consumer<String> onErrorCallback = error -> {
-                System.err.println("Error Received: " + error);
-            };
+| Name         | Type                | Description                                            |
+|--------------|---------------------|--------------------------------------------------------|
+| id           | String              | The unique identifier of the message.                  |
+| fromClientId | String              | The ID of the client that sent the message.            |
+| timestamp    | long                | The timestamp when the message was received, in seconds.|
+| channel      | String              | The channel to which the message belongs.              |
+| metadata     | String              | The metadata associated with the message.              |
+| body         | byte[]              | The body of the message.                               |
+| sequence     | long                | The sequence number of the message.                    |
+| tags         | Map<String, String> | The tags associated with the message.                  |
 
-            EventsStoreSubscription subscription = EventsStoreSubscription.builder()
-                    .channel(eventStoreChannelName)
-                    //.group("All IT Team")
-                    .eventsStoreType(EventsStoreType.StartAtTime)
-                    .eventsStoreStartTime(Instant.now().minus(1, ChronoUnit.HOURS))
-                    .onReceiveEventCallback(onReceiveEventCallback)
-                    .onErrorCallback(onErrorCallback)
-                    .build();
-
-            pubSubClient.subscribeToEventsStore(subscription);
-            System.out.println("EventsStore Subscribed");
-
-		// *** When you want to cancel subscrtipon call cancel function
-                subscription.cancel();
-           
-        } catch (RuntimeException e) {
-            System.err.println("Failed to subscribe to events store: " + e.getMessage());
-        }
-    }
-```
-**PubSub DeleteEventsChannel Example:**
-
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to delete   | None          | Yes       |
-
-
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelDeleted    | boolean| Channel deleted true/false|    
-----------------------------------------------------------------------------
-```java 
-public void deleteEventsChannel() {
-        try {
-            boolean isChannelDeleted = pubSubClient.deleteEventsChannel(eventChannelName);
-            System.out.println("Events Channel deleted: " + isChannelDeleted);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to delete events channel: " + e.getMessage());
-        }
-    }
-
-```
-**PubSub DeleteEventsStoreChannel Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to delete   | None          | Yes       |
-
-
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelDeleted    | boolean| Channel deleted true/false|    
-----------------------------------------------------------------------------
-
-```java 
-    public void deleteEventsStoreChannel() {
-        try {
-            boolean isChannelDeleted = pubSubClient.deleteEventsStoreChannel(eventStoreChannelName);
-            System.out.println("Events store Channel deleted: " + isChannelDeleted);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to delete events store channel: " + e.getMessage());
-        }
-    }
-```
-
-# KubeMQ Queues Client Examples
-Below examples demonstrating the usage of KubeMQ Queues client. The examples include creating, deleting, listing channels, and sending/receiving queues messages.
-
-## Project Structure
-
-- `CreateQueuesChannelExample.java`: Demonstrates creating queues channels.
-- `DeleteQueuesChannelExample.java`: Demonstrates deleting queues channels.
-- `ListQueuesChannelExample.java`: Demonstrates listing queues channels.
-- `GetQueuesInfoExample`: Demonstrates getting the detailed information of queue.
-- `SendQueuesMessageExample.java`: Demonstrates sending message in queue channels.
-- `Send_ReceiveMessageUsingStreamExample.java`: Demonstrates sending meesage using queue upstream and receive message using downstream.
-
-## Getting Started
-
-### Construct the QueuesClient
-For executing Queues operation we have to create the instance of QueuesClient, it's instance can created with minimum two parameter `address` (KubeMQ server address) & `clientId` . With these two parameter plainText connection are established.  Below Table Describe the Parameters available for establishing connection.
-### QueuesClient Accepted Configuration
-
-| Name                     | Type     | Description                                                   | Default Value           | Mandatory |
-|--------------------------|----------|---------------------------------------------------------------|-------------------------|-----------|
-| address                  | String   | The address of the KubeMQ server.                             | None                    | Yes       |
-| clientId                 | String   | The client ID used for authentication.                        | None                    | Yes       |
-| authToken                | String   | The authorization token for secure communication.             | None                    | No        |
-| tls                      | boolean  | Indicates if TLS (Transport Layer Security) is enabled.       | None                    | No        |
-| tlsCertFile              | String   | The path to the TLS certificate file.                         | None                    | No (Yes if `tls` is true) |
-| tlsKeyFile               | String   | The path to the TLS key file.                                 | None                    | No (Yes if `tls` is true) |
-| maxReceiveSize           | int      | The maximum size of the messages to receive (in bytes).       | 104857600 (100MB)       | No        |
-| reconnectIntervalSeconds | int      | The interval in seconds between reconnection attempts.        | 5                       | No        |
-| keepAlive                | boolean  | Indicates if the connection should be kept alive.             | None                    | No        |
-| pingIntervalInSeconds    | int      | The interval in seconds between ping messages.                | None                    | No        |
-| pingTimeoutInSeconds     | int      | The timeout in seconds for ping messages.                     | None                    | No        |
-| logLevel                 | Level    | The logging level to use.                                     | Level. INFO              | No        |
-
-### QueuesClient establishing connection example code
- ```java
- QueuesClient queuesClient = QueuesClient.builder()
-                 .address(address)
-                 .clientId(clientId)
-                 .build();
-```              
-
-Below example demonstrate to construct PubSubClient with ssl and other configurations:
- ```java
- QueuesClient queuesClient = QueuesClient.builder()
-                 .address(address)
-                 .clientId(clientId)
-                 .authToken("authToken") 
-                 .tls(true) 
-                 .tlsCertFile("path/to/cert/file") 
-                 .tlsKeyFile("path/to/key/file") 
-                 .maxReceiveSize(4 * 1048576)  // 4 MB
-                 .reconnectIntervalSeconds(10)
-                 .keepAlive(true) 
-                 .pingIntervalInSeconds(5) 
-                 .pingTimeoutInSeconds(10) 
-                 .logLevel(Level.INFO)
-                 .build();
-```   
-
-**Ping To KubeMQ server**
-You can ping the server to check connection is established or not.
-#### Request: `NONE`
-
-
-#### Response: `ServerInfo` Class Attributes
-
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| host                | String | The host of the server.                    |
-| version             | String | The version of the server.                 |
-| serverStartTime     | long   | The start time of the server (in seconds). |
-| serverUpTimeSeconds | long   | The uptime of the server (in seconds).     |
+#### Example
 
 ```java
-ServerInfo pingResult = queuesClient.ping();
-System.out.println("Ping Response: " + pingResult.toString());
-
-```
-**Queues CreateQueueChannel Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to create   | None          | Yes       |
-
-
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelCreated    | boolean| Channel created true/false|    
-----------------------------------------------------------------------------
-```java
-public void createQueueChannel() {
-        try {
-            boolean isChannelCreated = queuesClient.createQueuesChannel(queueChannelName);
-            System.out.println("QueueChannel created: " + isChannelCreated);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to create queue channel: " + e.getMessage());
-        }
-    }
-```   
-**Queues listQueueChannels Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| searchString         | String | Channel name which you want to search   | None          | No       |
-
-
-#### Response: `List<QueuesChannel>`  QueuesChannel Class Attributes
-
-| Name          | Type          | Description                                                |
-|---------------|---------------|------------------------------------------------------------|
-| name          | String        | The name of the queue channel.                             |
-| type          | String        | The type of the queue channel.                             |
-| lastActivity  | long          | The timestamp of the last activity in the queue channel.   |
-| isActive      | boolean       | Indicates whether the queue channel is currently active.   |
-| incoming      | QueuesStats   | The statistics for incoming messages in the queue channel. |
-| outgoing      | QueuesStats   | The statistics for outgoing messages in the queue channel. |
-
-
-```java 
-public void listQueueChannels() {
-        try {
-            List<QueuesChannel> channels = queuesClient.listQueuesChannels("");
-            for (QueuesChannel channel : channels) {
-                System.out.println("Channel Name: " + channel.getName());
-                System.out.println("Type: " + channel.getType());
-                System.out.println("Last Activity: " + channel.getLastActivity());
-                System.out.println("Is Active: " + channel.getIsActive());
-                System.out.println("Incoming Stats: " + channel.getIncoming());
-                System.out.println("Outgoing Stats: " + channel.getOutgoing());
-                System.out.println();
-            }
-        } catch (RuntimeException e) {
-            System.err.println("Failed to list queue channels: " + e.getMessage());
-        }
-    }
-```   
-**Queues GetQueueDetails Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which details you want to view   | None          | Yes       |
-
-
-#### Response:  `QueuesDetailInfo` class attribute
-
-| Name           | Type                     | Description                                |
-|----------------|--------------------------|--------------------------------------------|
-| refRequestID   | String                   | Reference ID of the request.               |
-| totalQueue     | int                      | Total number of queues.                    |
-| sent           | long                     | Total number of sent messages.             |
-| delivered      | long                     | Total number of delivered messages.        |
-| waiting        | long                     | Total number of messages waiting.          |
-| queues         | List<Kubemq.QueueInfo>   | List of queue information objects.         |
-
-##### `Kubemq.QueueInfo` Class Attributes
-
-| Name          | Type   | Description                                 |
-|---------------|--------|---------------------------------------------|
-| name          | String | The name of the queue.                      |
-| messages      | long   | The number of messages.                     |
-| bytes         | long   | The total size of the messages in bytes.    |
-| firstSequence | long   | The sequence number of the first message.   |
-| lastSequence  | long   | The sequence number of the last message.    |
-| sent          | long   | The number of sent messages.                |
-| delivered     | long   | The number of delivered messages.           |
-| waiting       | long   | The number of messages waiting.             |
-| subscribers   | long   | The number of subscribers.                  |
-
-
-```java 
-public void getQueueDetails() {
-        try {
-            // Get the queue information
-            QueuesDetailInfo queuesDetailInfo = queuesClient.getQueuesInfo(channelName);
-
-            // Print the queue information
-            System.out.println("Queue Information:");
-            System.out.println("RefRequestID: " + queuesDetailInfo.getRefRequestID());
-            System.out.println("TotalQueue: " + queuesDetailInfo.getTotalQueue());
-            System.out.println("Sent: " + queuesDetailInfo.getSent());
-            System.out.println("Delivered: " + queuesDetailInfo.getDelivered());
-            System.out.println("Waiting: " + queuesDetailInfo.getWaiting());
-
-            queuesDetailInfo.getQueues().forEach(queueInfo -> {
-                System.out.println("Queue Name: " + queueInfo.getName());
-                System.out.println("Messages: " + queueInfo.getMessages());
-                System.out.println("Bytes: " + queueInfo.getBytes());
-                System.out.println("FirstSequence: " + queueInfo.getFirstSequence());
-                System.out.println("LastSequence: " + queueInfo.getLastSequence());
-                System.out.println("Sent: " + queueInfo.getSent());
-                System.out.println("Delivered: " + queueInfo.getDelivered());
-                System.out.println("Waiting: " + queueInfo.getWaiting());
-                System.out.println("Subscribers: " + queueInfo.getSubscribers());
-            });
-        } catch (Exception e) {
-            System.out.println("Error while getting queue information");
-            e.printStackTrace();
-        }
-    }
-```   
-**Queues SendSingleMessage Example:**
-#### Request:  `QueueMessage` class attributes
-| Name                         | Type                | Description                                                                                 | Default Value | Mandatory |
-|------------------------------|---------------------|---------------------------------------------------------------------------------------------|---------------|-----------|
-| id                           | String              | The unique identifier for the message.                                                      | None          | No        |
-| channel                      | String              | The channel of the message.                                                                 | None          | Yes       |
-| metadata                     | String              | The metadata associated with the message.                                                   | None          | No        |
-| body                         | byte[]              | The body of the message.                                                                    | new byte[0]   | No        |
-| tags                         | Map<String, String> | The tags associated with the message.                                                       | new HashMap<>()| No        |
-| delayInSeconds               | int                 | The delay in seconds before the message becomes available in the queue.                     | None          | No        |
-| expirationInSeconds          | int                 | The expiration time in seconds for the message.                                             | None          | No        |
-| attemptsBeforeDeadLetterQueue| int                 | The number of receive attempts allowed for the message before it is moved to the dead letter queue. | None | No |
-| deadLetterQueue              | String              | The dead letter queue where the message will be moved after reaching the maximum receive attempts. | None | No |
-
-
-#### Response:  `QueueSendResult` class attributes
-| Name       | Type            | Description                                                   |
-|------------|-----------------|---------------------------------------------------------------|
-| id         | String          | The unique identifier of the message.                         |
-| sentAt     | LocalDateTime   | The timestamp when the message was sent.                      |
-| expiredAt  | LocalDateTime   | The timestamp when the message will expire.                   |
-| delayedTo  | LocalDateTime   | The timestamp when the message will be delivered.             |
-| isError    | boolean         | Indicates if there was an error while sending the message.    |
-| error      | String          | The error message if `isError` is true.                       |
-
-```java
-
-public void sendSingleMessage() {
-        try {
-            Map<String, String> tags = new HashMap<>();
-            tags.put("tag1", "kubemq");
-            tags.put("tag2", "kubemq2");
-
-            QueueMessage message = QueueMessage.builder()
-                    .id(UUID.randomUUID().toString())
-                    .body("Hello KubeMQ!".getBytes())
-                    .channel(queueChannelName)
-                    .metadata("metadata")
-                    .tags(tags)
-                    .expirationInSeconds(60 * 10) // 10 minutes
-                    .build();
-
-            QueueSendResult sendResult = queuesClient.sendQueuesMessage(message);
-            System.out.println("Message sent result: " + sendResult);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to send message: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-```   
-**Queues SendBatchMessage Example:**
-#### Request:  `List<QueueMessage>` `QueueMessage` Class Attributes
-| Name                         | Type                | Description                                                                                 | Default Value | Mandatory |
-|------------------------------|---------------------|---------------------------------------------------------------------------------------------|---------------|-----------|
-| id                           | String              | The unique identifier for the message.                                                      | None          | No        |
-| channel                      | String              | The channel of the message.                                                                 | None          | Yes       |
-| metadata                     | String              | The metadata associated with the message.                                                   | None          | No        |
-| body                         | byte[]              | The body of the message.                                                                    | new byte[0]   | No        |
-| tags                         | Map<String, String> | The tags associated with the message.                                                       | new HashMap<>()| No        |
-| delayInSeconds               | int                 | The delay in seconds before the message becomes available in the queue.                     | None          | No        |
-| expirationInSeconds          | int                 | The expiration time in seconds for the message.                                             | None          | No        |
-| attemptsBeforeDeadLetterQueue| int                 | The number of receive attempts allowed for the message before it is moved to the dead letter queue. | None | No |
-| deadLetterQueue              | String              | The dead letter queue where the message will be moved after reaching the maximum receive attempts. | None | No |
-
-
-#### Response:  `QueueMessagesBatchSendResult`
-| Name       | Type                      | Description                                        |
-|------------|---------------------------|----------------------------------------------------|
-| batchId    | String                    | The unique identifier of the batch.                |
-| results    | List`<QueueSendResult>`     | The list of results for each message in the batch. |
-| haveErrors | boolean                   | Indicates if there were any errors in the batch.   |
-
-
-##### `QueueSendResult` class attributes
-| Name       | Type            | Description                                                   |
-|------------|-----------------|---------------------------------------------------------------|
-| id         | String          | The unique identifier of the message.                         |
-| sentAt     | LocalDateTime   | The timestamp when the message was sent.                      |
-| expiredAt  | LocalDateTime   | The timestamp when the message will expire.                   |
-| delayedTo  | LocalDateTime   | The timestamp when the message will be delivered.             |
-| isError    | boolean         | Indicates if there was an error while sending the message.    |
-| error      | String          | The error message if `isError` is true.                       |
-
-#### Response:
-```java
-
-    public void sendBatchMessages() {
-        try {
-            Map<String, String> tags = new HashMap<>();
-            tags.put("tag1", "kubemq");
-            tags.put("tag2", "kubemq2");
-
-            QueueMessage message1 = QueueMessage.builder()
-                    .body("Message 1".getBytes())
-                    .channel(queueChannelName)
-                    .id(UUID.randomUUID().toString())
-                    .tags(tags)
-                    .build();
-
-            QueueMessage message2 = QueueMessage.builder()
-                    .body("Message 2".getBytes())
-                    .channel(queueChannelName)
-                    .id(UUID.randomUUID().toString())
-                    .build();
-
-            List<QueueMessage> messages = Arrays.asList(message1, message2);
-            String batchId = UUID.randomUUID().toString();
-            QueueMessagesBatchSendResult batchSendResult = queuesClient.sendQueuesMessageInBatch(messages, batchId);
-            System.out.println("Batch messages sent result: " + batchSendResult);
-        } catch (RuntimeException e) {
-            System.err.println("Failed to send batch messages: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-```   
-**Queues SendQueueMessage Using UpStream Example:**
-
-#### Request:  `QueueMessage` class attributes
-| Name                         | Type                | Description                                                                                 | Default Value | Mandatory |
-|------------------------------|---------------------|---------------------------------------------------------------------------------------------|---------------|-----------|
-| id                           | String              | The unique identifier for the message.                                                      | None          | No        |
-| channel                      | String              | The channel of the message.                                                                 | None          | Yes       |
-| metadata                     | String              | The metadata associated with the message.                                                   | None          | No        |
-| body                         | byte[]              | The body of the message.                                                                    | new byte[0]   | No        |
-| tags                         | Map<String, String> | The tags associated with the message.                                                       | new HashMap<>()| No        |
-| delayInSeconds               | int                 | The delay in seconds before the message becomes available in the queue.                     | None          | No        |
-| expirationInSeconds          | int                 | The expiration time in seconds for the message.                                             | None          | No        |
-| attemptsBeforeDeadLetterQueue| int                 | The number of receive attempts allowed for the message before it is moved to the dead letter queue. | None | No |
-| deadLetterQueue              | String              | The dead letter queue where the message will be moved after reaching the maximum receive attempts. | None | No |
-
-
-#### Response:  `QueueSendResult` class attributes
-| Name       | Type            | Description                                                   |
-|------------|-----------------|---------------------------------------------------------------|
-| id         | String          | The unique identifier of the message.                         |
-| sentAt     | LocalDateTime   | The timestamp when the message was sent.                      |
-| expiredAt  | LocalDateTime   | The timestamp when the message will expire.                   |
-| delayedTo  | LocalDateTime   | The timestamp when the message will be delivered.             |
-| isError    | boolean         | Indicates if there was an error while sending the message.    |
-| error      | String          | The error message if `isError` is true.                       |
-```java
-
- public void sendQueueMessage() {
-         System.out.println("\n============================== sendMessage Started =============================\n");
-            // Send message in Stream 
-            QueueMessage message = QueueMessage.builder()
-                    .body(("Sending data in queue message stream").getBytes())
-                    .channel(channelName)
-                    .metadata("metadata")
-                    .id(UUID.randomUUID().toString())
-                    .build();
-            QueueSendResult sendResult = queuesClient.sendQueuesMessageUpStream(message);
-
-            System.out.println("Message sent Response: " + sendResult);
-
-    }
-   
-```
-**Queues ReceiveQueueMessage Using DownStream Example:**
-#### Request:  `QueuesPollRequest` class attributes
-| Name                        | Type   | Description                                          | Default Value | Mandatory |
-|-----------------------------|--------|------------------------------------------------------|---------------|-----------|
-| channel                     | String | The channel to poll messages from.                  | None          | Yes       |
-| pollMaxMessages             | int    | The maximum number of messages to poll.             | 1             | No        |
-| pollWaitTimeoutInSeconds    | int    | The wait timeout in seconds for polling messages.   | 60            | No        |
-| autoAckMessages             | boolean| Indicates if messages should be auto-acknowledged.  | false         | No        |
-
-
-#### Response: `QueuesPollResponse` class attributes
-| Name                  | Type                              | Description                                             |
-|-----------------------|-----------------------------------|---------------------------------------------------------|
-| refRequestId           | String                            | The reference ID of the request.                       |
-| transactionId         | String                            | The unique identifier for the transaction.             |
-| messages              | List`<QueueMessageReceived>`        | The list of received queue messages.                   |
-| error                 | String                            | The error message, if any error occurred.              |
-| isError               | boolean                           | Indicates if there was an error.                       |
-| isTransactionCompleted| boolean                           | Indicates if the transaction is completed.             |
-| activeOffsets         | List<Long>                        | The list of active offsets.                            |
-| receiverClientId      | String                            | The client ID of the receiver.                         |
-
-```java 
-
-    public void receiveQueuesMessages() {
-        System.out.println("\n============================== receiveQueuesMessages =============================\n");
-
-        QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
-                .channel(channelName)
-                .pollMaxMessages(1)
-                .pollWaitTimeoutInSeconds(10)
-                .build();
-
-       QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
-       
-        System.out.println("Received Message: {}" + pollResponse);
-
-            System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
-            System.out.println("ReceiverClientId: " + pollResponse.getReceiverClientId());
-            System.out.println("TransactionId: " + pollResponse.getTransactionId());
-            pollResponse.getMessages().forEach(msg -> {
-                System.out.println("Message  Id: " + msg.getId());
-                System.out.println("Message Body: "+ByteString.copyFrom(msg.getBody()).toStringUtf8());
-               // Acknowledge message
-               msg.ack();
-               
-               // *** Reject message
-              // msg.reject();
-              
-               // *** ReQueue message
-              // msg.reQueue(channelName);
-            });
-
-    }
-```
-
-# KubeMQ Command & Query Client Examples
-
-Below examples demonstrating the usage of KubeMQ CQ (Commands and Queries) Client. The examples include creating, deleting, listing channels, and sending/subscribing to command and query messages.
-
-## Project Structure
-
-- `CommandsExample.java`: Demonstrates sending and subscribing to command messages.
-- `CreateExample.java`: Demonstrates creating command and query channels.
-- `DeleteExample.java`: Demonstrates deleting command and query channels.
-- `ListExample.java`: Demonstrates listing command and query channels.
-- `QueriesExample.java`: Demonstrates sending and subscribing to query messages.
-
-## Getting Started
-
-### Construct the CQClient
-For executing command & query operation we have to create the instance of CQClient, it's instance can created with minimum two parameter `address` (KubeMQ server address) & `clientId` . With these two parameter plainText connection are established. Below Table Describe the Parameters available for establishing connection.
-### CQClient Accepted Configuration
-
-| Name                     | Type     | Description                                                   | Default Value           | Mandatory |
-|--------------------------|----------|---------------------------------------------------------------|-------------------------|-----------|
-| address                  | String   | The address of the KubeMQ server.                             | None                    | Yes       |
-| clientId                 | String   | The client ID used for authentication.                        | None                    | Yes       |
-| authToken                | String   | The authorization token for secure communication.             | None                    | No        |
-| tls                      | boolean  | Indicates if TLS (Transport Layer Security) is enabled.       | None                    | No        |
-| tlsCertFile              | String   | The path to the TLS certificate file.                         | None                    | No (Yes if `tls` is true) |
-| tlsKeyFile               | String   | The path to the TLS key file.                                 | None                    | No (Yes if `tls` is true) |
-| maxReceiveSize           | int      | The maximum size of the messages to receive (in bytes).       | 104857600 (100MB)       | No        |
-| reconnectIntervalSeconds | int      | The interval in seconds between reconnection attempts.        | 5                       | No        |
-| keepAlive                | boolean  | Indicates if the connection should be kept alive.             | None                    | No        |
-| pingIntervalInSeconds    | int      | The interval in seconds between ping messages.                | None                    | No        |
-| pingTimeoutInSeconds     | int      | The timeout in seconds for ping messages.                     | None                    | No        |
-| logLevel                 | Level    | The logging level to use.                                     | Level. INFO              | No        |
-
-### CQClient establishing connection example code
- ```java
- CQClient cqClient = CQClient.builder()
-                 .address(address)
-                 .clientId(clientId)
-                 .build();
-```              
-
-Below example demonstrate to construct CQClient with ssl and other configurations:
- ```java
- CQClient cqClient = CQClient.builder()
-                 .address(address)
-                 .clientId(clientId)
-                 .authToken("authToken") 
-                 .tls(true) 
-                 .tlsCertFile("path/to/cert/file") 
-                 .tlsKeyFile("path/to/key/file") 
-                 .maxReceiveSize(4 * 1048576)  // 4 MB
-                 .reconnectIntervalSeconds(10)
-                 .keepAlive(true) 
-                 .pingIntervalInSeconds(5) 
-                 .pingTimeoutInSeconds(10) 
-                 .logLevel(Level.INFO)
-                 .build();
-```    
-
-**Ping To KubeMQ server**
-You can ping the server to check connection is established or not.
-#### Request: `NONE`
-
-
-#### Response: `ServerInfo` Class Attributes
-
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| host                | String | The host of the server.                    |
-| version             | String | The version of the server.                 |
-| serverStartTime     | long   | The start time of the server (in seconds). |
-| serverUpTimeSeconds | long   | The uptime of the server (in seconds).     |
-
-```java
-ServerInfo pingResult = cqClient.ping();
-System.out.println("Ping Response: " + pingResult.toString());
-
-```
-
-**Command CreateCommandsChannel Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to create   | None          | Yes       |
-
-
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelCreated    | boolean| Channel created true/false|    
-----------------------------------------------------------------------------
-```java
-
- private void createCommandsChannel(String channel) {
-          System.out.println("Executing createCommandsChannel...");
-        boolean result = cqClient.createCommandsChannel(channel);
-        System.out.println("Commands channel created: " + result);
-    }
-```
-**Queries CreateQueriesChannel Example:**
-
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to create   | None          | Yes       |
-
-
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelCreated    | boolean| Channel created true/false|    
-----------------------------------------------------------------------------
-```java 
-    private void createQueriesChannel(String channel) {
-        System.out.println("\nExecuting createQueriesChannel...");
-        boolean result = cqClient.createQueriesChannel(channel);
-        System.out.println("Queries channel created: " + result);
-    }
-```
-**Command ListCommandsChannel Example:**
-
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| searchString         | String | Channel name which you want to search   | None          | No       |
-
-
-#### Response:  `List<CQChannel>` `CQChannel` class attributes
-
-| Name          | Type      | Description                                      |
-|---------------|-----------|--------------------------------------------------|
-| name          | String    | The name of the channel.                        |
-| type          | String    | The type of the channel.                        |
-| lastActivity  | long      | The timestamp of the last activity on the channel. |
-| isActive      | boolean   | Indicates whether the channel is currently active. |
-| incoming      | CQStats   | Statistics about incoming messages to the channel. |
-| outgoing      | CQStats   | Statistics about outgoing messages from the channel. |
-
-```java 
- private void listCommandsChannels(String channelSearch) {
-         System.out.println("\nExecuting listCommandsChannels...");
-        List<CQChannel> channels = cqClient.listCommandsChannels(channelSearch);
-        System.out.println("Command Channels: " + channels);
-    }
-```
-**Queries ListQueriesChannel Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| searchString         | String | Channel name which you want to search   | None          | No       |
-
-
-#### Response:  `List<CQChannel>` `CQChannel` class attributes
-
-| Name          | Type      | Description                                      |
-|---------------|-----------|--------------------------------------------------|
-| name          | String    | The name of the channel.                        |
-| type          | String    | The type of the channel.                        |
-| lastActivity  | long      | The timestamp of the last activity on the channel. |
-| isActive      | boolean   | Indicates whether the channel is currently active. |
-| incoming      | CQStats   | Statistics about incoming messages to the channel. |
-| outgoing      | CQStats   | Statistics about outgoing messages from the channel. |
-
-```java 
-    private void listQueriesChannels(String channelSearch) {
-         System.out.println("\nExecuting listQueriesChannels...");
-        List<CQChannel> channels = cqClient.listQueriesChannels(channelSearch);
-        System.out.println("Query Channels: " + channels);
-    }
-```
-**Command SubscribeToCommandsChannel Example:**
-#### Request: `CommandsSubscription` Class Attributes
-| Name                     | Type                                  | Description                                            | Default Value | Mandatory |
-|--------------------------|---------------------------------------|--------------------------------------------------------|---------------|-----------|
-| channel                  | String                                | The channel for the subscription.                     | None          | Yes       |
-| group                    | String                                | The group associated with the subscription.           | None          | No        |
-| onReceiveCommandCallback | Consumer`<CommandMessageReceived>`      | Callback function for receiving commands.             | None          | Yes       |
-| onErrorCallback          | Consumer`<String>`                      | Callback function for error handling.                 | None          | No        |
-
-
-#### Response: `None`
-#### Callback: `CommandMessageReceived`  class attributes
-| Name             | Type                  | Description                                    |
-|------------------|-----------------------|------------------------------------------------|
-| commandReceived  | CommandMessageReceived| The command message that was received.        |
-| clientId         | String                | The ID of the client that sent the command.    |
-| requestId        | String                | The ID of the request.                         |
-| isExecuted       | boolean               | Indicates whether the command was executed.   |
-| timestamp        | LocalDateTime         | The timestamp of the response.                 |
-| error            | String                | The error message if an error occurred.        |
-
-
-```java 
-private void subscribeToCommands(String channel) {
-        // Consumer for handling received events
-        Consumer<CommandMessageReceived> onReceiveCommandCallback = receivedCommand -> {
-            System.out.println("Received CommandMessage: " + receivedCommand);
-            // Reply this message 
-           CommandResponseMessage response= CommandResponseMessage.builder().
-                    commandReceived(receivedCommand)
-                     .isExecuted(true)
-                     .build();
-            cqClient.sendResponseMessage(response);
+public void subscribeToEventsStore(String eventStoreChannelName) {
+    try {
+        // Callback for handling received event store messages
+        Consumer<EventStoreMessageReceived> onReceiveEventCallback = event -> {
+            System.out.println("Received event store message:");
+            System.out.println("ID: " + event.getId());
+            System.out.println("Channel: " + event.getChannel());
+            System.out.println("Metadata: " + event.getMetadata());
+            System.out.println("Body: " + new String(event.getBody()));
+            System.out.println("Tags: " + event.getTags());
         };
 
-        // Consumer for handling errors
-        Consumer<String> onErrorCallback = errorMessage -> {
-            System.err.println("Error in Command Subscription: " + errorMessage);
+        // Callback for handling errors
+        Consumer<String> onErrorCallback = error -> {
+            System.err.println("Subscription Error: " + error);
         };
 
-        CommandsSubscription subscription = CommandsSubscription.builder()
-                .channel(channel)
-                .onReceiveCommandCallback(onReceiveCommandCallback)
+        EventsStoreSubscription subscription = EventsStoreSubscription.builder()
+                .channel(eventStoreChannelName)
+                .eventsStoreType(EventsStoreType.StartAtTime)
+                .eventsStoreStartTime(Instant.now().minus(1, ChronoUnit.HOURS))
+                .onReceiveEventCallback(onReceiveEventCallback)
                 .onErrorCallback(onErrorCallback)
                 .build();
 
-        cqClient.subscribeToCommands(subscription);
-        System.out.println("");
+        pubSubClient.subscribeToEventsStore(subscription);
+        System.out.println("Successfully subscribed to EventsStore channel");
         
-        // *** When you want to cancel subscrtipn call cancel function
-        //subscription.cancel();
+        // To cancel the subscription later:
+        // subscription.cancel();
+    } catch (RuntimeException e) {
+        System.err.println("Failed to subscribe to events store: " + e.getMessage());
     }
+}
 ```
-**Command SendCommandRequest Example:**
-#### Request: `CommandMessage` class attributes
-| Name             | Type                   | Description                                             | Default Value  | Mandatory |
-|------------------|------------------------|---------------------------------------------------------|----------------|-----------|
-| id               | String                 | The ID of the command message.                         | None           | Yes       |
-| channel          | String                 | The channel through which the command message will be sent. | None       | Yes       |
-| metadata         | String                 | Additional metadata associated with the command message. | None          | No        |
-| body             | byte[]                 | The body of the command message as bytes.              | `empty byte array`  | No        |
-| tags             | Map<String, String>    | A dictionary of key-value pairs representing tags associated with the command message. | `empty Map` | No        |
-| timeoutInSeconds | int                    | The maximum time in seconds for which the command message is valid. | None          | Yes       |
+
+Note: Remember to handle the subscription lifecycle appropriately in your application. You may want to store the subscription object to cancel it when it's no longer needed.
 
 
-#### Response: `CommandResponseMessage`  class attributes
-| Name            | Type              | Description                                          |
-|-----------------|-------------------|------------------------------------------------------|
-| commandReceived | CommandMessageReceived | The command message received in the response.      |
-| clientId        | String            | The client ID associated with the command response. |
-| requestId        | String            | The unique request ID of the command response.       |
-| isExecuted       | boolean           | Indicates if the command has been executed.         |
-| timestamp       | LocalDateTime     | The timestamp when the command response was created.|
-| error            | String            | The error message if there was an error.            |
-##### `CommandMessageReceived` class attributes
-| Name            | Type             | Description                                         |
-|-----------------|------------------|-----------------------------------------------------|
-| id              | String           | The unique identifier of the command message.      |
-| fromClientId    | String           | The ID of the client who sent the command message. |
-| timestamp       | Instant          | The timestamp when the command message was received.|
-| channel         | String           | The channel through which the command message was sent. |
-| metadata        | String           | Additional metadata associated with the command message. |
-| body            | byte[]           | The body of the command message as bytes.          |
-| replyChannel    | String           | The channel to which the reply should be sent.     |
-| tags            | Map<String, String> | A dictionary of key-value pairs representing tags associated with the command message. |
 
 
-```java 
-   private void sendCommandRequest(String channel) {
+## Commands & Queries – Commands Operations
+
+### Create Channel
+
+Creates a new Command channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to create  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelCreated  | boolean | Indicates if channel was created |
+
+#### Example
+
+```java
+public void createCommandsChannel(String channelName) {
+    try {
+        boolean isChannelCreated = cqClient.createCommandsChannel(channelName);
+        System.out.println("Commands channel created: " + isChannelCreated);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to create commands channel: " + e.getMessage());
+    }
+}
+```
+
+### Delete Channel
+
+Deletes an existing Command channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to delete  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelDeleted  | boolean | Indicates if channel was deleted |
+
+#### Example
+
+```java
+public void deleteCommandsChannel(String channelName) {
+    try {
+        boolean isChannelDeleted = cqClient.deleteCommandsChannel(channelName);
+        System.out.println("Commands channel deleted: " + isChannelDeleted);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to delete commands channel: " + e.getMessage());
+    }
+}
+```
+
+### List Channels
+
+Retrieves a list of Command channels.
+
+#### Request Parameters
+
+| Name         | Type   | Description                                | Default Value | Mandatory |
+|--------------|--------|--------------------------------------------|---------------|-----------|
+| searchString | String | Search query to filter channels (optional) | None          | No        |
+
+#### Response
+
+Returns a `List<CQChannel>` where each `CQChannel` has the following attributes:
+
+| Name         | Type    | Description                                      |
+|--------------|---------|--------------------------------------------------|
+| name         | String  | The name of the channel.                         |
+| type         | String  | The type of the channel.                         |
+| lastActivity | long    | The timestamp of the last activity on the channel. |
+| isActive     | boolean | Indicates whether the channel is currently active. |
+| incoming     | CQStats | Statistics about incoming messages to the channel. |
+| outgoing     | CQStats | Statistics about outgoing messages from the channel. |
+
+#### Example
+
+```java
+public void listCommandsChannels(String searchString) {
+    try {
+        List<CQChannel> channels = cqClient.listCommandsChannels(searchString);
+        System.out.println("Command Channels:");
+        channels.forEach(channel -> {
+            System.out.println("Name: " + channel.getName() + 
+                               ", Type: " + channel.getType() + 
+                               ", Active: " + channel.getIsActive());
+        });
+    } catch (RuntimeException e) {
+        System.err.println("Failed to list command channels: " + e.getMessage());
+    }
+}
+```
+
+### Send Command Request
+
+Sends a command request to a Command channel.
+
+#### Request: `CommandMessage` Class Attributes
+
+| Name             | Type                | Description                                             | Default Value     | Mandatory |
+|------------------|---------------------|---------------------------------------------------------|-------------------|-----------|
+| id               | String              | The ID of the command message.                          | None              | Yes       |
+| channel          | String              | The channel through which the command message will be sent. | None          | Yes       |
+| metadata         | String              | Additional metadata associated with the command message. | None             | No        |
+| body             | byte[]              | The body of the command message as bytes.               | Empty byte array  | No        |
+| tags             | Map<String, String> | A dictionary of key-value pairs representing tags associated with the command message. | Empty Map | No |
+| timeoutInSeconds | int                 | The maximum time in seconds for which the command message is valid. | None    | Yes       |
+
+#### Response: `CommandResponseMessage` Class Attributes
+
+| Name            | Type                    | Description                                          |
+|-----------------|-------------------------|------------------------------------------------------|
+| commandReceived | CommandMessageReceived  | The command message received in the response.        |
+| clientId        | String                  | The client ID associated with the command response.  |
+| requestId       | String                  | The unique request ID of the command response.       |
+| isExecuted      | boolean                 | Indicates if the command has been executed.          |
+| timestamp       | LocalDateTime           | The timestamp when the command response was created. |
+| error           | String                  | The error message if there was an error.             |
+
+#### Example
+
+```java
+public void sendCommandRequest(String channel) {
+    try {
         Map<String, String> tags = new HashMap<>();
         tags.put("tag1", "Command Message example");
         tags.put("tag2", "cq1");
@@ -1192,49 +935,669 @@ private void subscribeToCommands(String channel) {
                 .timeoutInSeconds(20)
                 .build();
 
-            CommandResponseMessage response = cqClient.sendCommandRequest(commandMessage);
-            System.out.println("Command Response: " + response);
+        CommandResponseMessage response = cqClient.sendCommandRequest(commandMessage);
+        System.out.println("Command Response: " + response);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to send command request: " + e.getMessage());
     }
-```
-**Command DeleteCommandsChannel Example:**
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to delete   | None          | Yes       |
-
-
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelDeleted    | boolean| Channel deleted true/false|    
-----------------------------------------------------------------------------
-
-```java 
- private void deleteCommandsChannel(String channel) {
-        System.out.println("Executing deleteCommandsChannel...");
-        boolean isChannelDeleted = cqClient.deleteCommandsChannel(channel);
-        System.out.println("Commands channel deleted: " + result);
-    }
-```
-**Queries DeleteQueriesChannel Example:**
-
-#### Request:
-| Name                | Type   | Description                                | Default Value | Mandatory |
-|---------------------|--------|--------------------------------------------|---------------|-----------|
-| channelName         | String | Channel name which you want to delete   | None          | Yes       |
-
-
-#### Response:
-| Name                | Type   | Description                                |
-|---------------------|--------|--------------------------------------------|
-| isChannelDeleted    | boolean| Channel deleted true/false|    
-----------------------------------------------------------------------------
-
-```java 
-    private void deleteQueriesChannel(String channel) {
-        System.out.println("Executing deleteQueriesChannel...");
-        boolean isChannelDeleted = cqClient.deleteQueriesChannel(channel);
-        System.out.println("Queries channel deleted: " + result);
-    }
+}
 ```
 
+### Subscribe To Commands
+
+Subscribes to receive command messages from a Command channel.
+
+#### Request: `CommandsSubscription` Class Attributes
+
+| Name                     | Type                             | Description                                   | Default Value | Mandatory |
+|--------------------------|----------------------------------|-----------------------------------------------|---------------|-----------|
+| channel                  | String                           | The channel for the subscription.             | None          | Yes       |
+| group                    | String                           | The group associated with the subscription.   | None          | No        |
+| onReceiveCommandCallback | Consumer<CommandMessageReceived> | Callback function for receiving commands.     | None          | Yes       |
+| onErrorCallback          | Consumer<String>                 | Callback function for error handling.         | None          | No        |
+
+#### Response
+
+This method doesn't return a value. It sets up a subscription that will invoke the provided callbacks.
+
+#### Callback: `CommandMessageReceived` Class Attributes
+
+| Name         | Type                | Description                                         |
+|--------------|---------------------|-----------------------------------------------------|
+| id           | String              | The unique identifier of the command message.       |
+| fromClientId | String              | The ID of the client who sent the command message.  |
+| timestamp    | Instant             | The timestamp when the command message was received.|
+| channel      | String              | The channel through which the command message was sent. |
+| metadata     | String              | Additional metadata associated with the command message. |
+| body         | byte[]              | The body of the command message as bytes.           |
+| replyChannel | String              | The channel to which the reply should be sent.      |
+| tags         | Map<String, String> | A dictionary of key-value pairs representing tags associated with the command message. |
+
+
+#### Command Response: `CommandResponseMessage` Class Attributes
+
+When responding to a received command, you should construct a `CommandResponseMessage` with the following attributes:
+
+| Name            | Type                    | Description                                          |
+|-----------------|-------------------------|------------------------------------------------------|
+| commandReceived | CommandMessageReceived  | The command message received in the response.        |
+| clientId        | String                  | The client ID associated with the command response.  |
+| requestId       | String                  | The unique request ID of the command response.       |
+| isExecuted      | boolean                 | Indicates if the command has been executed.          |
+| timestamp       | LocalDateTime           | The timestamp when the command response was created. |
+| error           | String                  | The error message if there was an error.             |
+
+#### Example
+
+```java
+public void subscribeToCommands(String channel) {
+    try {
+        Consumer<CommandMessageReceived> onReceiveCommandCallback = receivedCommand -> {
+            System.out.println("Received Command: " + new String(receivedCommand.getBody()));
+            
+            // Create a response message
+            CommandResponseMessage response = CommandResponseMessage.builder()
+                .commandReceived(receivedCommand)
+                .clientId("responder-client-id")  // Set your client ID here
+                .requestId(receivedCommand.getId())  // Use the received command's ID as the request ID
+                .isExecuted(true)
+                .timestamp(LocalDateTime.now())
+                .error(null)  // Set an error message if execution failed
+                .build();
+
+            // Send the response
+            cqClient.sendResponseMessage(response);
+        };
+
+        Consumer<String> onErrorCallback = errorMessage -> {
+            System.err.println("Command Subscription Error: " + errorMessage);
+        };
+
+        CommandsSubscription subscription = CommandsSubscription.builder()
+                .channel(channel)
+                .onReceiveCommandCallback(onReceiveCommandCallback)
+                .onErrorCallback(onErrorCallback)
+                .build();
+
+        cqClient.subscribeToCommands(subscription);
+        System.out.println("Subscribed to Commands channel: " + channel);
+        
+        // To cancel the subscription later:
+        // subscription.cancel();
+    } catch (RuntimeException e) {
+        System.err.println("Failed to subscribe to commands: " + e.getMessage());
+    }
+}
+```
+
+Note: Remember to handle the subscription lifecycle appropriately in your application. You may want to store the subscription object to cancel it when it's no longer needed. Also, ensure that you properly construct and send a `CommandResponseMessage` for each received command to complete the request-response cycle.
+
+
+## Commands & Queries – Queries Operations
+
+### Create Channel
+
+Creates a new Query channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to create  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelCreated  | boolean | Indicates if channel was created |
+
+#### Example
+
+```java
+public void createQueriesChannel(String channelName) {
+    try {
+        boolean isChannelCreated = cqClient.createQueriesChannel(channelName);
+        System.out.println("Queries channel created: " + isChannelCreated);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to create queries channel: " + e.getMessage());
+    }
+}
+```
+
+### Delete Channel
+
+Deletes an existing Query channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to delete  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelDeleted  | boolean | Indicates if channel was deleted |
+
+#### Example
+
+```java
+public void deleteQueriesChannel(String channelName) {
+    try {
+        boolean isChannelDeleted = cqClient.deleteQueriesChannel(channelName);
+        System.out.println("Queries channel deleted: " + isChannelDeleted);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to delete queries channel: " + e.getMessage());
+    }
+}
+```
+
+### List Channels
+
+Retrieves a list of Query channels.
+
+#### Request Parameters
+
+| Name         | Type   | Description                                | Default Value | Mandatory |
+|--------------|--------|--------------------------------------------|---------------|-----------|
+| searchString | String | Search query to filter channels (optional) | None          | No        |
+
+#### Response
+
+Returns a `List<CQChannel>` where each `CQChannel` has the following attributes:
+
+| Name         | Type    | Description                                      |
+|--------------|---------|--------------------------------------------------|
+| name         | String  | The name of the channel.                         |
+| type         | String  | The type of the channel.                         |
+| lastActivity | long    | The timestamp of the last activity on the channel. |
+| isActive     | boolean | Indicates whether the channel is currently active. |
+| incoming     | CQStats | Statistics about incoming messages to the channel. |
+| outgoing     | CQStats | Statistics about outgoing messages from the channel. |
+
+#### Example
+
+```java
+public void listQueriesChannels(String searchString) {
+    try {
+        List<CQChannel> channels = cqClient.listQueriesChannels(searchString);
+        System.out.println("Query Channels:");
+        channels.forEach(channel -> {
+            System.out.println("Name: " + channel.getName() + 
+                               ", Type: " + channel.getType() + 
+                               ", Active: " + channel.getIsActive());
+        });
+    } catch (RuntimeException e) {
+        System.err.println("Failed to list query channels: " + e.getMessage());
+    }
+}
+```
+
+### Send Query Request
+
+Sends a query request to a Query channel.
+
+#### Request: `QueryMessage` Class Attributes
+
+| Name             | Type                | Description                                             | Default Value     | Mandatory |
+|------------------|---------------------|---------------------------------------------------------|-------------------|-----------|
+| id               | String              | The ID of the query message.                            | None              | Yes       |
+| channel          | String              | The channel through which the query message will be sent. | None             | Yes       |
+| metadata         | String              | Additional metadata associated with the query message.  | None              | No        |
+| body             | byte[]              | The body of the query message as bytes.                 | Empty byte array  | No        |
+| tags             | Map<String, String> | A dictionary of key-value pairs representing tags associated with the query message. | Empty Map | No |
+| timeoutInSeconds | int                 | The maximum time in seconds for which the query message is valid. | None     | Yes       |
+
+#### Response: `QueryResponseMessage` Class Attributes
+
+| Name           | Type                  | Description                                          |
+|----------------|------------------------|------------------------------------------------------|
+| queryReceived  | QueryMessageReceived   | The query message received in the response.          |
+| clientId       | String                 | The client ID associated with the query response.    |
+| requestId      | String                 | The unique request ID of the query response.         |
+| executed       | boolean                | Indicates if the query has been executed.            |
+| timestamp      | LocalDateTime          | The timestamp when the query response was created.   |
+| metadata       | String                 | Additional metadata associated with the response.    |
+| body           | byte[]                 | The body of the query response as bytes.             |
+| error          | String                 | The error message if there was an error.             |
+
+#### Example
+
+```java
+public void sendQueryRequest(String channel) {
+    try {
+        Map<String, String> tags = new HashMap<>();
+        tags.put("tag1", "Query Message example");
+        tags.put("tag2", "cq1");
+        
+        QueryMessage queryMessage = QueryMessage.builder()
+                .channel(channel)
+                .body("Test Query".getBytes())
+                .metadata("Metadata add some extra information")
+                .tags(tags)
+                .timeoutInSeconds(20)
+                .build();
+
+        QueryResponseMessage response = cqClient.sendQueryRequest(queryMessage);
+        System.out.println("Query Response: " + response);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to send query request: " + e.getMessage());
+    }
+}
+```
+
+### Subscribe To Queries
+
+Subscribes to receive query messages from a Query channel.
+
+#### Request: `QueriesSubscription` Class Attributes
+
+| Name                   | Type                           | Description                                   | Default Value | Mandatory |
+|------------------------|--------------------------------|-----------------------------------------------|---------------|-----------|
+| channel                | String                         | The channel for the subscription.             | None          | Yes       |
+| group                  | String                         | The group associated with the subscription.   | None          | No        |
+| onReceiveQueryCallback | Consumer<QueryMessageReceived> | Callback function for receiving queries.      | None          | Yes       |
+| onErrorCallback        | Consumer<String>               | Callback function for error handling.         | None          | No        |
+
+#### Response
+
+This method doesn't return a value. It sets up a subscription that will invoke the provided callbacks.
+
+#### Callback: `QueryMessageReceived` Class Attributes
+
+| Name         | Type                | Description                                         |
+|--------------|---------------------|-----------------------------------------------------|
+| id           | String              | The unique identifier of the query message.         |
+| fromClientId | String              | The ID of the client who sent the query message.    |
+| timestamp    | Instant             | The timestamp when the query message was received.  |
+| channel      | String              | The channel through which the query message was sent. |
+| metadata     | String              | Additional metadata associated with the query message. |
+| body         | byte[]              | The body of the query message as bytes.             |
+| replyChannel | String              | The channel to which the reply should be sent.      |
+| tags         | Map<String, String> | A dictionary of key-value pairs representing tags associated with the query message. |
+
+#### Query Response: `QueryResponseMessage` Class Attributes
+
+When responding to a received query, you should construct a `QueryResponseMessage` with the following attributes:
+
+| Name           | Type                 | Description                                          |
+|----------------|----------------------|------------------------------------------------------|
+| queryReceived  | QueryMessageReceived | The query message received in the response.          |
+| clientId       | String               | The client ID associated with the query response.    |
+| requestId      | String               | The unique request ID of the query response.         |
+| executed       | boolean              | Indicates if the query has been executed.            |
+| timestamp      | LocalDateTime        | The timestamp when the query response was created.   |
+| metadata       | String               | Additional metadata associated with the response.    |
+| body           | byte[]               | The body of the query response as bytes.             |
+| error          | String               | The error message if there was an error.             |
+
+#### Example
+
+```java
+public void subscribeToQueries(String channel) {
+    try {
+        Consumer<QueryMessageReceived> onReceiveQueryCallback = receivedQuery -> {
+            System.out.println("Received Query: " + new String(receivedQuery.getBody()));
+            
+            // Process the query and prepare a response
+            String responseData = "Processed query result";
+            
+            // Create a response message
+            QueryResponseMessage response = QueryResponseMessage.builder()
+                .queryReceived(receivedQuery)
+                .clientId("responder-client-id")  // Set your client ID here
+                .requestId(receivedQuery.getId())  // Use the received query's ID as the request ID
+                .executed(true)
+                .timestamp(LocalDateTime.now())
+                .metadata("Response metadata")
+                .body(responseData.getBytes())
+                .error(null)  // Set an error message if execution failed
+                .build();
+
+            // Send the response
+            cqClient.sendQueryResponse(response);
+        };
+
+        Consumer<String> onErrorCallback = errorMessage -> {
+            System.err.println("Query Subscription Error: " + errorMessage);
+        };
+
+        QueriesSubscription subscription = QueriesSubscription.builder()
+                .channel(channel)
+                .onReceiveQueryCallback(onReceiveQueryCallback)
+                .onErrorCallback(onErrorCallback)
+                .build();
+
+        cqClient.subscribeToQueries(subscription);
+        System.out.println("Subscribed to Queries channel: " + channel);
+        
+        // To cancel the subscription later:
+        // subscription.cancel();
+    } catch (RuntimeException e) {
+        System.err.println("Failed to subscribe to queries: " + e.getMessage());
+    }
+}
+```
+
+Note: Remember to handle the subscription lifecycle appropriately in your application. You may want to store the subscription object to cancel it when it's no longer needed. Also, ensure that you properly construct and send a `QueryResponseMessage` for each received query to complete the request-response cycle.
+
+## Queues Operations
+
+### Create Channel
+
+Creates a new Queue channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to create  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelCreated  | boolean | Indicates if channel was created |
+
+#### Example
+
+```java
+public void createQueueChannel(String queueChannelName) {
+    try {
+        boolean isChannelCreated = queuesClient.createQueuesChannel(queueChannelName);
+        System.out.println("Queue Channel created: " + isChannelCreated);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to create queue channel: " + e.getMessage());
+    }
+}
+```
+
+### Delete Channel
+
+Deletes an existing Queue channel.
+
+#### Request Parameters
+
+| Name        | Type   | Description                             | Default Value | Mandatory |
+|-------------|--------|-----------------------------------------|---------------|-----------|
+| channelName | String | Name of the channel you want to delete  | None          | Yes       |
+
+#### Response
+
+| Name              | Type    | Description                    |
+|-------------------|---------|--------------------------------|
+| isChannelDeleted  | boolean | Indicates if channel was deleted |
+
+#### Example
+
+```java
+public void deleteQueueChannel(String queueChannelName) {
+    try {
+        boolean isChannelDeleted = queuesClient.deleteQueuesChannel(queueChannelName);
+        System.out.println("Queue Channel deleted: " + isChannelDeleted);
+    } catch (RuntimeException e) {
+        System.err.println("Failed to delete queue channel: " + e.getMessage());
+    }
+}
+```
+
+### List Channels
+
+Retrieves a list of Queue channels.
+
+#### Request Parameters
+
+| Name         | Type   | Description                                | Default Value | Mandatory |
+|--------------|--------|--------------------------------------------|---------------|-----------|
+| searchString | String | Search query to filter channels (optional) | None          | No        |
+
+#### Response
+
+Returns a `List<QueuesChannel>` where each `QueuesChannel` has the following attributes:
+
+| Name         | Type        | Description                                                |
+|--------------|-------------|------------------------------------------------------------|
+| name         | String      | The name of the queue channel.                             |
+| type         | String      | The type of the queue channel.                             |
+| lastActivity | long        | The timestamp of the last activity in the queue channel.   |
+| isActive     | boolean     | Indicates whether the queue channel is currently active.   |
+| incoming     | QueuesStats | The statistics for incoming messages in the queue channel. |
+| outgoing     | QueuesStats | The statistics for outgoing messages in the queue channel. |
+
+#### Example
+
+```java
+public void listQueueChannels(String searchString) {
+    try {
+        List<QueuesChannel> channels = queuesClient.listQueuesChannels(searchString);
+        System.out.println("Queue Channels:");
+        for (QueuesChannel channel : channels) {
+            System.out.println("Channel Name: " + channel.getName());
+            System.out.println("Type: " + channel.getType());
+            System.out.println("Last Activity: " + channel.getLastActivity());
+            System.out.println("Is Active: " + channel.getIsActive());
+            System.out.println("Incoming Stats: " + channel.getIncoming());
+            System.out.println("Outgoing Stats: " + channel.getOutgoing());
+            System.out.println();
+        }
+    } catch (RuntimeException e) {
+        System.err.println("Failed to list queue channels: " + e.getMessage());
+    }
+}
+```
+### Send Queue Message
+
+Sends a message to a Queue channel.
+
+#### Request: `QueueMessage` Class Attributes
+
+| Name                         | Type                | Description                                                                                 | Default Value | Mandatory |
+|------------------------------|---------------------|---------------------------------------------------------------------------------------------|---------------|-----------|
+| id                           | String              | The unique identifier for the message.                                                      | None          | No        |
+| channel                      | String              | The channel of the message.                                                                 | None          | Yes       |
+| metadata                     | String              | The metadata associated with the message.                                                   | None          | No        |
+| body                         | byte[]              | The body of the message.                                                                    | new byte[0]   | No        |
+| tags                         | Map<String, String> | The tags associated with the message.                                                       | new HashMap<>()| No        |
+| delayInSeconds               | int                 | The delay in seconds before the message becomes available in the queue.                     | None          | No        |
+| expirationInSeconds          | int                 | The expiration time in seconds for the message.                                             | None          | No        |
+| attemptsBeforeDeadLetterQueue| int                 | The number of receive attempts allowed for the message before it is moved to the dead letter queue. | None | No |
+| deadLetterQueue              | String              | The dead letter queue where the message will be moved after reaching the maximum receive attempts. | None | No |
+
+#### Response: `QueueSendResult` Class Attributes
+
+| Name       | Type            | Description                                                   |
+|------------|-----------------|---------------------------------------------------------------|
+| id         | String          | The unique identifier of the message.                         |
+| sentAt     | LocalDateTime   | The timestamp when the message was sent.                      |
+| expiredAt  | LocalDateTime   | The timestamp when the message will expire.                   |
+| delayedTo  | LocalDateTime   | The timestamp when the message will be delivered.             |
+| isError    | boolean         | Indicates if there was an error while sending the message.    |
+| error      | String          | The error message if `isError` is true.                       |
+
+#### Example
+
+```java
+public void sendQueueMessage(String channelName) {
+    System.out.println("\n============================== Send Queue Message Started =============================\n");
+    try {
+        QueueMessage message = QueueMessage.builder()
+                .body("Sending data in queue message stream".getBytes())
+                .channel(channelName)
+                .metadata("Sample metadata")
+                .id(UUID.randomUUID().toString())
+                // Optional parameters
+                .tags(new HashMap<>() {{ put("key1", "value1"); put("key2", "value2"); }})
+                .delayInSeconds(10)
+                .expirationInSeconds(3600)
+                .attemptsBeforeDeadLetterQueue(3)
+                .deadLetterQueue("dlq-" + channelName)
+                .build();
+
+        QueueSendResult sendResult = queuesClient.sendQueuesMessageUpStream(message);
+
+        System.out.println("Message sent Response:");
+        System.out.println("ID: " + sendResult.getId());
+        System.out.println("Sent At: " + sendResult.getSentAt());
+        System.out.println("Expired At: " + sendResult.getExpiredAt());
+        System.out.println("Delayed To: " + sendResult.getDelayedTo());
+        System.out.println("Is Error: " + sendResult.isError());
+        if (sendResult.isError()) {
+            System.out.println("Error: " + sendResult.getError());
+        }
+    } catch (RuntimeException e) {
+        System.err.println("Failed to send queue message: " + e.getMessage());
+    }
+}
+```
+
+This method allows you to send a message to a specified Queue channel. You can customize various aspects of the message, such as its content, metadata, tags, delay, expiration, and dead letter queue settings. The response provides information about the sent message, including its ID, timestamps, and any potential errors.
+
+### Receive Queue Messages
+
+Receives messages from a Queue channel.
+
+#### Request: `QueuesPollRequest` Class Attributes
+
+| Name                     | Type    | Description                                          | Default Value | Mandatory |
+|--------------------------|---------|------------------------------------------------------|---------------|-----------|
+| channel                  | String  | The channel to poll messages from.                   | None          | Yes       |
+| pollMaxMessages          | int     | The maximum number of messages to poll.              | 1             | No        |
+| pollWaitTimeoutInSeconds | int     | The wait timeout in seconds for polling messages.    | 60            | No        |
+| autoAckMessages          | boolean | Indicates if messages should be auto-acknowledged.   | false         | No        |
+
+#### Response: `QueuesPollResponse` Class Attributes
+
+| Name                   | Type                       | Description                                             |
+|------------------------|----------------------------|---------------------------------------------------------|
+| refRequestId           | String                     | The reference ID of the request.                        |
+| transactionId          | String                     | The unique identifier for the transaction.              |
+| messages               | List<QueueMessageReceived> | The list of received queue messages.                    |
+| error                  | String                     | The error message, if any error occurred.               |
+| isError                | boolean                    | Indicates if there was an error.                        |
+| isTransactionCompleted | boolean                    | Indicates if the transaction is completed.              |
+| activeOffsets          | List<Long>                 | The list of active offsets.                             |
+| receiverClientId       | String                     | The client ID of the receiver.                          |
+
+#### Example
+
+```java
+public void receiveQueuesMessages(String channelName) {
+    try {
+        QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
+                .channel(channelName)
+                .pollMaxMessages(1)
+                .pollWaitTimeoutInSeconds(10)
+                .build();
+
+        QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
+        
+        System.out.println("Received Message Response:");
+        System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
+        System.out.println("ReceiverClientId: " + pollResponse.getReceiverClientId());
+        System.out.println("TransactionId: " + pollResponse.getTransactionId());
+        
+        if (pollResponse.isError()) {
+            System.out.println("Error: " + pollResponse.getError());
+        } else {
+            pollResponse.getMessages().forEach(msg -> {
+                System.out.println("Message ID: " + msg.getId());
+                System.out.println("Message Body: " + new String(msg.getBody()));
+                
+                // Message handling options:
+                
+                // 1. Acknowledge message (mark as processed)
+                msg.ack();
+                
+                // 2. Reject message (won't be requeued)
+                // msg.reject();
+                
+                // 3. Requeue message (send back to queue)
+                // msg.reQueue(channelName);
+            });
+        }
+        
+        System.out.println("Is Transaction Completed: " + pollResponse.isTransactionCompleted());
+        System.out.println("Active Offsets: " + pollResponse.getActiveOffsets());
+        
+    } catch (RuntimeException e) {
+        System.err.println("Failed to receive queue messages: " + e.getMessage());
+    }
+}
+```
+
+This method allows you to receive messages from a specified Queue channel. You can configure the polling behavior, including the maximum number of messages to receive and the wait timeout. The response provides detailed information about the received messages and the transaction.
+
+#### Message Handling Options:
+
+1. **Acknowledge (ack)**: Mark the message as processed and remove it from the queue.
+2. **Reject**: Reject the message. It won't be requeued.
+3. **Requeue**: Send the message back to the queue for later processing.
+
+Choose the appropriate handling option based on your application's logic and requirements.
+
+#### Additional Example: Bulk Message Handling
+
+This example demonstrates how to use the bulk operations `ackAll`, `rejectAll`, and `requeueAll` on the `QueuesPollResponse` object.
+
+```java
+public void receiveAndBulkHandleQueueMessages(String channelName) {
+    System.out.println("\n============================== Receive and Bulk Handle Queue Messages =============================\n");
+    try {
+        QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
+                .channel(channelName)
+                .pollMaxMessages(10)  // Increased to receive multiple messages
+                .pollWaitTimeoutInSeconds(15)
+                .build();
+
+        QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
+        
+        System.out.println("Received Message Response:");
+        System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
+        System.out.println("ReceiverClientId: " + pollResponse.getReceiverClientId());
+        System.out.println("TransactionId: " + pollResponse.getTransactionId());
+        
+        if (pollResponse.isError()) {
+            System.out.println("Error: " + pollResponse.getError());
+        } else {
+            int messageCount = pollResponse.getMessages().size();
+            System.out.println("Received " + messageCount + " messages.");
+
+            // Print details of received messages
+            pollResponse.getMessages().forEach(msg -> {
+                System.out.println("Message ID: " + msg.getId());
+                System.out.println("Message Body: " + new String(msg.getBody()));
+            });
+
+            // Demonstrate bulk operations based on some condition
+            if (messageCount > 5) {
+                // Acknowledge all messages if more than 5 are received
+                pollResponse.ackAll();
+                System.out.println("Acknowledged all messages.");
+            } else if (messageCount > 0) {
+                // Requeue all messages if 1-5 messages are received
+                pollResponse.requeueAll(channelName);
+                System.out.println("Requeued all messages to channel: " + channelName);
+            } else {
+                // Reject all if no messages are received (this is just for demonstration)
+                pollResponse.rejectAll();
+                System.out.println("Rejected all messages (no messages received).");
+            }
+        }
+        
+        System.out.println("Is Transaction Completed: " + pollResponse.isTransactionCompleted());
+        System.out.println("Active Offsets: " + pollResponse.getActiveOffsets());
+        
+    } catch (RuntimeException e) {
+        System.err.println("Failed to receive or handle queue messages: " + e.getMessage());
+    }
+}
+```
+
+This example showcases the following bulk operations:
+
+1. **ackAll()**: Acknowledges all received messages, marking them as processed and removing them from the queue.
+2. **requeueAll(String channel)**: Requeues all received messages back to the specified channel for later processing.
+3. **rejectAll()**: Rejects all received messages. They won't be requeued.
+
+These bulk operations are particularly useful when you need to apply the same action to all received messages based on certain conditions or business logic. They can significantly simplify your code when dealing with multiple messages at once.
