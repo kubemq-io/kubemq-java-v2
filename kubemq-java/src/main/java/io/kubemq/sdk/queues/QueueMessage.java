@@ -157,7 +157,7 @@ public class QueueMessage {
 
     @Override
     public String toString() {
-        return "QueueMessageWrapper{" +
+        return "QueueMessage{" +
                 "id='" + id + '\'' +
                 ", channel='" + channel + '\'' +
                 ", metadata='" + metadata + '\'' +
