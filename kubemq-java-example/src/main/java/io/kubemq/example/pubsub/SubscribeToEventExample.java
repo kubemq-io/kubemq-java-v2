@@ -68,11 +68,13 @@ public class SubscribeToEventExample {
             pubSubClient.subscribeToEvents(subscription);
             System.out.println("Events Subscribed");
             
-            // Wait for 20 seconds and call the cancel subscription
+            // Wait for 10 seconds and call the cancel subscription
             try{
                 Thread.sleep(10 * 1000);
                 subscription.cancel();
-            }catch(Exception ex){}
+            } catch(Exception ex){
+
+            }
             
         } catch (RuntimeException e) {
             System.err.println("Failed to subscribe to events: " + e.getMessage());
