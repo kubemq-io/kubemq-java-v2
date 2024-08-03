@@ -41,7 +41,7 @@ public class EventStreamHelper {
             queuesUpStreamHandler = kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
         }
         queuesUpStreamHandler.onNext(event);
-        log.info("Message send waiting for response");
+        log.debug("Message send waiting for response");
         try {
             return futureResponse.get();
         } catch (Exception e) {
