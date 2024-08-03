@@ -27,6 +27,7 @@ public class SendEventMessageExample {
         pubSubClient = PubSubClient.builder()
                 .address(address)
                 .clientId(clientId)
+                .reconnectIntervalSeconds(1)
                 .build();
         // Ping to test Connection is succesffull
         ServerInfo pingResult = pubSubClient.ping();
@@ -93,7 +94,7 @@ public class SendEventMessageExample {
      */
     public static void main(String[] args) {
         SendEventMessageExample example = new SendEventMessageExample();
-        example.sendEventMessage();
+        //example.sendEventMessage();
         example.sendEventStoreMessage();
     }
 }

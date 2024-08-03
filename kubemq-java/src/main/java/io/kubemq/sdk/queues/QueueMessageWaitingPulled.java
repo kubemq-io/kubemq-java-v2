@@ -1,8 +1,6 @@
 package io.kubemq.sdk.queues;
 
-import io.grpc.stub.StreamObserver;
 import kubemq.Kubemq.QueueMessage;
-import kubemq.Kubemq.QueuesDownstreamRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

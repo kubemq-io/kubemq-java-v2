@@ -127,7 +127,7 @@ public class SubscribeToEventExample {
     public static void main(String[] args) throws InterruptedException {
         
         SubscribeToEventExample example = new SubscribeToEventExample();
-        example.subscribeToEvents();
+        //example.subscribeToEvents();
         example.subscribeToEventsStore();
         
         // Keep the main thread running to handle responses test reconnection

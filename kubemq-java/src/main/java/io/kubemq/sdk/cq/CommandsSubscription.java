@@ -6,7 +6,6 @@ import kubemq.Kubemq.Subscribe;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 @Data
@@ -96,25 +95,16 @@ public class CommandsSubscription {
     }
 
     private void reconnect(CQClient cQClient) {
-        long retryInterval = 1000 * cQClient.getReconnectIntervalSeconds();
-        while (true) {
             try {
+                Thread.sleep(cQClient.getReconnectIntervalSeconds());
                 log.debug("Attempting to re-subscribe...");
-                // Your method to subscribe again
                 cQClient.getAsyncClient().subscribeToRequests(this.encode(cQClient.getClientId(), cQClient), this.getObserver());
                 log.debug("Re-subscribed successfully");
-                break;
             } catch (Exception e) {
                 log.error("Re-subscribe attempt failed", e);
-                try {
-                    Thread.sleep(retryInterval);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    log.error("Re-subscribe sleep interrupted", ie);
-                    break;
-                }
+                this.reconnect(cQClient);
             }
-        }
+
     }
 
     @Override
