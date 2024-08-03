@@ -78,7 +78,7 @@ public class SendEventMessageExample {
                     .build();
             
             EventSendResult result = pubSubClient.sendEventsStoreMessage(eventStoreMessage);
-            System.out.println("Send event result: " + result);
+            System.out.println("Send eventstore result: " + result);
         } catch (RuntimeException e) {
             System.err.println("Failed to send event store message: " + e.getMessage());
         }
