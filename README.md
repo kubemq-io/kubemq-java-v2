@@ -213,20 +213,20 @@ All KubeMQ clients (PubSubClient, QueuesClient, and CQClient) share the same con
 
 The table below describes all available configuration parameters:
 
-| Name                     | Type     | Description                                                   | Default Value     | Mandatory |
-|--------------------------|----------|---------------------------------------------------------------|-------------------|-----------|
-| address                  | String   | The address of the KubeMQ server.                             | None              | Yes       |
-| clientId                 | String   | The client ID used for authentication.                        | None              | Yes       |
-| authToken                | String   | The authorization token for secure communication.             | None              | No        |
-| tls                      | boolean  | Indicates if TLS (Transport Layer Security) is enabled.       | false             | No        |
-| tlsCertFile              | String   | The path to the TLS certificate file.                         | None              | No (Yes if `tls` is true) |
-| tlsKeyFile               | String   | The path to the TLS key file.                                 | None              | No (Yes if `tls` is true) |
-| maxReceiveSize           | int      | The maximum size of the messages to receive (in bytes).       | 104857600 (100MB) | No        |
-| reconnectIntervalSeconds | int      | The interval in seconds between reconnection attempts.        | 5                 | No        |
-| keepAlive                | boolean  | Indicates if the connection should be kept alive.             | false             | No        |
-| pingIntervalInSeconds    | int      | The interval in seconds between ping messages.                | None              | No        |
-| pingTimeoutInSeconds     | int      | The timeout in seconds for ping messages.                     | None              | No        |
-| logLevel                 | Level    | The logging level to use.                                     | Level.INFO        | No        |
+| Name                     | Type    | Description                                             | Default Value     | Mandatory                 |
+|--------------------------|---------|---------------------------------------------------------|-------------------|---------------------------|
+| address                  | String  | The address of the KubeMQ server.                       | None              | Yes                       |
+| clientId                 | String  | The client ID used for authentication.                  | None              | Yes                       |
+| authToken                | String  | The authorization token for secure communication.       | None              | No                        |
+| tls                      | boolean | Indicates if TLS (Transport Layer Security) is enabled. | false             | No                        |
+| tlsCertFile              | String  | The path to the TLS certificate file.                   | None              | No (Yes if `tls` is true) |
+| tlsKeyFile               | String  | The path to the TLS key file.                           | None              | No (Yes if `tls` is true) |
+| maxReceiveSize           | int     | The maximum size of the messages to receive (in bytes). | 104857600 (100MB) | No                        |
+| reconnectIntervalSeconds | int     | The interval in seconds between reconnection attempts.  | 5                 | No                        |
+| keepAlive                | boolean | Indicates if the connection should be kept alive.       | false             | No                        |
+| pingIntervalInSeconds    | int     | The interval in seconds between ping messages.          | 60                | No                        |
+| pingTimeoutInSeconds     | int     | The timeout in seconds for ping messages.               | 30                | No                        |
+| logLevel                 | Level   | The logging level to use.                               | Level.INFO        | No                        |
 
 ### Example Usage
 
@@ -313,55 +313,6 @@ The ping operation is optional and should be used judiciously. Here are some app
 - **Error Handling**: Always handle potential IOException when using ping, as network issues can occur.
 
 Remember, the KubeMQ client is designed to handle connection management efficiently. In most cases, you can rely on the client to maintain the connection without explicit ping operations.
-
-
-## KubeMQ Message Payload Parameters
-
-The following table describes the common payload parameters used in all sending and receiving messages across different KubeMQ client types (PubSub, Queues, and Command & Query):
-
-| Parameter | Type | Description | Format | Mandatory |
-|-----------|------|-------------|--------|-----------|
-| Id | String | Unique identifier for the message | UUID or any unique string | No (auto-generated if not provided) |
-| Channel | String | The channel name for sending/receiving the message | Any string | Yes |
-| Metadata | String | Additional information associated with the message | Any string (e.g., JSON, XML) | No |
-| Body | byte[] | The actual content of the message | Byte array (can be serialized from various formats) | No |
-| Tags | Map<String, String> | Key-value pairs for message categorization | Map of strings | No |
-| ClientID | String | Identifier of the client sending the message | Any string (must be unique for EventStore) | Yes (set during client creation) |
-
-### Notes:
-
-1. **Id**: If not provided, KubeMQ will auto-generate a unique identifier for the message.
-
-2. **Channel**: This is crucial for routing messages to the correct subscribers or receivers.
-
-3. **Metadata**: Use this field to include any additional information about the message that doesn't fit into the main body or tags. It's often used for things like message type, version, or other metadata.
-
-4. **Body**: This can be any data serialized into a byte array. Common formats include JSON, Protocol Buffers, or custom binary formats. Make sure to use consistent serialization/deserialization methods on both sender and receiver sides.
-
-5. **Tags**: Useful for adding searchable or filterable attributes to your messages without modifying the main body content.
-
-6. **ClientID**: This is typically set when creating the client and is used in all messages sent by that client. It's particularly important for tracing and debugging.
-
-### Example Usage (PubSub):
-
-```java
-Map<String, String> tags = new HashMap<>();
-tags.put("priority", "high");
-tags.put("department", "finance");
-
-EventMessage message = EventMessage.builder()
-    .id(UUID.randomUUID().toString())
-    .channel("finance-updates")
-    .metadata("{\"version\": \"1.0\", \"type\": \"monthly-report\"}")
-    .body(serializeToJsonBytes(monthlyReport))
-    .tags(tags)
-    .build();
-
-pubSubClient.sendEventsMessage(message);
-```
-
-Remember that while these parameters are common across all message types, some specific message types (like Queue messages or Command/Query messages) might have additional parameters or slightly different usage patterns.
-
 
 ## PubSub Events Operations
 
@@ -470,15 +421,13 @@ Sends a message to an Events channel.
 
 #### Request: `EventMessage` Class Attributes
 
-| Name      | Type               | Description                                                   | Default Value   | Mandatory |
-|-----------|--------------------|------------------------------------------------------------|-----------------|-----------|
-| id        | String             | Unique identifier for the event message.                    | None            | No        |
-| channel   | String             | The channel to which the event message is sent.             | None            | Yes       |
-| metadata  | String             | Metadata associated with the event message.                 | None            | No        |
-| body      | byte[]             | Body of the event message in bytes.                         | Empty byte array| No        |
-| tags      | Map<String, String>| Tags associated with the event message as key-value pairs.  | Empty Map       | No        |
-
-**Note:** At least one of `metadata`, `body`, or `tags` is required.
+| Name     | Type                | Description                                                | Default Value    | Mandatory |
+|----------|---------------------|------------------------------------------------------------|------------------|-----------|
+| id       | String              | Unique identifier for the event message.                   | None             | No        |
+| channel  | String              | The channel to which the event message is sent.            | None             | Yes       |
+| metadata | String              | Metadata associated with the event message.                | None             | No        |
+| body     | byte[]              | Body of the event message in bytes.                        | Empty byte array | No        |
+| tags     | Map<String, String> | Tags associated with the event message as key-value pairs. | Empty Map        | No        |
 
 #### Response
 
@@ -487,26 +436,26 @@ This method doesn't return a value. Successful execution implies the message was
 #### Example
 
 ```java
-public void sendEventMessage(String eventChannelName) {
-    try {
-        String data = "Sample event data";
-        Map<String, String> tags = new HashMap<>();
-        tags.put("tag1", "value1");
-        tags.put("tag2", "value2");
+public void sendEventMessage() {
+  try {
+    String data = "Any data can be passed in byte, JSON or anything";
+    Map<String, String> tags = new HashMap<>();
+    tags.put("tag1", "kubemq");
+    tags.put("tag2", "kubemq2");
 
-        EventMessage eventMessage = EventMessage.builder()
-                .id(UUID.randomUUID().toString())
-                .channel(eventChannelName)
-                .metadata("Sample metadata")
-                .body(data.getBytes())
-                .tags(tags)
-                .build();
-        
-        pubSubClient.sendEventsMessage(eventMessage);
-        System.out.println("Event message sent successfully");
-    } catch (RuntimeException e) {
-        System.err.println("Failed to send event message: " + e.getMessage());
-    }
+    EventMessage eventMessage = EventMessage.builder()
+            .id(UUID.randomUUID().toString())
+            .channel(eventChannelName)
+            .metadata("something you want to describe")
+            .body(data.getBytes())
+            .tags(tags)
+            .build();
+
+    pubSubClient.sendEventsMessage(eventMessage);
+    System.out.println("Event message sent ");
+  } catch (RuntimeException e) {
+    System.err.println("Failed to send event message: " + e.getMessage());
+  }
 }
 ```
 
@@ -543,37 +492,44 @@ This method doesn't return a value. It sets up a subscription that will invoke t
 #### Example
 
 ```java
-public void subscribeToEvents(String eventChannelName) {
-    try {
-        // Callback for handling received events
-        Consumer<EventMessageReceived> onReceiveEventCallback = event -> {
-            System.out.println("Received event:");
-            System.out.println("ID: " + event.getId());
-            System.out.println("Channel: " + event.getChannel());
-            System.out.println("Metadata: " + event.getMetadata());
-            System.out.println("Body: " + new String(event.getBody()));
-            System.out.println("Tags: " + event.getTags());
-        };
-        
-        // Callback for handling errors
-        Consumer<String> onErrorCallback = error -> {
-            System.err.println("Subscription Error: " + error);
-        };
+public void subscribeToEvents() {
+  try {
+    // Consumer for handling received events
+    Consumer<EventMessageReceived> onReceiveEventCallback = event -> {
+      System.out.println("Received event:");
+      System.out.println("ID: " + event.getId());
+      System.out.println("Channel: " + event.getChannel());
+      System.out.println("Metadata: " + event.getMetadata());
+      System.out.println("Body: " + new String(event.getBody()));
+      System.out.println("Tags: " + event.getTags());
+    };
 
-        EventsSubscription subscription = EventsSubscription.builder()
-                .channel(eventChannelName)
-                .onReceiveEventCallback(onReceiveEventCallback)
-                .onErrorCallback(onErrorCallback)
-                .build();
 
-        pubSubClient.subscribeToEvents(subscription);
-        System.out.println("Successfully subscribed to Events channel");
-        
-        // To cancel the subscription later:
-        // subscription.cancel();
-    } catch (RuntimeException e) {
-        System.err.println("Failed to subscribe to events: " + e.getMessage());
+    // Consumer for handling errors
+    Consumer<String> onErrorCallback = error -> {
+      System.err.println("Error Received: " + error);
+    };
+
+    EventsSubscription subscription = EventsSubscription.builder()
+            .channel(eventChannelName)
+            .onReceiveEventCallback(onReceiveEventCallback)
+            .onErrorCallback(onErrorCallback)
+            .build();
+
+    pubSubClient.subscribeToEvents(subscription);
+    System.out.println("Events Subscribed");
+
+    // Wait for 10 seconds and call the cancel subscription
+    try{
+      Thread.sleep(10 * 1000);
+      subscription.cancel();
+    } catch(Exception ex){
+
     }
+
+  } catch (RuntimeException e) {
+    System.err.println("Failed to subscribe to events: " + e.getMessage());
+  }
 }
 ```
 
@@ -742,6 +698,19 @@ Subscribes to receive messages from an EventsStore channel.
 | eventsStoreType         | EventsStoreType                     | Type of EventsStore subscription (e.g., StartAtTime, StartAtSequence)| None          | Yes       |
 | eventsStoreStartTime    | Instant                             | Start time for EventsStore subscription (if applicable)              | None          | Conditional |
 
+
+#### EventsStoreType Options
+
+| Type              | Value | Description                                                        |
+|-------------------|-------|--------------------------------------------------------------------|
+| Undefined         | 0     | Default value, should be explicitly set to a valid type before use |
+| StartNewOnly      | 1     | Start storing events from the point when the subscription is made  |
+| StartFromFirst    | 2     | Start storing events from the first event available                |
+| StartFromLast     | 3     | Start storing events from the last event available                 |
+| StartAtSequence   | 4     | Start storing events from a specific sequence number               |
+| StartAtTime       | 5     | Start storing events from a specific point in time                 |
+| StartAtTimeDelta  | 6     | Start storing events from a specific time delta in seconds         |
+
 #### Response
 
 This method doesn't return a value. It sets up a subscription that will invoke the provided callbacks.
@@ -762,45 +731,48 @@ This method doesn't return a value. It sets up a subscription that will invoke t
 #### Example
 
 ```java
-public void subscribeToEventsStore(String eventStoreChannelName) {
-    try {
-        // Callback for handling received event store messages
-        Consumer<EventStoreMessageReceived> onReceiveEventCallback = event -> {
-            System.out.println("Received event store message:");
-            System.out.println("ID: " + event.getId());
-            System.out.println("Channel: " + event.getChannel());
-            System.out.println("Metadata: " + event.getMetadata());
-            System.out.println("Body: " + new String(event.getBody()));
-            System.out.println("Tags: " + event.getTags());
-        };
+public void subscribeToEventsStore() {
+  try {
+    // Consumer for handling received event store messages
+    Consumer<EventStoreMessageReceived> onReceiveEventCallback = event -> {
+      System.out.println("Received event store:");
+      System.out.println("ID: " + event.getId());
+      System.out.println("Channel: " + event.getChannel());
+      System.out.println("Metadata: " + event.getMetadata());
+      System.out.println("Body: " + new String(event.getBody()));
+      System.out.println("Tags: " + event.getTags());
+    };
 
-        // Callback for handling errors
-        Consumer<String> onErrorCallback = error -> {
-            System.err.println("Subscription Error: " + error);
-        };
+    // Consumer for handling errors
+    Consumer<String> onErrorCallback = error -> {
+      System.err.println("Error Received: " + error);
+    };
 
-        EventsStoreSubscription subscription = EventsStoreSubscription.builder()
-                .channel(eventStoreChannelName)
-                .eventsStoreType(EventsStoreType.StartAtTime)
-                .eventsStoreStartTime(Instant.now().minus(1, ChronoUnit.HOURS))
-                .onReceiveEventCallback(onReceiveEventCallback)
-                .onErrorCallback(onErrorCallback)
-                .build();
+    EventsStoreSubscription subscription = EventsStoreSubscription.builder()
+            .channel(eventStoreChannelName)
+            //.group("All IT Team")
+            .eventsStoreType(EventsStoreType.StartAtTime)
+            .eventsStoreStartTime(Instant.now().minus(1, ChronoUnit.HOURS))
+            .onReceiveEventCallback(onReceiveEventCallback)
+            .onErrorCallback(onErrorCallback)
+            .build();
 
-        pubSubClient.subscribeToEventsStore(subscription);
-        System.out.println("Successfully subscribed to EventsStore channel");
-        
-        // To cancel the subscription later:
-        // subscription.cancel();
-    } catch (RuntimeException e) {
-        System.err.println("Failed to subscribe to events store: " + e.getMessage());
-    }
+    pubSubClient.subscribeToEventsStore(subscription);
+    System.out.println("EventsStore Subscribed");
+
+    // Wait for 10 seconds and call the cancel subscription
+    try{
+      Thread.sleep(10 * 1000);
+      subscription.cancel();
+    }catch(Exception ex){}
+
+  } catch (RuntimeException e) {
+    System.err.println("Failed to subscribe to events store: " + e.getMessage());
+  }
 }
 ```
 
 Note: Remember to handle the subscription lifecycle appropriately in your application. You may want to store the subscription object to cancel it when it's no longer needed.
-
-
 
 
 ## Commands & Queries – Commands Operations
@@ -910,14 +882,14 @@ Sends a command request to a Command channel.
 
 #### Request: `CommandMessage` Class Attributes
 
-| Name             | Type                | Description                                             | Default Value     | Mandatory |
-|------------------|---------------------|---------------------------------------------------------|-------------------|-----------|
-| id               | String              | The ID of the command message.                          | None              | Yes       |
-| channel          | String              | The channel through which the command message will be sent. | None          | Yes       |
-| metadata         | String              | Additional metadata associated with the command message. | None             | No        |
-| body             | byte[]              | The body of the command message as bytes.               | Empty byte array  | No        |
+| Name             | Type                | Description                                                                            | Default Value     | Mandatory |
+|------------------|---------------------|----------------------------------------------------------------------------------------|-------------------|-----------|
+| id               | String              | The ID of the command message.                                                         | None              | Yes       |
+| channel          | String              | The channel through which the command message will be sent.                            | None          | Yes       |
+| metadata         | String              | Additional metadata associated with the command message.                               | None             | No        |
+| body             | byte[]              | The body of the command message as bytes.                                              | Empty byte array  | No        |
 | tags             | Map<String, String> | A dictionary of key-value pairs representing tags associated with the command message. | Empty Map | No |
-| timeoutInSeconds | int                 | The maximum time in seconds for which the command message is valid. | None    | Yes       |
+| timeoutInSeconds | int                 | The maximum time in seconds for waiting to response.                                   | None    | Yes       |
 
 #### Response: `CommandResponseMessage` Class Attributes
 
@@ -1152,14 +1124,14 @@ Sends a query request to a Query channel.
 
 #### Request: `QueryMessage` Class Attributes
 
-| Name             | Type                | Description                                             | Default Value     | Mandatory |
-|------------------|---------------------|---------------------------------------------------------|-------------------|-----------|
-| id               | String              | The ID of the query message.                            | None              | Yes       |
-| channel          | String              | The channel through which the query message will be sent. | None             | Yes       |
-| metadata         | String              | Additional metadata associated with the query message.  | None              | No        |
-| body             | byte[]              | The body of the query message as bytes.                 | Empty byte array  | No        |
+| Name             | Type                | Description                                                                          | Default Value     | Mandatory |
+|------------------|---------------------|--------------------------------------------------------------------------------------|-------------------|-----------|
+| id               | String              | The ID of the query message.                                                         | None              | Yes       |
+| channel          | String              | The channel through which the query message will be sent.                            | None             | Yes       |
+| metadata         | String              | Additional metadata associated with the query message.                               | None              | No        |
+| body             | byte[]              | The body of the query message as bytes.                                              | Empty byte array  | No        |
 | tags             | Map<String, String> | A dictionary of key-value pairs representing tags associated with the query message. | Empty Map | No |
-| timeoutInSeconds | int                 | The maximum time in seconds for which the query message is valid. | None     | Yes       |
+| timeoutInSeconds | int                 | The maximum time in seconds for waiting response.                                    | None     | Yes       |
 
 #### Response: `QueryResponseMessage` Class Attributes
 
