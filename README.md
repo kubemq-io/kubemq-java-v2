@@ -41,7 +41,7 @@ The **KubeMQ SDK for Java** enables Java developers to seamlessly communicate wi
     * [Subscribe To Events Messages](#subscribe-to-events-messages)
       * [Request: `EventsSubscription` Class Attributes](#request-eventssubscription-class-attributes)
       * [Response](#response-4)
-      * [Callback: `EventMessageReceived` Class Detail](#callback-eventmessagereceived-class-details)
+      * [Callback: `EventMessageReceived` Class Detail](#callback-eventmessagereceived-class-detail)
       * [Example](#example-4)
   * [PubSub EventsStore Operations](#pubsub-eventsstore-operations)
     * [Create Channel](#create-channel-1)
@@ -63,7 +63,7 @@ The **KubeMQ SDK for Java** enables Java developers to seamlessly communicate wi
     * [Subscribe To EventsStore Messages](#subscribe-to-eventsstore-messages)
       * [Request: `EventsStoreSubscription` Class Attributes](#request-eventsstoresubscription-class-attributes)
       * [Response](#response-9)
-      * [Callback: `EventStoreMessageReceived` Class Detail](#callback-eventstoremessagereceived-class-details)
+      * [Callback: `EventStoreMessageReceived` Class Detail](#callback-eventstoremessagereceived-class-detail)
       * [Example](#example-9)
   * [Commands & Queries – Commands Operations](#commands--queries--commands-operations)
     * [Create Channel](#create-channel-2)
@@ -134,6 +134,18 @@ The **KubeMQ SDK for Java** enables Java developers to seamlessly communicate wi
       * [Example](#example-24)
       * [Message Handling Options:](#message-handling-options)
       * [Additional Example: Bulk Message Handling](#additional-example-bulk-message-handling)
+    * [Waiting Queue Messages](#waiting-queue-messages)
+      * [Request Parameters](#request-parameters-15)
+      * [Response: `QueueMessagesWaiting` Class Attributes](#response-queuemessageswaiting-class-attributes)
+      * [`QueueMessageWaitingPulled` Class Attributes](#queuemessagewaitingpulled-class-attributes)
+      * [Example](#example-25)
+      * [Important Notes:](#important-notes-1)
+    * [Pull Messages](#pull-messages)
+      * [Request Parameters](#request-parameters-16)
+      * [Response: `QueueMessagesPulled` Class Attributes](#response-queuemessagespulled-class-attributes)
+      * [`QueueMessageWaitingPulled` Class Attributes](#queuemessagewaitingpulled-class-attributes-1)
+      * [Example](#example-26)
+      * [Important Notes:](#important-notes-2)
 <!-- TOC -->
 ## Prerequisites
 
@@ -1418,36 +1430,40 @@ Sends a message to a Queue channel.
 #### Example
 
 ```java
-public void sendQueueMessage(String channelName) {
-    System.out.println("\n============================== Send Queue Message Started =============================\n");
-    try {
-        QueueMessage message = QueueMessage.builder()
-                .body("Sending data in queue message stream".getBytes())
-                .channel(channelName)
-                .metadata("Sample metadata")
-                .id(UUID.randomUUID().toString())
-                // Optional parameters
-                .tags(new HashMap<>() {{ put("key1", "value1"); put("key2", "value2"); }})
-                .delayInSeconds(10)
-                .expirationInSeconds(3600)
-                .attemptsBeforeDeadLetterQueue(3)
-                .deadLetterQueue("dlq-" + channelName)
-                .build();
+public void sendQueueMessage() {
+  System.out.println("\n============================== Send Queue Message Started =============================\n");
+  try {
+    Map<String, String> tags = new HashMap<>();
+    tags.put("tag1", "kubemq");
+    tags.put("tag2", "kubemq2");
+    QueueMessage message = QueueMessage.builder()
+            .body("Sending data in queue message stream".getBytes())
+            .channel(channelName)
+            .metadata("Sample metadata")
+            .id(UUID.randomUUID().toString())
+            // Optional parameters
+            .tags(tags)
+            .delayInSeconds(1)
+            .expirationInSeconds(3600)
+            .attemptsBeforeDeadLetterQueue(3)
+            .deadLetterQueue("dlq-" + channelName)
+            .build();
 
-        QueueSendResult sendResult = queuesClient.sendQueuesMessageUpStream(message);
+    QueueSendResult sendResult = queuesClient.sendQueuesMessage(message);
 
-        System.out.println("Message sent Response:");
-        System.out.println("ID: " + sendResult.getId());
-        System.out.println("Sent At: " + sendResult.getSentAt());
-        System.out.println("Expired At: " + sendResult.getExpiredAt());
-        System.out.println("Delayed To: " + sendResult.getDelayedTo());
-        System.out.println("Is Error: " + sendResult.isError());
-        if (sendResult.isError()) {
-            System.out.println("Error: " + sendResult.getError());
-        }
-    } catch (RuntimeException e) {
-        System.err.println("Failed to send queue message: " + e.getMessage());
+    System.out.println("Message sent Response:");
+    System.out.println("ID: " + sendResult.getId());
+    System.out.println("Sent At: " + sendResult.getSentAt());
+    System.out.println("Expired At: " + sendResult.getExpiredAt());
+    System.out.println("Delayed To: " + sendResult.getDelayedTo());
+    System.out.println("Is Error: " + sendResult.isError());
+    if (sendResult.isError()) {
+      System.out.println("Error: " + sendResult.getError());
     }
+  } catch (RuntimeException e) {
+    System.err.println("Failed to send queue message: " + e.getMessage());
+  }
+
 }
 ```
 
@@ -1490,7 +1506,7 @@ public void receiveQueuesMessages(String channelName) {
                 .pollWaitTimeoutInSeconds(10)
                 .build();
 
-        QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
+        QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessages(queuesPollRequest);
         
         System.out.println("Received Message Response:");
         System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
@@ -1516,10 +1532,6 @@ public void receiveQueuesMessages(String channelName) {
                 // msg.reQueue(channelName);
             });
         }
-        
-        System.out.println("Is Transaction Completed: " + pollResponse.isTransactionCompleted());
-        System.out.println("Active Offsets: " + pollResponse.getActiveOffsets());
-        
     } catch (RuntimeException e) {
         System.err.println("Failed to receive queue messages: " + e.getMessage());
     }
@@ -1542,55 +1554,49 @@ This example demonstrates how to use the bulk operations `ackAll`, `rejectAll`, 
 
 ```java
 public void receiveAndBulkHandleQueueMessages(String channelName) {
-    System.out.println("\n============================== Receive and Bulk Handle Queue Messages =============================\n");
-    try {
-        QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
-                .channel(channelName)
-                .pollMaxMessages(10)  // Increased to receive multiple messages
-                .pollWaitTimeoutInSeconds(15)
-                .build();
+  System.out.println("\n============================== Receive and Bulk Handle Queue Messages =============================\n");
+  try {
+    QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
+            .channel(channelName)
+            .pollMaxMessages(10)  // Increased to receive multiple messages
+            .pollWaitTimeoutInSeconds(15)
+            .build();
 
-        QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessagesDownStream(queuesPollRequest);
-        
-        System.out.println("Received Message Response:");
-        System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
-        System.out.println("ReceiverClientId: " + pollResponse.getReceiverClientId());
-        System.out.println("TransactionId: " + pollResponse.getTransactionId());
-        
-        if (pollResponse.isError()) {
-            System.out.println("Error: " + pollResponse.getError());
-        } else {
-            int messageCount = pollResponse.getMessages().size();
-            System.out.println("Received " + messageCount + " messages.");
+    QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessages(queuesPollRequest);
 
-            // Print details of received messages
-            pollResponse.getMessages().forEach(msg -> {
-                System.out.println("Message ID: " + msg.getId());
-                System.out.println("Message Body: " + new String(msg.getBody()));
-            });
+    System.out.println("Received Message Response:");
+    System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
+    System.out.println("ReceiverClientId: " + pollResponse.getReceiverClientId());
+    System.out.println("TransactionId: " + pollResponse.getTransactionId());
 
-            // Demonstrate bulk operations based on some condition
-            if (messageCount > 5) {
-                // Acknowledge all messages if more than 5 are received
-                pollResponse.ackAll();
-                System.out.println("Acknowledged all messages.");
-            } else if (messageCount > 0) {
-                // Requeue all messages if 1-5 messages are received
-                pollResponse.requeueAll(channelName);
-                System.out.println("Requeued all messages to channel: " + channelName);
-            } else {
-                // Reject all if no messages are received (this is just for demonstration)
-                pollResponse.rejectAll();
-                System.out.println("Rejected all messages (no messages received).");
-            }
-        }
-        
-        System.out.println("Is Transaction Completed: " + pollResponse.isTransactionCompleted());
-        System.out.println("Active Offsets: " + pollResponse.getActiveOffsets());
-        
-    } catch (RuntimeException e) {
-        System.err.println("Failed to receive or handle queue messages: " + e.getMessage());
+    if (pollResponse.isError()) {
+      System.out.println("Error: " + pollResponse.getError());
+    } else {
+      int messageCount = pollResponse.getMessages().size();
+      System.out.println("Received " + messageCount + " messages.");
+
+      // Print details of received messages
+      pollResponse.getMessages().forEach(msg -> {
+        System.out.println("Message ID: " + msg.getId());
+        System.out.println("Message Body: " + new String(msg.getBody()));
+      });
+
+      // Acknowledge all messages
+      pollResponse.ackAll();
+      System.out.println("Acknowledged all messages.");
+
+      // Reject all messages
+      // pollResponse.rejectAll();
+      // System.out.println("Rejected all messages.");
+
+      // Requeue all messages
+      // pollResponse.reQueueAll(channelName);
+      // System.out.println("Requeued all messages.");
     }
+
+  } catch (RuntimeException e) {
+    System.err.println("Failed to receive or handle queue messages: " + e.getMessage());
+  }
 }
 ```
 
@@ -1601,3 +1607,183 @@ This example showcases the following bulk operations:
 3. **rejectAll()**: Rejects all received messages. They won't be requeued.
 
 These bulk operations are particularly useful when you need to apply the same action to all received messages based on certain conditions or business logic. They can significantly simplify your code when dealing with multiple messages at once.
+
+
+### Waiting Queue Messages
+
+The "Waiting" operation allows you to retrieve information about messages waiting in a queue without removing them from the queue. This can be useful for monitoring queue status or implementing custom processing logic based on waiting messages.
+
+#### Request Parameters
+
+| Name                | Type   | Description                                            | Default Value | Mandatory |
+|---------------------|--------|--------------------------------------------------------|---------------|-----------|
+| channelName         | String | The name of the channel to check for waiting messages. | None          | Yes       |
+| maxNumberOfMessages | int    | The maximum number of waiting messages to retrieve.    | None          | Yes       |
+| waitTimeSeconds     | int    | The maximum time to wait for messages, in seconds.     | None          | Yes       |
+
+#### Response: `QueueMessagesWaiting` Class Attributes
+
+| Name     | Type                           | Description                             |
+|----------|--------------------------------|-----------------------------------------|
+| messages | List<QueueMessageWaitingPulled>| List of waiting messages in the queue.  |
+| isError  | boolean                        | Indicates if there was an error.        |
+| error    | String                         | The error message, if any.              |
+
+#### `QueueMessageWaitingPulled` Class Attributes
+
+| Name              | Type                | Description                                                       |
+|-------------------|---------------------|-------------------------------------------------------------------|
+| id                | String              | The unique identifier of the message.                             |
+| channel           | String              | The channel name of the message.                                  |
+| metadata          | String              | Additional metadata associated with the message.                  |
+| body              | byte[]              | The body content of the message.                                  |
+| fromClientId      | String              | The ID of the client that sent the message.                       |
+| tags              | Map<String, String> | Key-value pairs of tags associated with the message.              |
+| timestamp         | Instant             | The timestamp when the message was sent.                          |
+| sequence          | long                | The sequence number of the message in the queue.                  |
+| receiveCount      | int                 | The number of times this message has been received.               |
+| isReRouted        | boolean             | Indicates if the message has been re-routed.                      |
+| reRouteFromQueue  | String              | The original queue name if the message was re-routed.             |
+| expiredAt         | Instant             | The timestamp when the message will expire.                       |
+| delayedTo         | Instant             | The timestamp until which the message is delayed for processing.  |
+| receiverClientId  | String              | The ID of the client receiving the message.                       |
+
+#### Example
+
+```java
+public void getWaitingMessages() {
+    System.out.println("\n============================== getWaitingMessages Started =============================\n");
+    try {
+        String channelName = "mytest-channel";
+        int maxNumberOfMessages = 1;
+        int waitTimeSeconds = 10;
+
+        QueueMessagesWaiting rcvMessages = queuesClient.waiting(channelName, maxNumberOfMessages, waitTimeSeconds);
+        
+        if (rcvMessages.isError()) {
+            System.out.println("Error occurred: " + rcvMessages.getError());
+            return;
+        }
+        
+        System.out.println("Waiting Messages Count: " + rcvMessages.getMessages().size());
+        
+        for (QueueMessageWaitingPulled msg : rcvMessages.getMessages()) {
+            System.out.println("Message ID: " + msg.getId());
+            System.out.println("Channel: " + msg.getChannel());
+            System.out.println("Metadata: " + msg.getMetadata());
+            System.out.println("Body: " + new String(msg.getBody()));
+            System.out.println("From Client ID: " + msg.getFromClientId());
+            System.out.println("Tags: " + msg.getTags());
+            System.out.println("Timestamp: " + msg.getTimestamp());
+            System.out.println("Sequence: " + msg.getSequence());
+            System.out.println("Receive Count: " + msg.getReceiveCount());
+            System.out.println("Is Re-routed: " + msg.isReRouted());
+            System.out.println("Re-route From Queue: " + msg.getReRouteFromQueue());
+            System.out.println("Expired At: " + msg.getExpiredAt());
+            System.out.println("Delayed To: " + msg.getDelayedTo());
+            System.out.println("Receiver Client ID: " + msg.getReceiverClientId());
+            System.out.println("--------------------");
+        }
+    } catch (RuntimeException e) {
+        System.err.println("Failed to get waiting messages: " + e.getMessage());
+    }
+}
+```
+
+This method allows you to peek at messages waiting in a specified queue channel without removing them. It's particularly useful for:
+
+#### Important Notes:
+1. Monitoring queue depth and content.
+2. Implementing custom logic based on the number or content of waiting messages.
+3. Previewing messages before deciding whether to process them.
+
+
+### Pull Messages
+
+The "Pull Messages" operation allows you to retrieve and remove messages from a queue. Unlike the "Waiting" operation, this actually dequeues the messages, making them unavailable for other consumers.
+
+#### Request Parameters
+
+| Name                | Type   | Description                                            | Default Value | Mandatory |
+|---------------------|--------|--------------------------------------------------------|---------------|-----------|
+| channelName         | String | The name of the channel to pull messages from.         | None          | Yes       |
+| maxNumberOfMessages | int    | The maximum number of messages to pull.                | None          | Yes       |
+| waitTimeSeconds     | int    | The maximum time to wait for messages, in seconds.     | None          | Yes       |
+
+#### Response: `QueueMessagesPulled` Class Attributes
+
+| Name     | Type                           | Description                             |
+|----------|--------------------------------|-----------------------------------------|
+| messages | List<QueueMessageWaitingPulled>| List of pulled messages from the queue. |
+| isError  | boolean                        | Indicates if there was an error.        |
+| error    | String                         | The error message, if any.              |
+
+#### `QueueMessageWaitingPulled` Class Attributes
+
+| Name              | Type                | Description                                                       |
+|-------------------|---------------------|-------------------------------------------------------------------|
+| id                | String              | The unique identifier of the message.                             |
+| channel           | String              | The channel name of the message.                                  |
+| metadata          | String              | Additional metadata associated with the message.                  |
+| body              | byte[]              | The body content of the message.                                  |
+| fromClientId      | String              | The ID of the client that sent the message.                       |
+| tags              | Map<String, String> | Key-value pairs of tags associated with the message.              |
+| timestamp         | Instant             | The timestamp when the message was sent.                          |
+| sequence          | long                | The sequence number of the message in the queue.                  |
+| receiveCount      | int                 | The number of times this message has been received.               |
+| isReRouted        | boolean             | Indicates if the message has been re-routed.                      |
+| reRouteFromQueue  | String              | The original queue name if the message was re-routed.             |
+| expiredAt         | Instant             | The timestamp when the message will expire.                       |
+| delayedTo         | Instant             | The timestamp until which the message is delayed for processing.  |
+| receiverClientId  | String              | The ID of the client receiving the message.                       |
+
+#### Example
+
+```java
+public void getPullMessages() {
+    System.out.println("\n============================== getPullMessages Started =============================\n");
+    try {
+        String channelName = "mytest-channel";
+        int maxNumberOfMessages = 1;
+        int waitTimeSeconds = 10;
+
+        QueueMessagesPulled rcvMessages = queuesClient.pull(channelName, maxNumberOfMessages, waitTimeSeconds);
+
+        if (rcvMessages.isError()) {
+            System.out.println("Error occurred: " + rcvMessages.getError());
+            return;
+        }
+
+        System.out.println("Pulled Messages Count: " + rcvMessages.getMessages().size());
+
+        for (QueueMessageWaitingPulled msg : rcvMessages.getMessages()) {
+            System.out.println("Message ID: " + msg.getId());
+            System.out.println("Channel: " + msg.getChannel());
+            System.out.println("Metadata: " + msg.getMetadata());
+            System.out.println("Body: " + new String(msg.getBody()));
+            System.out.println("From Client ID: " + msg.getFromClientId());
+            System.out.println("Tags: " + msg.getTags());
+            System.out.println("Timestamp: " + msg.getTimestamp());
+            System.out.println("Sequence: " + msg.getSequence());
+            System.out.println("Receive Count: " + msg.getReceiveCount());
+            System.out.println("Is Re-routed: " + msg.isReRouted());
+            System.out.println("Re-route From Queue: " + msg.getReRouteFromQueue());
+            System.out.println("Expired At: " + msg.getExpiredAt());
+            System.out.println("Delayed To: " + msg.getDelayedTo());
+            System.out.println("Receiver Client ID: " + msg.getReceiverClientId());
+            System.out.println("--------------------");
+        }
+    } catch (RuntimeException e) {
+        System.err.println("Failed to pull messages: " + e.getMessage());
+    }
+}
+```
+
+This example demonstrates how to pull messages from a specified queue channel, process them, and access all the available metadata for each message.
+
+#### Important Notes:
+
+- The `pull` operation removes messages from the queue. Once pulled, these messages are no longer available to other consumers.
+- The `QueueMessagesPulled` object includes an `isError` flag and an `error` string, which should be checked before processing the messages.
+- The structure of `QueueMessageWaitingPulled` is the same for both "waiting" and "pull" operations, providing consistent access to message metadata.
+
