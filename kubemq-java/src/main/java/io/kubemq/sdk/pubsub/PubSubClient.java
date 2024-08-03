@@ -5,7 +5,6 @@ import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.ChannelDecoder;
 import kubemq.Kubemq;
 import lombok.Builder;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -16,7 +15,6 @@ import java.util.UUID;
  * It provides methods to send messages, create and delete channels, list channels, and subscribe to events.
  */
 @Slf4j
-@NoArgsConstructor
 public class PubSubClient extends KubeMQClient {
 
     @Builder

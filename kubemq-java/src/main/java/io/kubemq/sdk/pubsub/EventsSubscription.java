@@ -5,7 +5,6 @@ import kubemq.Kubemq;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -135,25 +134,17 @@ public class EventsSubscription {
     }
 
     private void reconnect(PubSubClient pubSubClient) {
-        long retryInterval = 1000 * pubSubClient.getReconnectIntervalSeconds();
-        while (true) {
             try {
+                Thread.sleep(pubSubClient.getReconnectIntervalSeconds());
                 log.debug("Attempting to re-subscribe... ");
                 // Your method to subscribe again
                 pubSubClient.getAsyncClient().subscribeToEvents(this.encode(pubSubClient.getClientId(),pubSubClient), this.getObserver());
                 log.debug("Re-subscribed successfully");
-                break;
             } catch (Exception e) {
                 log.error("Re-subscribe attempt failed", e);
-                try {
-                    Thread.sleep(retryInterval);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    log.error("Re-subscribe sleep interrupted", ie);
-                    break;
-                }
+                this.reconnect(pubSubClient);
             }
-        }
+
     }
 
     @Override

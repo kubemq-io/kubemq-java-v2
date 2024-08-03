@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -66,6 +65,9 @@ public class EventsStoreSubscription {
      */
     @Setter(onMethod_ = @__(@java.lang.SuppressWarnings("unused")))
     private transient StreamObserver<Kubemq.EventReceive> observer;
+
+    @Setter(onMethod_ = @__(@java.lang.SuppressWarnings("unused")))
+    private transient Kubemq.Subscribe subscribe;
 
     /**
      * Default constructor initializing default values.
@@ -138,7 +140,7 @@ public class EventsStoreSubscription {
      * @return The encoded KubeMQ Subscribe object.
      */
     public Kubemq.Subscribe encode(String clientId, final PubSubClient pubSubClient) {
-        Kubemq.Subscribe subscribe = Kubemq.Subscribe.newBuilder()
+         subscribe = Kubemq.Subscribe.newBuilder()
                 .setSubscribeTypeData(Kubemq.Subscribe.SubscribeType.forNumber(SubscribeType.EventsStore.getValue()))
                 .setClientID(clientId)
                 .setChannel(channel)
@@ -176,27 +178,14 @@ public class EventsStoreSubscription {
     }
 
     private void reconnect(PubSubClient pubSubClient) {
-
-        long retryInterval = 1000 * pubSubClient.getReconnectIntervalSeconds();
-
-        while (true) {
-            try {
-                log.debug("Attempting to re-subscribe...");
-                // Your method to subscribe again
-                //pubSubClient.subscribeToEventsStore(this);
-                pubSubClient.getAsyncClient().subscribeToEvents(this.encode(pubSubClient.getClientId(),pubSubClient), this.getObserver());
-                log.debug("Re-subscribed successfully");
-                break;
-            } catch (Exception e) {
-                log.error("Re-subscribe attempt failed", e);
-                try {
-                    Thread.sleep(retryInterval);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    log.error("Re-subscribe sleep interrupted", ie);
-                    break;
-                }
-            }
+        try {
+            Thread.sleep(pubSubClient.getReconnectIntervalSeconds());
+            log.debug("Attempting to re-subscribe...");
+            pubSubClient.getAsyncClient().subscribeToEvents(this.subscribe, this.getObserver());
+            log.debug("Re-subscribed successfully");
+        } catch (Exception e) {
+            log.error("Re-subscribe attempt failed", e);
+            this.reconnect(pubSubClient);
         }
     }
 
