@@ -30,7 +30,7 @@ public class SubscribeToEventExample {
         pubSubClient = PubSubClient.builder()
                 .address(address)
                 .clientId(clientId)
-                .logLevel(KubeMQClient.Level.DEBUG)
+                .logLevel(KubeMQClient.Level.INFO)
                 .build();
         // Ping to test Connection is succesffull
         ServerInfo pingResult = pubSubClient.ping();

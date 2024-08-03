@@ -134,17 +134,13 @@ public class EventsSubscription {
         return subscribe;
     }
 
-    private int retryCount = 0;
     private void reconnect(PubSubClient pubSubClient) {
-
-        int maxRetries = 50000;  // Set your maximum retry attempts
         long retryInterval = 1000 * pubSubClient.getReconnectIntervalSeconds();
-
-        while (retryCount < maxRetries) {
+        while (true) {
             try {
-                log.debug("Attempting to re-subscribe... Attempt #" +(retryCount+=1));
+                log.debug("Attempting to re-subscribe... ");
                 // Your method to subscribe again
-                pubSubClient.subscribeToEvents(this);
+                pubSubClient.getAsyncClient().subscribeToEvents(this.encode(pubSubClient.getClientId(),pubSubClient), this.getObserver());
                 log.debug("Re-subscribed successfully");
                 break;
             } catch (Exception e) {
@@ -157,11 +153,6 @@ public class EventsSubscription {
                     break;
                 }
             }
-        }
-
-        if (retryCount >= maxRetries) {
-            log.error("Max retries reached. Could not re-subscribe to events.");
-            raiseOnError("Max retries reached. Could not re-subscribe to events.");
         }
     }
 
