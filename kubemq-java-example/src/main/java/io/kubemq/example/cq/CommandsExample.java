@@ -5,6 +5,7 @@ import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.exception.GRPCException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 public class CommandsExample {
@@ -56,11 +57,11 @@ public class CommandsExample {
         cqClient.subscribeToCommands(subscription);
         System.out.println("");
         
-        // Wait for 20 seconds and call the cancel subscription
-            try{
-                Thread.sleep(10 * 1000);
-                subscription.cancel();
-            }catch(Exception ex){}
+        // Wait for 10 seconds and call the cancel subscription
+//            try{
+//                Thread.sleep(10 * 1000);
+//                subscription.cancel();
+//            }catch(Exception ex){}
     }
 
    private void sendCommandRequest(String channel) {
@@ -89,13 +90,15 @@ public class CommandsExample {
         try {
 
             // Run in sperate thread
-            new Thread(() -> {
-              cqClientExample.subscribeToCommands(commandChannel);
-            }).start();
-          
+            cqClientExample.subscribeToCommands(commandChannel);
+            
             cqClientExample.sendCommandRequest(commandChannel);
+            
+            // Keep the main thread running to handle responses test reconnection
+            CountDownLatch latch = new CountDownLatch(1);
+            latch.await();  // This will keep the main thread alive
 
-        } catch (GRPCException e) {
+        } catch (GRPCException |InterruptedException e) {
             System.err.println("gRPC error: " + e.getMessage());
             e.printStackTrace();
         }

@@ -94,15 +94,15 @@ public class QueriesSubscription {
         return request;
     }
 
-    private AtomicInteger retryCount = new AtomicInteger(0);
+    private int retryCount = 0;
     private void reconnect(CQClient cQClient) {
 
         int maxRetries = 50000;  // Set your maximum retry attempts
         long retryInterval = 1000 * cQClient.getReconnectIntervalSeconds();
 
-        while (retryCount.get() < maxRetries) {
+        while (retryCount < maxRetries) {
             try {
-                log.debug("Attempting to re-subscribe... Attempt #" + retryCount.incrementAndGet());
+                log.debug("Attempting to re-subscribe... Attempt #" + (retryCount+=1));
                 // Your method to subscribe again
                 cQClient.subscribeToQueries(this);
                 log.debug("Re-subscribed successfully");
@@ -119,7 +119,7 @@ public class QueriesSubscription {
             }
         }
 
-        if (retryCount.get() >= maxRetries) {
+        if (retryCount >= maxRetries) {
             log.error("Max retries reached. Could not re-subscribe to queries.");
             raiseOnError("Max retries reached. Could not re-subscribe to queries.");
         }
