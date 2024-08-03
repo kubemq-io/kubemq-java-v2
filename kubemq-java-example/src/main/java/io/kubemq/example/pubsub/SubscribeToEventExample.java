@@ -69,12 +69,12 @@ public class SubscribeToEventExample {
             System.out.println("Events Subscribed");
             
             // Wait for 10 seconds and call the cancel subscription
-            try{
-                Thread.sleep(10 * 1000);
-                subscription.cancel();
-            } catch(Exception ex){
-
-            }
+//            try{
+//                Thread.sleep(10 * 1000);
+//                subscription.cancel();
+//            } catch(Exception ex){
+//
+//            }
             
         } catch (RuntimeException e) {
             System.err.println("Failed to subscribe to events: " + e.getMessage());
@@ -114,10 +114,10 @@ public class SubscribeToEventExample {
             System.out.println("EventsStore Subscribed");
             
             // Wait for 10 seconds and call the cancel subscription
-            try{
-                Thread.sleep(10 * 1000);
-                subscription.cancel();
-            }catch(Exception ex){}
+//            try{
+//                Thread.sleep(10 * 1000);
+//                subscription.cancel();
+//            }catch(Exception ex){}
             
         } catch (RuntimeException e) {
             System.err.println("Failed to subscribe to events store: " + e.getMessage());
@@ -130,9 +130,9 @@ public class SubscribeToEventExample {
         example.subscribeToEvents();
         example.subscribeToEventsStore();
         
-          // Keep the main thread running to handle responses
-//        CountDownLatch latch = new CountDownLatch(1);
-//        latch.await();  // This will keep the main thread alive
+        // Keep the main thread running to handle responses test reconnection
+        CountDownLatch latch = new CountDownLatch(1);
+        latch.await();  // This will keep the main thread alive
         
     }
 
