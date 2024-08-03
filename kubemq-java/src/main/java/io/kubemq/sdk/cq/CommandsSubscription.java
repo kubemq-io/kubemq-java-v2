@@ -95,17 +95,13 @@ public class CommandsSubscription {
         return request;
     }
 
-    private int retryCount = 0;
     private void reconnect(CQClient cQClient) {
-
-        int maxRetries = 50000;  // Set your maximum retry attempts
         long retryInterval = 1000 * cQClient.getReconnectIntervalSeconds();
-
-        while (retryCount < maxRetries) {
+        while (true) {
             try {
-                log.debug("Attempting to re-subscribe... Attempt #" + (retryCount+=1));
+                log.debug("Attempting to re-subscribe...");
                 // Your method to subscribe again
-                cQClient.subscribeToCommands(this);
+                cQClient.getAsyncClient().subscribeToRequests(this.encode(cQClient.getClientId(), cQClient), this.getObserver());
                 log.debug("Re-subscribed successfully");
                 break;
             } catch (Exception e) {
@@ -118,11 +114,6 @@ public class CommandsSubscription {
                     break;
                 }
             }
-        }
-
-        if (retryCount >= maxRetries) {
-            log.error("Max retries reached. Could not re-subscribe to commands.");
-            raiseOnError("Max retries reached. Could not re-subscribe to commands.");
         }
     }
 
