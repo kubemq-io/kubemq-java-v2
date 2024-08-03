@@ -119,8 +119,8 @@ public abstract class KubeMQClient implements AutoCloseable {
                         .sslContext(sslContext)
                         .negotiationType(NegotiationType.TLS)
                         .maxInboundMessageSize(maxReceiveSize)
-                        .keepAliveTime(pingIntervalInSeconds == 0 ? 180 : pingIntervalInSeconds, TimeUnit.SECONDS)
-                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 20 : pingTimeoutInSeconds, TimeUnit.SECONDS)
+                        .keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
+                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 30 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                         .keepAliveWithoutCalls(keepAlive)
                         .enableRetry()
                         .build();
@@ -152,7 +152,7 @@ public abstract class KubeMQClient implements AutoCloseable {
         // Add listener to handle reconnections
         addChannelStateListener();
 
-        log.info("Client initialized for KubeMQ address: {}", address);
+        log.debug("Client initialized for KubeMQ address: {}", address);
     }
 
     private void addChannelStateListener() {
