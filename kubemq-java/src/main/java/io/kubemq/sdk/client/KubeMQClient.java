@@ -85,7 +85,7 @@ public abstract class KubeMQClient implements AutoCloseable {
         this.tlsCertFile = tlsCertFile;
         this.tlsKeyFile = tlsKeyFile;
         this.maxReceiveSize = maxReceiveSize <=0 ?(1024 * 1024 * 100):maxReceiveSize; // 100MB
-        this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0?5:reconnectIntervalSeconds;
+        this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0?1:reconnectIntervalSeconds;
         this.keepAlive = keepAlive;
         this.pingIntervalInSeconds = pingIntervalInSeconds;
         this.pingTimeoutInSeconds = pingTimeoutInSeconds;
