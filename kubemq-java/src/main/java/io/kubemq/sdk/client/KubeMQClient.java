@@ -131,8 +131,8 @@ public abstract class KubeMQClient implements AutoCloseable {
         } else {
             managedChannel = ManagedChannelBuilder.forTarget(address)
                     .maxInboundMessageSize(maxReceiveSize)
-                    .keepAliveTime(pingIntervalInSeconds == 0 ? 180 : pingIntervalInSeconds, TimeUnit.SECONDS)
-                    .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 20 : pingTimeoutInSeconds, TimeUnit.SECONDS)
+                    .keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
+                    .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 30 : pingTimeoutInSeconds, TimeUnit.SECONDS)
                     .keepAliveWithoutCalls(keepAlive)
                     .usePlaintext()
                     .enableRetry()
