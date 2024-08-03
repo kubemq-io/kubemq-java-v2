@@ -220,7 +220,7 @@ The table below describes all available configuration parameters:
 | tlsCertFile              | String  | The path to the TLS certificate file.                   | None              | No (Yes if `tls` is true) |
 | tlsKeyFile               | String  | The path to the TLS key file.                           | None              | No (Yes if `tls` is true) |
 | maxReceiveSize           | int     | The maximum size of the messages to receive (in bytes). | 104857600 (100MB) | No                        |
-| reconnectIntervalSeconds | int     | The interval in seconds between reconnection attempts.  | 5                 | No                        |
+| reconnectIntervalSeconds | int     | The interval in seconds between reconnection attempts.  | 1                 | No                        |
 | keepAlive                | boolean | Indicates if the connection should be kept alive.       | false             | No                        |
 | pingIntervalInSeconds    | int     | The interval in seconds between ping messages.          | 60                | No                        |
 | pingTimeoutInSeconds     | int     | The timeout in seconds for ping messages.               | 30                | No                        |
