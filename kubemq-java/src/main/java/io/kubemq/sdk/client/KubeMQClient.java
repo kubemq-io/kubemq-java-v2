@@ -11,7 +11,6 @@ import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
@@ -28,7 +27,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Getter
-@NoArgsConstructor
 @AllArgsConstructor
 public abstract class KubeMQClient implements AutoCloseable {
 
@@ -85,7 +83,7 @@ public abstract class KubeMQClient implements AutoCloseable {
         this.tlsCertFile = tlsCertFile;
         this.tlsKeyFile = tlsKeyFile;
         this.maxReceiveSize = maxReceiveSize <=0 ?(1024 * 1024 * 100):maxReceiveSize; // 100MB
-        this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0?1:reconnectIntervalSeconds;
+        this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0 ? (1*1000):(reconnectIntervalSeconds * 1000);
         this.keepAlive = keepAlive;
         this.pingIntervalInSeconds = pingIntervalInSeconds;
         this.pingTimeoutInSeconds = pingTimeoutInSeconds;
