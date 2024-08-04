@@ -14,6 +14,31 @@ public class EventStreamHelper {
 
     private StreamObserver<Kubemq.Event> queuesUpStreamHandler = null;
 
+    public void sendEventMessage(KubeMQClient kubeMQClient, Kubemq.Event event) {
+
+        if (queuesUpStreamHandler == null) {
+            StreamObserver<Kubemq.Result> resultStreamObserver = new StreamObserver<Kubemq.Result>() {
+                @Override
+                public void onNext(Kubemq.Result result) {
+                    log.debug("Received EventSendResult: '{}'", result);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    log.error("Error in EventSendResult: ", t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    log.debug("EventSendResult onCompleted.");
+                }
+            };
+            queuesUpStreamHandler = kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
+        }
+        queuesUpStreamHandler.onNext(event);
+        log.debug("Event Message send waiting for response");
+    }
+
     public EventSendResult sendEventStoreMessage(KubeMQClient kubeMQClient, Kubemq.Event event) {
         CompletableFuture<EventSendResult> futureResponse = new CompletableFuture<>();
 
@@ -41,7 +66,7 @@ public class EventStreamHelper {
             queuesUpStreamHandler = kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
         }
         queuesUpStreamHandler.onNext(event);
-        log.debug("Message send waiting for response");
+        log.debug("Event store Message send waiting for response");
         try {
             return futureResponse.get();
         } catch (Exception e) {
