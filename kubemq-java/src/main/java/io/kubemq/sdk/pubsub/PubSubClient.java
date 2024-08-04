@@ -17,10 +17,13 @@ import java.util.UUID;
 @Slf4j
 public class PubSubClient extends KubeMQClient {
 
+    private EventStreamHelper eventStreamHelper;
+
     @Builder
     public PubSubClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
-                        int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
+                        int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
         super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
+        eventStreamHelper =  new EventStreamHelper();
     }
 
     /**
@@ -35,22 +38,7 @@ public class PubSubClient extends KubeMQClient {
             log.debug("Sending event message");
             message.validate();
             Kubemq.Event event = message.encode(this.getClientId());
-            StreamObserver<Kubemq.Result> resultStreamObserver = new StreamObserver<Kubemq.Result>() {
-                @Override
-                public void onNext(Kubemq.Result result) {
-                }
-                @Override
-                public void onError(Throwable t) {
-                    log.error("Error in sendEventsMessage: ", t);
-                }
-                @Override
-                public void onCompleted() {
-                    log.debug("sendEventsMessage onCompleted.");
-                }
-            };
-            super.getAsyncClient().sendEventsStream(resultStreamObserver);
-
-            //kubemq.Kubemq.Result result = kubeMQClient.getClient().sendEvent(event);
+            eventStreamHelper.sendEventMessage(this,event);
         } catch (Exception e) {
             log.error("Failed to send event message", e);
             throw new RuntimeException(e);
@@ -69,8 +57,7 @@ public class PubSubClient extends KubeMQClient {
             log.debug("Sending event store message");
             message.validate();
             Kubemq.Event event = message.encode(this.getClientId());
-            //kubemq.Kubemq.Result result = kubeMQClient.getClient().sendEvent(event);
-            return new EventStreamHelper().sendEventStoreMessage(this,event);
+            return eventStreamHelper.sendEventStoreMessage(this,event);
         } catch (Exception e) {
             log.error("Failed to send event store message", e);
             throw new RuntimeException(e);
