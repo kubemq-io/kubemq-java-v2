@@ -17,7 +17,7 @@ public class CQClient extends KubeMQClient {
 
     @Builder
     public CQClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
-                        int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, KubeMQClient.Level logLevel) {
+                        int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, KubeMQClient.Level logLevel) {
         super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
     }
 

@@ -38,7 +38,7 @@ public abstract class KubeMQClient implements AutoCloseable {
     private  String tlsKeyFile;
     private  int maxReceiveSize;
     private  int reconnectIntervalSeconds;
-    private  boolean keepAlive;
+    private  Boolean keepAlive;
     private  int pingIntervalInSeconds;
     private  int pingTimeoutInSeconds;
     private  Level logLevel;
@@ -68,7 +68,7 @@ public abstract class KubeMQClient implements AutoCloseable {
      * @param logLevel                The logging level to use.
      */
     public KubeMQClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
-                        int maxReceiveSize, int reconnectIntervalSeconds, boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
+                        int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
         if (address == null || clientId == null) {
             throw new IllegalArgumentException("Address and clientId are required");
         }
@@ -113,28 +113,32 @@ public abstract class KubeMQClient implements AutoCloseable {
                         .trustManager(new File(tlsCertFile))
                         .keyManager(new File(tlsCertFile), new File(tlsKeyFile))
                         .build();
-                managedChannel = NettyChannelBuilder.forTarget(address)
+                NettyChannelBuilder ncb = NettyChannelBuilder.forTarget(address)
                         .sslContext(sslContext)
                         .negotiationType(NegotiationType.TLS)
                         .maxInboundMessageSize(maxReceiveSize)
-                        .keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
-                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 30 : pingTimeoutInSeconds, TimeUnit.SECONDS)
-                        .keepAliveWithoutCalls(keepAlive)
-                        .enableRetry()
-                        .build();
+                        .enableRetry();
+                    if(keepAlive != null){
+                    ncb = ncb.keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
+                                .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 30 : pingTimeoutInSeconds, TimeUnit.SECONDS)
+                                .keepAliveWithoutCalls(keepAlive);
+                    }
+                managedChannel = ncb.build();
             } catch (SSLException e) {
                 log.error("Failed to set up SSL context", e);
                 throw new RuntimeException(e);
             }
         } else {
-            managedChannel = ManagedChannelBuilder.forTarget(address)
+            ManagedChannelBuilder mcb = ManagedChannelBuilder.forTarget(address)
                     .maxInboundMessageSize(maxReceiveSize)
-                    .keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
-                    .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 30 : pingTimeoutInSeconds, TimeUnit.SECONDS)
-                    .keepAliveWithoutCalls(keepAlive)
                     .usePlaintext()
-                    .enableRetry()
-                    .build();
+                    .enableRetry();
+            if(keepAlive != null){
+                mcb = mcb.keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)
+                        .keepAliveTimeout(pingTimeoutInSeconds == 0 ? 30 : pingTimeoutInSeconds, TimeUnit.SECONDS)
+                        .keepAliveWithoutCalls(keepAlive);
+            }
+            managedChannel = mcb.build();
         }
 
         if (metadata != null) {
