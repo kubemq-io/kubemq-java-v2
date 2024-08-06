@@ -36,7 +36,7 @@ public class EventStreamHelper {
             queuesUpStreamHandler = kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
         }
         queuesUpStreamHandler.onNext(event);
-        log.debug("Event Message send waiting for response");
+        log.debug("Event Message sent");
     }
 
     public EventSendResult sendEventStoreMessage(KubeMQClient kubeMQClient, Kubemq.Event event) {
