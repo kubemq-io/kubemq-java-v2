@@ -62,3 +62,113 @@ target
 secrets.yml
 .gradletasknamecache
 .sts4-cache
+
+# Maven specific ignores
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IntelliJ IDEA specific ignores
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# IntelliJ IDEA log and plugin-specific files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches/
+.idea/modules.xml
+.idea/assetWizard.xml
+.idea/jsLibraryMappings.xml
+.idea/compiler.xml
+
+# IDE preferences and usage
+.idea/misc.xml
+.idea/vcs.xml
+.idea/sonarIssues.xml
+.idea/uiDesigner.xml
+.idea/encodings.xml
+
+# IntelliJ IDEA local history
+.idea/localHistory/
+
+# IntelliJ IDEA module output
+out/
+
+# NetBeans specific ignores
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Eclipse specific ignores
+.classpath
+.project
+.settings/
+bin/
+
+# OS-specific ignores
+.DS_Store
+Thumbs.db
+
+# General IDE and tools configuration
+*.swp
+*~
+.project
+*.tmproj
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.orig
+
+# Compiled class files
+*.class
+
+# Java specific files
+*.war
+*.ear
+
+# Mac OS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Linux specific files
+*~
+
+# Windows specific files
+Thumbs.db
+ehthumbs.db
+
+# Windows image file caches
+Thumbs.db
+
+# Windows Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Temporary files created by macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+

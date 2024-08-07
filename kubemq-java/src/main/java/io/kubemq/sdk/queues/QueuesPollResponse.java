@@ -39,6 +39,7 @@ public class QueuesPollResponse {
                 .setRefTransactionId(transactionId)
                 .addAllSequenceRange(activeOffsets)
                 .build();
+        if(responseHandler != null)
         responseHandler.onNext(request);
     }
 
@@ -53,6 +54,7 @@ public class QueuesPollResponse {
                 .setRefTransactionId(transactionId)
                 .addAllSequenceRange(activeOffsets)
                 .build();
+        if(responseHandler != null)
          responseHandler.onNext(request);
     }
 
@@ -68,6 +70,7 @@ public class QueuesPollResponse {
                 .addAllSequenceRange(activeOffsets)
                 .setReQueueChannel(channel)
                 .build();
+        if(responseHandler != null)
          responseHandler.onNext(request);
     }
 
