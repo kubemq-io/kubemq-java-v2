@@ -32,6 +32,7 @@ public class QueueMessagesPulled {
 
     /**
      * The number of messages received.
+     * @return
      */
     public List<QueueMessageWaitingPulled> getMessages() {
         if(messages == null){

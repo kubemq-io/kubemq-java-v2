@@ -62,6 +62,7 @@ public abstract class KubeMQClient implements AutoCloseable {
      * @param tlsCertFile             The path to the TLS certificate file.
      * @param tlsKeyFile              The path to the TLS key file.
      * @param maxReceiveSize          The maximum size of the messages to receive (in bytes).
+     * @param reconnectIntervalSeconds The interval between reconnect attempted.
      * @param keepAlive               Indicates if the connection should be kept alive.
      * @param pingIntervalInSeconds   The interval between ping messages (in seconds).
      * @param pingTimeoutInSeconds    The timeout for ping messages (in seconds).
