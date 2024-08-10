@@ -30,7 +30,6 @@ public class PubSubClient extends KubeMQClient {
      * Sends an event message.
      *
      * @param message the event message to be sent
-     * @return the result of sending the event message
      * @throws RuntimeException if sending the message fails
      */
     public void sendEventsMessage(EventMessage message) {

@@ -63,10 +63,10 @@ public class EventsStoreSubscription {
      * Observer for the subscription.
      * This field is excluded from the builder and setter.
      */
-    @Setter(onMethod_ = @__(@java.lang.SuppressWarnings("unused")))
+    @Setter
     private transient StreamObserver<Kubemq.EventReceive> observer;
 
-    @Setter(onMethod_ = @__(@java.lang.SuppressWarnings("unused")))
+    @Setter
     private transient Kubemq.Subscribe subscribe;
 
     /**
@@ -137,6 +137,7 @@ public class EventsStoreSubscription {
      * Encodes the subscription into a KubeMQ Subscribe object.
      *
      * @param clientId The client ID for the subscription.
+     * @param pubSubClient The client use to reconnect
      * @return The encoded KubeMQ Subscribe object.
      */
     public Kubemq.Subscribe encode(String clientId, final PubSubClient pubSubClient) {
