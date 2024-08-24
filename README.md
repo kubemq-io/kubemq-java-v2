@@ -172,7 +172,7 @@ compile group: 'io.kubemq.sdk', name: 'kubemq-sdk-Java', version: '2.0.0'
 
 ## Running Examples
 
-The [examples](https://github.com/kubemq-io/kubemq-java-example) are standalone projects that showcase the usage of the SDK. To run the examples, ensure you have a running instance of KubeMQ. Import the project into any IDE of your choice (e.g., IntelliJ, Eclipse, NetBeans). The example project contains three packages demonstrating different implementations:
+The [examples](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example) are standalone projects that showcase the usage of the SDK. To run the examples, ensure you have a running instance of KubeMQ. Import the project into any IDE of your choice (e.g., IntelliJ, Eclipse, NetBeans). The example project contains three packages demonstrating different implementations:
 
 - `io.kubemq.example.cq`: Examples related to Commands and Queries
 - `io.kubemq.example.pubsub`: Examples related to Events and EventStore
