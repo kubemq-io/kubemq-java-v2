@@ -160,7 +160,7 @@ The recommended way to use the SDK for Java in your project is to add it as a de
 <dependency>
    <groupId>io.kubemq.sdk</groupId>
    <artifactId>kubemq-sdk-Java</artifactId>
-   <version>2.0.0</version>
+   <version>LATEST</version>
 </dependency>
 ```
 
