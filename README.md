@@ -1,6 +1,7 @@
 # KubeMQ Java SDK
 
 The **KubeMQ SDK for Java** enables Java developers to seamlessly communicate with the [KubeMQ](https://kubemq.io/) server, implementing various communication patterns such as Events, EventStore, Commands, Queries, and Queues.
+
 <!-- TOC -->
 * [KubeMQ Java SDK](#kubemq-java-sdk)
   * [Prerequisites](#prerequisites)
