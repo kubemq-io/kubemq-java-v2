@@ -81,6 +81,11 @@ public class QueueMessage {
             throw new IllegalArgumentException("Queue message must have at least one of the following: metadata, body, or tags.");
         }
 
+        final int MAX_BODY_SIZE = 104857600; // 100 MB in bytes
+        if (body.length > MAX_BODY_SIZE) {
+            throw new IllegalArgumentException("Queue message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.");
+        }
+
         if (attemptsBeforeDeadLetterQueue < 0) {
             throw new IllegalArgumentException("Queue message attempts_before_dead_letter_queue must be a positive number.");
         }
