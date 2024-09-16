@@ -19,7 +19,8 @@ public class QueryMessage {
     private String id;
     private String channel;
     private String metadata;
-    private byte[] body;
+    @Builder.Default
+    private byte[] body = new byte[0];
     @Builder.Default
     private Map<String, String> tags = new HashMap<>();
     private int timeoutInSeconds;
@@ -33,6 +34,11 @@ public class QueryMessage {
 
         if ((metadata == null || metadata.isEmpty()) && (body == null || body.length == 0) && (tags == null || tags.isEmpty())) {
             throw new IllegalArgumentException("Query message must have at least one of the following: metadata, body, or tags.");
+        }
+
+        final int MAX_BODY_SIZE = 104857600; // 100 MB in bytes
+        if (body.length > MAX_BODY_SIZE) {
+            throw new IllegalArgumentException("Queue message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.");
         }
 
         if (timeoutInSeconds <= 0) {
