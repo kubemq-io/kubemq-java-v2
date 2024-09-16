@@ -1,6 +1,7 @@
 # KubeMQ Java SDK
 
 The **KubeMQ SDK for Java** enables Java developers to seamlessly communicate with the [KubeMQ](https://kubemq.io/) server, implementing various communication patterns such as Events, EventStore, Commands, Queries, and Queues.
+
 <!-- TOC -->
 * [KubeMQ Java SDK](#kubemq-java-sdk)
   * [Prerequisites](#prerequisites)
@@ -160,7 +161,7 @@ The recommended way to use the SDK for Java in your project is to add it as a de
 <dependency>
    <groupId>io.kubemq.sdk</groupId>
    <artifactId>kubemq-sdk-Java</artifactId>
-   <version>2.0.0</version>
+   <version>LATEST</version>
 </dependency>
 ```
 
@@ -172,7 +173,7 @@ compile group: 'io.kubemq.sdk', name: 'kubemq-sdk-Java', version: '2.0.0'
 
 ## Running Examples
 
-The [examples](https://github.com/kubemq-io/kubemq-java-example) are standalone projects that showcase the usage of the SDK. To run the examples, ensure you have a running instance of KubeMQ. Import the project into any IDE of your choice (e.g., IntelliJ, Eclipse, NetBeans). The example project contains three packages demonstrating different implementations:
+The [examples](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example) are standalone projects that showcase the usage of the SDK. To run the examples, ensure you have a running instance of KubeMQ. Import the project into any IDE of your choice (e.g., IntelliJ, Eclipse, NetBeans). The example project contains three packages demonstrating different implementations:
 
 - `io.kubemq.example.cq`: Examples related to Commands and Queries
 - `io.kubemq.example.pubsub`: Examples related to Events and EventStore
