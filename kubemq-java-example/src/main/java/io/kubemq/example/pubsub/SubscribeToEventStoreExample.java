@@ -27,6 +27,7 @@ public class SubscribeToEventStoreExample {
         pubSubClient = PubSubClient.builder()
                 .address(address)
                 .clientId(clientId)
+                .reconnectIntervalSeconds(10)
                 .logLevel(KubeMQClient.Level.INFO)
                 .build();
         // Ping to test Connection is succesffull
