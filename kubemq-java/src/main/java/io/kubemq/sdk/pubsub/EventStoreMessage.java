@@ -34,9 +34,10 @@ public class EventStoreMessage {
     private String metadata;
 
     /**
-     * The body of the message.
+     * Body of the event message in bytes.
      */
-    private byte[] body;
+    @Builder.Default
+    private byte[] body = new byte[0];
 
     /**
      * The tags associated with the message.
@@ -54,8 +55,13 @@ public class EventStoreMessage {
             throw new IllegalArgumentException("Event Store message must have a channel.");
         }
 
-        if (metadata == null && body == null && (tags == null || tags.isEmpty())) {
+        if (metadata == null && body.length == 0 && (tags == null || tags.isEmpty())) {
             throw new IllegalArgumentException("Event Store message must have at least one of the following: metadata, body, or tags.");
+        }
+
+        final int MAX_BODY_SIZE = 104857600; // 100 MB in bytes
+        if (body.length > MAX_BODY_SIZE) {
+            throw new IllegalArgumentException("Queue message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.");
         }
     }
 
