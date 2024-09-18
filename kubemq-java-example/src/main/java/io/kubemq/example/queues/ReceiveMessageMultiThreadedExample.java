@@ -152,7 +152,7 @@ public class ReceiveMessageMultiThreadedExample {
         example.shutdownWorkerPool();
 
         // Keep the main thread running (for demo purposes)
-        CountDownLatch latch = new CountDownLatch(1);
-        latch.await();
+//        CountDownLatch latch = new CountDownLatch(1);
+//        latch.await();
     }
 }
