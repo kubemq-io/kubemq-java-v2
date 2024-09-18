@@ -28,7 +28,7 @@ public class QueuesPollResponse {
     private StreamObserver<QueuesDownstreamRequest> responseHandler;
     private String receiverClientId;
 
-    public void ackAll() {
+    public synchronized void ackAll() {
         if (isTransactionCompleted) {
             throw new IllegalStateException("Transaction is already completed");
         }
@@ -39,11 +39,11 @@ public class QueuesPollResponse {
                 .setRefTransactionId(transactionId)
                 .addAllSequenceRange(activeOffsets)
                 .build();
-        if(responseHandler != null)
-        responseHandler.onNext(request);
+
+        this.addTaskToQueue(request);
     }
 
-    public void rejectAll() {
+    public synchronized void rejectAll() {
         if (isTransactionCompleted) {
             throw new IllegalStateException("Transaction is already completed");
         }
@@ -54,11 +54,11 @@ public class QueuesPollResponse {
                 .setRefTransactionId(transactionId)
                 .addAllSequenceRange(activeOffsets)
                 .build();
-        if(responseHandler != null)
-         responseHandler.onNext(request);
+
+        this.addTaskToQueue(request);
     }
 
-    public void reQueueAll(String channel) {
+    public synchronized void reQueueAll(String channel) {
         if (channel == null || channel.isEmpty()) {
             throw new IllegalArgumentException("Re-queue channel cannot be empty");
         }
@@ -70,8 +70,8 @@ public class QueuesPollResponse {
                 .addAllSequenceRange(activeOffsets)
                 .setReQueueChannel(channel)
                 .build();
-        if(responseHandler != null)
-         responseHandler.onNext(request);
+
+        this.addTaskToQueue(request);
     }
 
     public QueuesPollResponse decode(
@@ -106,6 +106,20 @@ public class QueuesPollResponse {
                 refRequestId, transactionId, error, isError, isTransactionCompleted, activeOffsets, messages);
     }
 
+    private void addTaskToQueue(QueuesDownstreamRequest request){
+
+            QueueDownStreamProcessor.addTask(() -> {
+                synchronized (responseHandler) {
+                    try {
+                        responseHandler.onNext(request);
+                        log.debug("{} message: {}",request.getRequestTypeData(), request.getRequestID());
+                    } catch (Exception e) {
+                        log.error("Error processing {}: {}",request.getRequestTypeData(),e.getMessage());
+                    }
+                }
+            });
+
+    }
 
     public void setRefRequestId(String refRequestId) {
         this.refRequestId = refRequestId;
