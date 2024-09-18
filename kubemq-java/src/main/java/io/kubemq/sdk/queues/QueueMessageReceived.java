@@ -43,7 +43,8 @@ public class QueueMessageReceived {
     private StreamObserver<QueuesDownstreamRequest> responseHandler;
     private String receiverClientId;
 
-    public void ack() {
+    // Method to ack() a message, add to queue for processing
+    public synchronized void ack() {
         if (isTransactionCompleted) {
             throw new IllegalStateException("Transaction is already completed");
         }
@@ -57,10 +58,12 @@ public class QueueMessageReceived {
                 .addSequenceRange(sequence)
                 .build();
 
-        responseHandler.onNext(request);
+        // Add ack task to queue
+        this.addTaskToQueue(request);
     }
 
-    public void reject() {
+    // Method to reject() a message, add to queue for processing
+    public synchronized void reject() {
         if (isTransactionCompleted) {
             throw new IllegalStateException("Transaction is already completed");
         }
@@ -74,25 +77,28 @@ public class QueueMessageReceived {
                 .addSequenceRange(sequence)
                 .build();
 
-         responseHandler.onNext(request);
+        // Add reject task to queue
+        this.addTaskToQueue(request);
     }
 
-    public void reQueue(String channel) {
-        if (channel == null || channel.isEmpty()) {
+    // Method to reQueue() a message, add to queue for processing
+    public synchronized void reQueue(String newChannel) {
+        if (newChannel == null || newChannel.isEmpty()) {
             throw new IllegalArgumentException("Re-queue channel cannot be empty");
         }
 
         QueuesDownstreamRequest request = QueuesDownstreamRequest.newBuilder()
                 .setRequestID(UUID.randomUUID().toString())
                 .setClientID(receiverClientId)
-                .setChannel(this.channel)
+                .setChannel(channel)
                 .setRequestTypeData(QueuesDownstreamRequestType.ReQueueRange)
                 .setRefTransactionId(transactionId)
                 .addSequenceRange(sequence)
-                .setReQueueChannel(channel)
+                .setReQueueChannel(newChannel)
                 .build();
 
-        responseHandler.onNext(request);
+        // Add reQueue task to queue
+        this.addTaskToQueue(request);
     }
 
     public static QueueMessageReceived decode(
@@ -130,5 +136,19 @@ public class QueueMessageReceived {
                 "QueueMessageReceived: id=%s, channel=%s, metadata=%s, body=%s, fromClientId=%s, timestamp=%s, sequence=%d, receiveCount=%d, isReRouted=%s, reRouteFromQueue=%s, expiredAt=%s, delayedTo=%s, transactionId=%s, isTransactionCompleted=%s, tags=%s",
                 id, channel, metadata, new String(body), fromClientId, timestamp, sequence, receiveCount, isReRouted, reRouteFromQueue, expiredAt, delayedTo, transactionId, isTransactionCompleted, tags
         );
+    }
+
+    private void addTaskToQueue(QueuesDownstreamRequest request){
+
+            QueueDownStreamProcessor.addTask(() -> {
+                synchronized (responseHandler) {
+                    try {
+                        responseHandler.onNext(request);
+                        log.debug("{} message: {}",request.getRequestTypeData(), request.getRequestID());
+                    } catch (Exception e) {
+                        log.error("Error processing {}: {}",request.getRequestTypeData(),e.getMessage());
+                    }
+                }
+            });
     }
 }
