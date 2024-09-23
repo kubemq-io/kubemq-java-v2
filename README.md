@@ -1451,7 +1451,8 @@ Receives messages from a Queue channel.
 | channel                  | String  | The channel to poll messages from.                   | None          | Yes       |
 | pollMaxMessages          | int     | The maximum number of messages to poll.              | 1             | No        |
 | pollWaitTimeoutInSeconds | int     | The wait timeout in seconds for polling messages.    | 60            | No        |
-| autoAckMessages          | boolean | Indicates if messages should be auto-acknowledged.   | false         | No        |
+| autoAckMessages             | boolean| Indicates if messages should be auto-acknowledged.  | false         | No        |
+| visibilitySeconds           | int| Add a visibility timeout feature for messages.  | 0         | No        |
 
 #### Response: `QueuesPollResponse` Class Attributes
 
@@ -1465,6 +1466,34 @@ Receives messages from a Queue channel.
 | isTransactionCompleted | boolean                    | Indicates if the transaction is completed.              |
 | activeOffsets          | List<Long>                 | The list of active offsets.                             |
 | receiverClientId       | String                     | The client ID of the receiver.                          |
+| visibilitySeconds      | int                        | The visibility timeout for the message in seconds.      |
+| isAutoAcked            | boolean                    | Indicates whether the message was auto-acknowledged.    |
+
+
+##### Response: `QueueMessageReceived` class attributes 
+Here's the requested Markdown table for the `QueueMessageReceived` class:
+
+| Name                  | Type                                  | Description                                             |
+|-----------------------|---------------------------------------|---------------------------------------------------------|
+| id                    | String                                | The unique identifier for the message.                  |
+| channel               | String                                | The channel from which the message was received.         |
+| metadata              | String                                | Metadata associated with the message.                   |
+| body                  | byte[]                                | The body of the message in byte array format.           |
+| fromClientId          | String                                | The ID of the client that sent the message.             |
+| tags                  | Map`<String, String>`                 | Key-value pairs representing tags for the message.      |
+| timestamp             | Instant                               | The timestamp when the message was created.             |
+| sequence              | long                                  | The sequence number of the message.                     |
+| receiveCount          | int                                   | The number of times the message has been received.       |
+| isReRouted            | boolean                               | Indicates whether the message was rerouted.             |
+| reRouteFromQueue      | String                                | The name of the queue from which the message was rerouted.|
+| expiredAt             | Instant                               | The expiration time of the message, if applicable.      |
+| delayedTo             | Instant                               | The time the message is delayed until, if applicable.   |
+| transactionId         | String                                | The transaction ID associated with the message.         |
+| isTransactionCompleted| boolean                               | Indicates whether the transaction for the message is completed. |
+| responseHandler       | StreamObserver`<QueuesDownstreamRequest>` | The response handler for processing downstream requests. |
+| receiverClientId      | String                                | The ID of the client receiving the message.             |
+| visibilitySeconds     | int                                   | The visibility timeout for the message in seconds.      |
+| isAutoAcked           | boolean                               | Indicates whether the message was auto-acknowledged.     |
 
 #### Example
 
@@ -1507,6 +1536,120 @@ public void receiveQueuesMessages(String channelName) {
         System.err.println("Failed to receive queue messages: " + e.getMessage());
     }
 }
+
+
+public void receiveExampleWithVisibility() {
+        System.out.println("\n============================== receiveExampleWithVisibility =============================\n");
+       try {
+            QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
+                    .channel(channelName)
+                    .pollMaxMessages(1)  // Pull 10 messages at a time
+                    .pollWaitTimeoutInSeconds(10)
+                    .visibilitySeconds(5)
+                    .autoAckMessages(false)
+                    .build();
+
+            QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessages(queuesPollRequest);
+
+            System.out.println("Received Message Response:"+" TransactionId: " + pollResponse.getTransactionId());
+            System.out.println("RefRequestId: " + pollResponse.getRefRequestId()+" ReceiverClientId: " + pollResponse.getReceiverClientId());
+
+            if (pollResponse.isError()) {
+                System.out.println("Error: " + pollResponse.getError());
+            } else {
+                pollResponse.getMessages().forEach(msg -> {
+                    try {
+                        System.out.println("Message ID: " + msg.getId()+" Message Body: " + new String(msg.getBody()));
+                        Thread.sleep(1000);
+                        msg.ack();
+                        System.out.println("Acknowledged to message");
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(ReceiveMessageWithVisibilityExample.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                });
+            }
+
+        } catch (RuntimeException e) {
+            System.err.println("Failed to receive queue messages: " + e.getMessage());
+        }
+    }
+
+    public void receiveExampleWithVisibilityExpired() {
+        System.out.println("\n============================== receiveExampleWithVisibilityExpired =============================\n");
+        try {
+            QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
+                    .channel(channelName)
+                    .pollMaxMessages(1)  // Pull 10 messages at a time
+                    .pollWaitTimeoutInSeconds(10)
+                    .visibilitySeconds(2)
+                    .autoAckMessages(false)
+                    .build();
+
+            QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessages(queuesPollRequest);
+
+            System.out.println("Received Message Response:"+" TransactionId: " + pollResponse.getTransactionId());
+            System.out.println("RefRequestId: " + pollResponse.getRefRequestId()+" ReceiverClientId: " + pollResponse.getReceiverClientId());
+
+            if (pollResponse.isError()) {
+                System.out.println("Error: " + pollResponse.getError());
+            } else {
+                pollResponse.getMessages().forEach(msg -> {
+                    try {
+                        System.out.println("Message ID: " + msg.getId()+" Message Body: " + new String(msg.getBody()));
+                        Thread.sleep(3000);
+                        msg.ack();
+                        System.out.println("Acknowledged to message");
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(ReceiveMessageWithVisibilityExample.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                });
+            }
+
+        } catch (RuntimeException e) {
+            System.err.println("Failed to receive queue messages: " + e.getMessage());
+        }
+    }
+
+    public void receiveExampleWithVisibilityExtension() {
+        System.out.println("\n============================== receiveExampleWithVisibilityExtension =============================\n");
+        try {
+            QueuesPollRequest queuesPollRequest = QueuesPollRequest.builder()
+                    .channel(channelName)
+                    .pollMaxMessages(1)  // Pull 10 messages at a time
+                    .pollWaitTimeoutInSeconds(10)
+                    .visibilitySeconds(3)
+                    .autoAckMessages(false)
+                    .build();
+
+            QueuesPollResponse pollResponse = queuesClient.receiveQueuesMessages(queuesPollRequest);
+
+            System.out.println("Received Message Response:");
+            System.out.println("RefRequestId: " + pollResponse.getRefRequestId());
+            System.out.println("ReceiverClientId: " + pollResponse.getReceiverClientId());
+            System.out.println("TransactionId: " + pollResponse.getTransactionId());
+
+            if (pollResponse.isError()) {
+                System.out.println("Error: " + pollResponse.getError());
+            } else {
+                pollResponse.getMessages().forEach(msg -> {
+                    try {
+                        System.out.println("Message ID: " + msg.getId()+" Message Body: " + new String(msg.getBody()));
+                        Thread.sleep(1000);
+                        msg.extendVisibilityTimer(3);
+                        Thread.sleep(2000);
+                        msg.ack();
+                        System.out.println("Acknowledged to message");
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(ReceiveMessageWithVisibilityExample.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                });
+            }
+
+        } catch (RuntimeException e) {
+            System.err.println("Failed to receive queue messages: " + e.getMessage());
+        }
+    }
+
 ```
 
 This method allows you to receive messages from a specified Queue channel. You can configure the polling behavior, including the maximum number of messages to receive and the wait timeout. The response provides detailed information about the received messages and the transaction.
