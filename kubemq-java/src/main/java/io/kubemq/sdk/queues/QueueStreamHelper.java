@@ -95,7 +95,8 @@ public class QueueStreamHelper {
                             .build();
                     for (Kubemq.QueueMessage queueMessage : messageReceive.getMessagesList()) {
                         qpResp.getMessages().add(QueueMessageReceived.decode(queueMessage, qpResp.getTransactionId(),
-                                qpResp.isTransactionCompleted(), qpResp.getReceiverClientId(), queuesDownstreamHandler));
+                                qpResp.isTransactionCompleted(), qpResp.getReceiverClientId(), queuesDownstreamHandler,
+                                queuesPollRequest.getVisibilitySeconds(),queuesPollRequest.isAutoAckMessages()));
                     }
                     futureResponse.complete(qpResp);
                 }
