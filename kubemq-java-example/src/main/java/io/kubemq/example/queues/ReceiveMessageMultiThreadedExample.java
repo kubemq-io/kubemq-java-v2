@@ -1,5 +1,6 @@
 package io.kubemq.example.queues;
 
+import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.queues.QueueMessage;
 import io.kubemq.sdk.queues.QueueMessageReceived;
 import io.kubemq.sdk.queues.QueueSendResult;
@@ -28,6 +29,7 @@ public class ReceiveMessageMultiThreadedExample {
         queuesClient = QueuesClient.builder()
                 .address(address)
                 .clientId(clientId)
+                .logLevel(KubeMQClient.Level.INFO)
                 .build();
 
         // Create a thread pool with a fixed number of workers
@@ -40,7 +42,7 @@ public class ReceiveMessageMultiThreadedExample {
     public void sendQueueMessage() {
         System.out.println("\n============================== Send Queue Messages Started =============================\n");
         try {
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 10; i++) {
                 Map<String, String> tags = new HashMap<>();
                 tags.put("tag1", "kubemq");
                 tags.put("tag2", "kubemq2");
@@ -95,6 +97,7 @@ public class ReceiveMessageMultiThreadedExample {
         } catch (RuntimeException e) {
             System.err.println("Failed to receive queue messages: " + e.getMessage());
         }
+        System.out.println("All Polled message processed successfully");
     }
 
     /**
@@ -118,8 +121,7 @@ public class ReceiveMessageMultiThreadedExample {
 
         } catch (Exception e) {
             System.err.println("Error processing message ID: " + msg.getId() + ". Error: " + e.getMessage());
-            msg.reQueue(channelName);
-            System.out.println("Message ID: " + msg.getId() + " requeued.");
+            e.printStackTrace();
         }
     }
 
@@ -148,11 +150,11 @@ public class ReceiveMessageMultiThreadedExample {
         example.receiveQueuesMessages();
 
         // Shutdown the worker pool after processing is done
-        Thread.sleep(8000);  // Wait for workers to finish processing (for demo purposes)
+        Thread.sleep(10000);  // Wait for workers to finish processing (for demo purposes)
         example.shutdownWorkerPool();
-
-        // Keep the main thread running (for demo purposes)
-//        CountDownLatch latch = new CountDownLatch(1);
-//        latch.await();
+        
+                // Keep the main thread running to handle responses
+        CountDownLatch latch = new CountDownLatch(1);
+        latch.await();  // This will keep the main thread alive
     }
 }
