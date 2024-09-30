@@ -17,13 +17,13 @@ import java.util.UUID;
 @Slf4j
 public class QueuesClient extends KubeMQClient {
 
-    private final QueueStreamHelper queueStreamHelper;
+   // private final QueueStreamHelper queueStreamHelper;
 
     @Builder
     public QueuesClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
                         int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
         super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
-        this.queueStreamHelper=new QueueStreamHelper();
+        //this.queueStreamHelper=new QueueStreamHelper();
     }
 
     /**
@@ -63,7 +63,7 @@ public class QueuesClient extends KubeMQClient {
      */
     public QueueSendResult sendQueuesMessage(QueueMessage queueMessage) {
         queueMessage.validate();
-      return queueStreamHelper.sendMessage(this, queueMessage.encode(this.getClientId()));
+      return new QueueStreamHelper().sendMessage(this, queueMessage.encode(this.getClientId()));
     }
 
     /**
@@ -74,7 +74,7 @@ public class QueuesClient extends KubeMQClient {
      */
     public QueuesPollResponse receiveQueuesMessages(QueuesPollRequest queuesPollRequest) {
         queuesPollRequest.validate();
-        return queueStreamHelper.receiveMessage(this, queuesPollRequest);
+        return new QueueStreamHelper().receiveMessage(this, queuesPollRequest);
     }
 
     /**

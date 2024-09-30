@@ -54,8 +54,6 @@ public class QueueStreamHelper {
             queuesUpStreamHandler = kubeMQClient.getAsyncClient().queuesUpstream(request);
         }
 
-        // Synchronize sending messages to avoid concurrent issues
-        synchronized (this) {
             try {
                 log.debug("Sending message");
                 queuesUpStreamHandler.onNext(queueMessage);
@@ -63,10 +61,9 @@ public class QueueStreamHelper {
                 log.error("Error sending message: ", e);
                 throw new RuntimeException("Failed to send message", e);
             }
-        }
 
         try {
-            log.debug("Retrieving response from futureResponse.get()");
+            //log.debug("Retrieving response from futureResponse.get()");
             return futureResponse.get();
         } catch (Exception e) {
             log.error("Error waiting for response: ", e);
@@ -77,7 +74,7 @@ public class QueueStreamHelper {
 
     public QueuesPollResponse receiveMessage(KubeMQClient kubeMQClient, QueuesPollRequest queuesPollRequest) {
         CompletableFuture<QueuesPollResponse> futureResponse = new CompletableFuture<>();
-        if (queuesDownstreamHandler == null) {
+//        StreamObserver<Kubemq.QueuesDownstreamRequest> queuesDownstreamHandler = null;
             StreamObserver<Kubemq.QueuesDownstreamResponse> request = new StreamObserver<Kubemq.QueuesDownstreamResponse>() {
 
                 @Override
@@ -117,16 +114,13 @@ public class QueueStreamHelper {
                 }
             };
             queuesDownstreamHandler = kubeMQClient.getAsyncClient().queuesDownstream(request);
-        }
-        // Synchronize sending messages to avoid concurrent issues
-        synchronized (this) {
+
             try {
                 queuesDownstreamHandler.onNext(queuesPollRequest.encode(kubeMQClient.getClientId()));
             } catch (Exception e) {
                 log.error("Error polling message: ", e);
                 throw new RuntimeException("Failed to polling message", e);
             }
-        }
 
         try {
             return futureResponse.get();

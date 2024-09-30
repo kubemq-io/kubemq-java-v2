@@ -32,15 +32,15 @@ public class QueuesPollResponse {
     private int visibilitySeconds;
     private boolean isAutoAcked;
 
-    public synchronized void ackAll() {
+    public void ackAll() {
         doOperation(QueuesDownstreamRequestType.AckAll, null);
     }
 
-    public synchronized void rejectAll() {
+    public void rejectAll() {
         doOperation(QueuesDownstreamRequestType.NAckAll, null);
     }
 
-    public synchronized void reQueueAll(String channel) {
+    public void reQueueAll(String channel) {
         doOperation(QueuesDownstreamRequestType.ReQueueAll, channel);
     }
 
@@ -74,7 +74,6 @@ public class QueuesPollResponse {
             for (QueueMessageReceived message : messages) {
                 message.markTransactionCompleted();
             }
-
     }
 
     public static QueuesPollResponse decode(
@@ -136,48 +135,4 @@ public class QueuesPollResponse {
     public boolean isError() {
         return this.isError;
     }
-//
-//    public void setRefRequestId(String refRequestId) {
-//        this.refRequestId = refRequestId;
-//    }
-//
-//    public void setTransactionId(String transactionId) {
-//        this.transactionId = transactionId;
-//    }
-//
-//    public void setMessages(List<QueueMessageReceived> messages) {
-//        this.messages = messages;
-//    }
-//
-//    public void setError(String error) {
-//        this.error = error;
-//    }
-//
-//    public void setIsError(boolean error) {
-//        this.isError = error;
-//    }
-//
-//    public boolean getIsError() {
-//        return this.isError;
-//    }
-//
-//    public boolean isError() {
-//        return this.isError;
-//    }
-//
-//    public void setTransactionCompleted(boolean transactionCompleted) {
-//        isTransactionCompleted = transactionCompleted;
-//    }
-//
-//    public void setActiveOffsets(List<Long> activeOffsets) {
-//        this.activeOffsets = activeOffsets;
-//    }
-//
-//    public void setResponseHandler(StreamObserver<QueuesDownstreamRequest> responseHandler) {
-//        this.responseHandler = responseHandler;
-//    }
-//
-//    public void setReceiverClientId(String receiverClientId) {
-//        this.receiverClientId = receiverClientId;
-//    }
 }
