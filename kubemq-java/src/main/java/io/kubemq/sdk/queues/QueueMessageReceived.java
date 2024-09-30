@@ -56,33 +56,17 @@ public class QueueMessageReceived {
     private final Lock lock = new ReentrantLock();
 
     // Method to ack() a message
-    public synchronized void ack() {
+    public  void ack() {
         doOperation(QueuesDownstreamRequestType.AckRange, null);
-
-//        QueuesDownstreamRequest request = QueuesDownstreamRequest.newBuilder()
-//                .setRequestID(UUID.randomUUID().toString())
-//                .setClientID(receiverClientId)
-//                .setChannel(channel)
-//                .setRequestTypeData(QueuesDownstreamRequestType.AckRange)
-//                .setRefTransactionId(transactionId)
-//                .addSequenceRange(sequence)
-//                .build();
-//
-//        this.addTaskToThreadSafeQueue(request);
-//
-//        messageCompleted = true;
-//        if (visibilityTimer != null && !timerExpired) {
-//            visibilityTimer.cancel();
-//        }
     }
 
     // Method to reject() a message
-    public synchronized void reject() {
+    public  void reject() {
         doOperation(QueuesDownstreamRequestType.NAckRange, null);
     }
 
     // Method to reQueue() a message
-    public synchronized void reQueue(String reQueueChannel) {
+    public  void reQueue(String reQueueChannel) {
         if (reQueueChannel == null || reQueueChannel.isEmpty()) {
             throw new IllegalArgumentException("Re-queue channel cannot be empty");
         }
@@ -172,41 +156,23 @@ public class QueueMessageReceived {
     }
 
     private void startVisibilityTimer() {
-        // Use the shared lock from the SharedLock class
-        Lock lock = QueueSharedLock.getLock();
-        lock.lock();
-        try {
-            visibilityTimer = new Timer();
-            visibilityTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    onVisibilityExpired();
-                }
-            }, visibilitySeconds * 1000);
-        } finally {
-            lock.unlock();
-        }
+        visibilityTimer = new Timer();
+        visibilityTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                onVisibilityExpired();
+            }
+        }, visibilitySeconds * 1000);
     }
 
     private void onVisibilityExpired() {
-        // Use the shared lock from the SharedLock class
-        Lock lock = QueueSharedLock.getLock();
-        lock.lock();
-        try {
-            timerExpired = true;
-            visibilityTimer = null;
-        } finally {
-            lock.unlock();
-        }
+        timerExpired = true;
+        visibilityTimer = null;
         reject();
         throw new IllegalStateException("Message visibility expired");
     }
 
     public void extendVisibilityTimer(int additionalSeconds) {
-        // Use the shared lock from the SharedLock class
-        Lock lock = QueueSharedLock.getLock();
-        lock.lock();
-        try {
         if (additionalSeconds <= 0) {
             throw new IllegalArgumentException("additionalSeconds must be greater than 0");
         }
@@ -222,25 +188,15 @@ public class QueueMessageReceived {
             visibilityTimer.cancel(); // Cancel the existing timer
             visibilitySeconds += additionalSeconds; // Extend the duration
             startVisibilityTimer(); // Restart the timer with the new duration
-        } finally {
-                lock.unlock();
-        }
     }
 
 
     // Method to mark the transaction as completed
     public void markTransactionCompleted() {
-        // Use the shared lock from the SharedLock class
-        Lock lock = QueueSharedLock.getLock();
-        lock.lock();
-        try {
-            messageCompleted = true;
-            isTransactionCompleted = true;
-            if (visibilityTimer != null) {
-                visibilityTimer.cancel();
-            }
-        } finally {
-            lock.unlock();
+        messageCompleted = true;
+        isTransactionCompleted = true;
+        if (visibilityTimer != null) {
+            visibilityTimer.cancel();
         }
     }
 }
