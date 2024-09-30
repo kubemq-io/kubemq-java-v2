@@ -220,7 +220,7 @@ The table below describes all available configuration parameters:
 | tls                      | boolean | Indicates if TLS (Transport Layer Security) is enabled. | false             | No                        |
 | tlsCertFile              | String  | The path to the TLS certificate file.                   | None              | No (Yes if `tls` is true) |
 | tlsKeyFile               | String  | The path to the TLS key file.                           | None              | No (Yes if `tls` is true) |
-| maxReceiveSize           | int     | The maximum size of the messages to receive (in bytes). | 104857600 (100MB) | No                        |
+| maxReceiveize           | int     | The maximum size of the messages to receive (in bytes). | 104857600 (100MB) | No                        |
 | reconnectIntervalSeconds | int     | The interval in seconds between reconnection attempts.  | 1                 | No                        |
 | keepAlive                | boolean | Indicates if the connection should be kept alive.       | false             | No                        |
 | pingIntervalInSeconds    | int     | The interval in seconds between ping messages.          | 60                | No                        |
@@ -239,7 +239,7 @@ PubSubClient pubSubClient = PubSubClient.builder()
     .tls(true)
     .tlsCertFile("/path/to/cert.pem")
     .tlsKeyFile("/path/to/key.pem")
-    .maxReceiveSize(5 * 1024 * 1024)  // 5 MB
+    .maxReceiveize(5 * 1024 * 1024)  // 5 MB
     .reconnectIntervalSeconds(10)
     .keepAlive(true)
     .pingIntervalInSeconds(30)
@@ -253,7 +253,7 @@ Replace `PubSubClient` with `QueuesClient` or `CQClient` to create instances of 
 ### Notes
 
 - For secure connections, set `tls` to `true` and provide the paths to your TLS certificate and key files.
-- Adjust `maxReceiveSize` based on your expected message sizes to optimize performance.
+- Adjust `maxReceiveize` based on your expected message sizes to optimize performance.
 - Fine-tune `reconnectIntervalSeconds`, `keepAlive`, `pingIntervalInSeconds`, and `pingTimeoutInSeconds` based on your network conditions and requirements.
 - Choose an appropriate `logLevel` for your development or production environment.
 
@@ -317,7 +317,7 @@ Remember, the KubeMQ client is designed to handle connection management efficien
 
 ### Create Channel
 
-Creates a new Events channel.
+Create a new Events channel.
 
 #### Request Parameters
 
@@ -346,7 +346,7 @@ public void createEventsChannel(String eventChannelName) {
 
 ### Delete Channel
 
-Deletes an existing Events channel.
+Delete an existing Events channel.
 
 #### Request Parameters
 
@@ -375,7 +375,7 @@ public void deleteEventsChannel(String eventChannelName) {
 
 ### List Channels
 
-Retrieves a list of Events channels.
+Retrieve a list of Events channels.
 
 #### Request Parameters
 
@@ -416,7 +416,7 @@ public void listEventsChannels(String searchQuery) {
 
 ### Send Event Message
 
-Sends a message to an Events channel.
+Send a message to an Events channel.
 
 #### Request: `EventMessage` Class Attributes
 
@@ -539,7 +539,7 @@ Note: Remember to handle the subscription lifecycle appropriately in your applic
 
 ### Create Channel
 
-Creates a new EventsStore channel.
+Create a new EventsStore channel.
 
 #### Request Parameters
 
@@ -568,7 +568,7 @@ public void createEventsStoreChannel(String eventStoreChannelName) {
 
 ### Delete Channel
 
-Deletes an existing EventsStore channel.
+Delete an existing EventsStore channel.
 
 #### Request Parameters
 
@@ -597,7 +597,7 @@ public void deleteEventsStoreChannel(String eventStoreChannelName) {
 
 ### List Channels
 
-Retrieves a list of EventsStore channels.
+Retrieve a list of EventsStore channels.
 
 #### Request Parameters
 
@@ -638,7 +638,7 @@ public void listEventsStoreChannels(String searchQuery) {
 
 ### Send EventStore Message
 
-Sends a message to an EventsStore channel.
+Send a message to an EventsStore channel.
 
 #### Request: `EventStoreMessage` Class Attributes
 
@@ -778,7 +778,7 @@ Note: Remember to handle the subscription lifecycle appropriately in your applic
 
 ### Create Channel
 
-Creates a new Command channel.
+Create a new Command channel.
 
 #### Request Parameters
 
@@ -807,7 +807,7 @@ public void createCommandsChannel(String channelName) {
 
 ### Delete Channel
 
-Deletes an existing Command channel.
+Delete an existing Command channel.
 
 #### Request Parameters
 
@@ -836,7 +836,7 @@ public void deleteCommandsChannel(String channelName) {
 
 ### List Channels
 
-Retrieves a list of Command channels.
+Retrieve a list of Command channels.
 
 #### Request Parameters
 
@@ -877,7 +877,7 @@ public void listCommandsChannels(String searchString) {
 
 ### Send Command Request
 
-Sends a command request to a Command channel.
+Send a command request to a Command channel.
 
 #### Request: `CommandMessage` Class Attributes
 
@@ -1020,7 +1020,7 @@ Note: Remember to handle the subscription lifecycle appropriately in your applic
 
 ### Create Channel
 
-Creates a new Query channel.
+Create a new Query channel.
 
 #### Request Parameters
 
@@ -1049,7 +1049,7 @@ public void createQueriesChannel(String channelName) {
 
 ### Delete Channel
 
-Deletes an existing Query channel.
+Delete an existing Query channel.
 
 #### Request Parameters
 
@@ -1078,7 +1078,7 @@ public void deleteQueriesChannel(String channelName) {
 
 ### List Channels
 
-Retrieves a list of Query channels.
+Retrieve a list of Query channels.
 
 #### Request Parameters
 
@@ -1119,7 +1119,7 @@ public void listQueriesChannels(String searchString) {
 
 ### Send Query Request
 
-Sends a query request to a Query channel.
+Send a query request to a Query channel.
 
 #### Request: `QueryMessage` Class Attributes
 
@@ -1269,7 +1269,7 @@ Note: Remember to handle the subscription lifecycle appropriately in your applic
 
 ### Create Channel
 
-Creates a new Queue channel.
+Create a new Queue channel.
 
 #### Request Parameters
 
@@ -1298,7 +1298,7 @@ public void createQueueChannel(String queueChannelName) {
 
 ### Delete Channel
 
-Deletes an existing Queue channel.
+Delete an existing Queue channel.
 
 #### Request Parameters
 
@@ -1327,7 +1327,7 @@ public void deleteQueueChannel(String queueChannelName) {
 
 ### List Channels
 
-Retrieves a list of Queue channels.
+Retrieve a list of Queue channels.
 
 #### Request Parameters
 
@@ -1371,7 +1371,7 @@ public void listQueueChannels(String searchString) {
 ```
 ### Send Queue Message
 
-Sends a message to a Queue channel.
+Send a message to a Queue channel.
 
 #### Request: `QueueMessage` Class Attributes
 
@@ -1442,7 +1442,7 @@ This method allows you to send a message to a specified Queue channel. You can c
 
 ### Receive Queue Messages
 
-Receives messages from a Queue channel.
+Receive messages from a Queue channel.
 
 #### Request: `QueuesPollRequest` Class Attributes
 
@@ -1488,12 +1488,7 @@ Here's the requested Markdown table for the `QueueMessageReceived` class:
 | reRouteFromQueue      | String                                | The name of the queue from which the message was rerouted.|
 | expiredAt             | Instant                               | The expiration time of the message, if applicable.      |
 | delayedTo             | Instant                               | The time the message is delayed until, if applicable.   |
-| transactionId         | String                                | The transaction ID associated with the message.         |
-| isTransactionCompleted| boolean                               | Indicates whether the transaction for the message is completed. |
-| responseHandler       | StreamObserver`<QueuesDownstreamRequest>` | The response handler for processing downstream requests. |
-| receiverClientId      | String                                | The ID of the client receiving the message.             |
-| visibilitySeconds     | int                                   | The visibility timeout for the message in seconds.      |
-| isAutoAcked           | boolean                               | Indicates whether the message was auto-acknowledged.     |
+
 
 #### Example
 
