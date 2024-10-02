@@ -211,8 +211,8 @@ public class ReceiveMessageWithVisibilityExample {
         example.receiveExampleWithVisibilityExtension();
         
         // Keep the main thread running to handle responses
-        CountDownLatch latch = new CountDownLatch(1);
-        latch.await();  // This will keep the main thread alive
+//        CountDownLatch latch = new CountDownLatch(1);
+//        latch.await();  // This will keep the main thread alive
 
     }
 }
