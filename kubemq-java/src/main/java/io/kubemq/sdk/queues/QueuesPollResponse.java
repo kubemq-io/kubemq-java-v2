@@ -34,6 +34,7 @@ public class QueuesPollResponse {
 
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
+    @Builder.Default
     private Queue<String> msgQueue = new LinkedList<>();
 
 
@@ -91,7 +92,7 @@ public class QueuesPollResponse {
             int visibilitySeconds,
             boolean isAutoAcked
     ) {
-        //QueuesPollResponse pollResponse = new QueuesPollResponse();
+
         this.refRequestId = response.getRefRequestId();
         this.transactionId = response.getTransactionId();
         this.error = response.getError();
@@ -143,15 +144,18 @@ public class QueuesPollResponse {
         if(responseHandler != null){
             responseHandler.onCompleted();
         }
-        msgQueue.clear();
+
+        if (msgQueue !=null && !msgQueue.isEmpty()) {
+            msgQueue.clear();
+        }
     }
 
     public void checkAndCloseStream(String id) {
-        if (msgQueue.contains(id)) {
+        if (msgQueue !=null && msgQueue.contains(id)) {
             msgQueue.remove(id);
         }
         // If the queue is empty after processing, trigger another function
-        if (msgQueue.isEmpty()) {
+        if (msgQueue ==null || msgQueue.isEmpty()) {
             this.closeStream();
         }
     }
