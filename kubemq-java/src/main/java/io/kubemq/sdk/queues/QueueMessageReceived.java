@@ -4,10 +4,7 @@ import io.grpc.stub.StreamObserver;
 import kubemq.Kubemq.QueueMessage;
 import kubemq.Kubemq.QueuesDownstreamRequest;
 import kubemq.Kubemq.QueuesDownstreamRequestType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -43,17 +40,24 @@ public class QueueMessageReceived {
     private Instant expiredAt;
     private Instant delayedTo;
     private String transactionId;
-    private boolean isTransactionCompleted;
     private StreamObserver<QueuesDownstreamRequest> responseHandler;
     private String receiverClientId;
     private int visibilitySeconds;
+
+    @Getter
+    private boolean isTransactionCompleted;
+    @Getter
     private boolean isAutoAcked;
 
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
     private Timer visibilityTimer;
     private boolean messageCompleted;
     private boolean timerExpired;
 
-    private final Lock lock = new ReentrantLock();
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private QueuesPollResponse queuesPollResponse;
 
     // Method to ack() a message
     public  void ack() {
@@ -88,7 +92,6 @@ public class QueueMessageReceived {
             QueuesDownstreamRequest.Builder requestBuilder = QueuesDownstreamRequest.newBuilder()
                     .setRequestID(UUID.randomUUID().toString())
                     .setClientID(receiverClientId)
-                    .setChannel(channel)
                     .setRequestTypeData(requestType)
                     .setRefTransactionId(transactionId)
                     .addSequenceRange(sequence);
@@ -103,6 +106,10 @@ public class QueueMessageReceived {
             if (visibilityTimer != null && !timerExpired) {
                 visibilityTimer.cancel();
             }
+
+        if(queuesPollResponse != null) {
+            queuesPollResponse.checkAndCloseStream(id);
+        }
     }
 
     private void addTaskToThreadSafeQueue(QueuesDownstreamRequest request) {
@@ -118,41 +125,43 @@ public class QueueMessageReceived {
         });
     }
 
-    public static QueueMessageReceived decode(
+    public QueueMessageReceived decode(
             QueueMessage message,
             String transactionId,
             boolean transactionIsCompleted,
             String receiverClientId,
             StreamObserver<QueuesDownstreamRequest> responseHandler,
             int visibilitySeconds,
-            boolean isAutoAcked
+            boolean isAutoAcked,
+            QueuesPollResponse queuesPollResponse
     ) {
-        QueueMessageReceived received = new QueueMessageReceived();
-        received.id = message.getMessageID();
-        received.channel = message.getChannel();
-        received.metadata = message.getMetadata();
-        received.body = message.getBody().toByteArray();
-        received.fromClientId = message.getClientID();
-        received.tags = new HashMap<>(message.getTagsMap());
-        received.timestamp = Instant.ofEpochSecond(message.getAttributes().getTimestamp() / 1_000_000_000L);
-        received.sequence = message.getAttributes().getSequence();
-        received.receiveCount = message.getAttributes().getReceiveCount();
-        received.isReRouted = message.getAttributes().getReRouted();
-        received.reRouteFromQueue = message.getAttributes().getReRoutedFromQueue();
-        received.expiredAt = Instant.ofEpochSecond(message.getAttributes().getExpirationAt() / 1_000_000L);
-        received.delayedTo = Instant.ofEpochSecond(message.getAttributes().getDelayedTo() / 1_000_000L);
-        received.transactionId = transactionId;
-        received.isTransactionCompleted = transactionIsCompleted;
-        received.receiverClientId = receiverClientId;
-        received.responseHandler = responseHandler;
-        received.visibilitySeconds = visibilitySeconds;
-        received.isAutoAcked = isAutoAcked;
 
-        if (received.visibilitySeconds > 0) {
-            received.startVisibilityTimer();
+        this.id = message.getMessageID();
+        this.channel = message.getChannel();
+        this.metadata = message.getMetadata();
+        this.body = message.getBody().toByteArray();
+        this.fromClientId = message.getClientID();
+        this.tags = new HashMap<>(message.getTagsMap());
+        this.timestamp = Instant.ofEpochSecond(message.getAttributes().getTimestamp() / 1_000_000_000L);
+        this.sequence = message.getAttributes().getSequence();
+        this.receiveCount = message.getAttributes().getReceiveCount();
+        this.isReRouted = message.getAttributes().getReRouted();
+        this.reRouteFromQueue = message.getAttributes().getReRoutedFromQueue();
+        this.expiredAt = Instant.ofEpochSecond(message.getAttributes().getExpirationAt() / 1_000_000L);
+        this.delayedTo = Instant.ofEpochSecond(message.getAttributes().getDelayedTo() / 1_000_000L);
+        this.transactionId = transactionId;
+        this.isTransactionCompleted = transactionIsCompleted;
+        this.receiverClientId = receiverClientId;
+        this.responseHandler = responseHandler;
+        this.visibilitySeconds = visibilitySeconds;
+        this.isAutoAcked = isAutoAcked;
+        this.queuesPollResponse = queuesPollResponse;
+
+        if (this.visibilitySeconds > 0) {
+            this.startVisibilityTimer();
         }
 
-        return received;
+        return this;
     }
 
     private void startVisibilityTimer() {
