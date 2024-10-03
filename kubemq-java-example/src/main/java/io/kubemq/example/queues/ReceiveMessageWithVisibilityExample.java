@@ -10,7 +10,6 @@ import io.kubemq.sdk.queues.QueuesPollResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -210,9 +209,7 @@ public class ReceiveMessageWithVisibilityExample {
         
         example.receiveExampleWithVisibilityExtension();
         
-        // Keep the main thread running to handle responses
-//        CountDownLatch latch = new CountDownLatch(1);
-//        latch.await();  // This will keep the main thread alive
+        System.exit(0);
 
     }
 }

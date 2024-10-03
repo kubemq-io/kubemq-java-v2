@@ -11,7 +11,6 @@ import io.kubemq.sdk.queues.QueuesPollResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -134,6 +133,7 @@ public class ReceiveMessageMultiThreadedExample {
         if (!workerPool.awaitTermination(60, TimeUnit.SECONDS)) {
             workerPool.shutdownNow();
         }
+        System.exit(0);
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -153,8 +153,5 @@ public class ReceiveMessageMultiThreadedExample {
         Thread.sleep(10000);  // Wait for workers to finish processing (for demo purposes)
         example.shutdownWorkerPool();
         
-                // Keep the main thread running to handle responses
-//        CountDownLatch latch = new CountDownLatch(1);
-//        latch.await();  // This will keep the main thread alive
     }
 }
