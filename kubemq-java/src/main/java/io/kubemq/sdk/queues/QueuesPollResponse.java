@@ -118,7 +118,7 @@ public class QueuesPollResponse {
             this.msgQueue.add(receivedMessage.getId());
         });
         //If auto ack is true OR auto ack is false and no messages received, close stream after receiving.
-        if(isAutoAcked == false || this.messages.isEmpty()){
+        if(isAutoAcked == true || this.messages.isEmpty()){
             this.closeStream();
         }
 
