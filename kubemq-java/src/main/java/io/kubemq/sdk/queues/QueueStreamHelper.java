@@ -74,7 +74,7 @@ public class QueueStreamHelper {
 
     public QueuesPollResponse receiveMessage(KubeMQClient kubeMQClient, QueuesPollRequest queuesPollRequest) {
         CompletableFuture<QueuesPollResponse> futureResponse = new CompletableFuture<>();
-//        StreamObserver<Kubemq.QueuesDownstreamRequest> queuesDownstreamHandler = null;
+
             StreamObserver<Kubemq.QueuesDownstreamResponse> request = new StreamObserver<Kubemq.QueuesDownstreamResponse>() {
 
                 @Override
@@ -91,9 +91,9 @@ public class QueueStreamHelper {
                             .isError(messageReceive.getIsError())
                             .build();
                     for (Kubemq.QueueMessage queueMessage : messageReceive.getMessagesList()) {
-                        qpResp.getMessages().add(QueueMessageReceived.decode(queueMessage, qpResp.getTransactionId(),
+                        qpResp.getMessages().add(new QueueMessageReceived().decode(queueMessage, qpResp.getTransactionId(),
                                 qpResp.isTransactionCompleted(), qpResp.getReceiverClientId(), queuesDownstreamHandler,
-                                queuesPollRequest.getVisibilitySeconds(),queuesPollRequest.isAutoAckMessages()));
+                                queuesPollRequest.getVisibilitySeconds(),queuesPollRequest.isAutoAckMessages(), qpResp));
                     }
                     futureResponse.complete(qpResp);
                 }
