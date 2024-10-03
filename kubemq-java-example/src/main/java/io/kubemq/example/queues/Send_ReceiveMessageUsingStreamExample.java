@@ -1,6 +1,5 @@
 package io.kubemq.example.queues;
 
-import com.google.protobuf.ByteString;
 import io.kubemq.sdk.common.ServerInfo;
 import io.kubemq.sdk.queues.QueueMessage;
 import io.kubemq.sdk.queues.QueueSendResult;
@@ -11,7 +10,6 @@ import io.kubemq.sdk.queues.QueuesPollResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * Example class demonstrating how to poll the queue messages using from KubeMQ
@@ -186,8 +184,6 @@ public class Send_ReceiveMessageUsingStreamExample {
         Thread.sleep(1000);
         example.receiveQueuesMessages();
 
-        // Keep the main thread running to handle responses
-//        CountDownLatch latch = new CountDownLatch(1);
-//        latch.await();  // This will keep the main thread alive
+        System.exit(0);
     }
 }
