@@ -212,20 +212,21 @@ All KubeMQ clients (PubSubClient, QueuesClient, and CQClient) share the same con
 
 The table below describes all available configuration parameters:
 
-| Name                     | Type    | Description                                             | Default Value     | Mandatory                 |
-|--------------------------|---------|---------------------------------------------------------|-------------------|---------------------------|
-| address                  | String  | The address of the KubeMQ server.                       | None              | Yes                       |
-| clientId                 | String  | The client ID used for authentication.                  | None              | Yes                       |
-| authToken                | String  | The authorization token for secure communication.       | None              | No                        |
-| tls                      | boolean | Indicates if TLS (Transport Layer Security) is enabled. | false             | No                        |
-| tlsCertFile              | String  | The path to the TLS certificate file.                   | None              | No (Yes if `tls` is true) |
-| tlsKeyFile               | String  | The path to the TLS key file.                           | None              | No (Yes if `tls` is true) |
-| maxReceiveize           | int     | The maximum size of the messages to receive (in bytes). | 104857600 (100MB) | No                        |
-| reconnectIntervalSeconds | int     | The interval in seconds between reconnection attempts.  | 1                 | No                        |
-| keepAlive                | boolean | Indicates if the connection should be kept alive.       | false             | No                        |
-| pingIntervalInSeconds    | int     | The interval in seconds between ping messages.          | 60                | No                        |
-| pingTimeoutInSeconds     | int     | The timeout in seconds for ping messages.               | 30                | No                        |
-| logLevel                 | Level   | The logging level to use.                               | Level.INFO        | No                        |
+| Name                      | Type    | Description                                             | Default Value     | Mandatory |
+|---------------------------|---------|---------------------------------------------------------|-------------------|-----------|
+| address                   | String  | The address of the KubeMQ server.                       | None              | Yes       |
+| clientId                  | String  | The client ID used for authentication.                  | None              | Yes       |
+| authToken                 | String  | The authorization token for secure communication.       | None              | No        |
+| tls                       | boolean | Indicates if TLS (Transport Layer Security) is enabled. | false             | No        |
+| tlsCertFile               | String  | The path to the TLS certificate file.                   | None              | No        |
+| tlsKeyFile                | String  | The path to the TLS key file.                           | None              | No        |
+| caCertFile                | String  | The path to the CA certificate file.                    | None              | No        |
+| maxReceiveize             | int     | The maximum size of the messages to receive (in bytes). | 104857600 (100MB) | No        |
+| reconnectIntervalSeconds  | int     | The interval in seconds between reconnection attempts.  | 1                 | No        |
+| keepAlive                 | boolean | Indicates if the connection should be kept alive.       | false             | No        |
+| pingIntervalInSeconds     | int     | The interval in seconds between ping messages.          | 60                | No        |
+| pingTimeoutInSeconds      | int     | The timeout in seconds for ping messages.               | 30                | No        |
+| logLevel                  | Level   | The logging level to use.                               | Level.INFO        | No        |
 
 ### Example Usage
 
@@ -239,6 +240,7 @@ PubSubClient pubSubClient = PubSubClient.builder()
     .tls(true)
     .tlsCertFile("/path/to/cert.pem")
     .tlsKeyFile("/path/to/key.pem")
+    .caCertFile("/path/to/cacert.crt")
     .maxReceiveize(5 * 1024 * 1024)  // 5 MB
     .reconnectIntervalSeconds(10)
     .keepAlive(true)
