@@ -36,6 +36,7 @@ public abstract class KubeMQClient implements AutoCloseable {
     private  boolean tls;
     private  String tlsCertFile;
     private  String tlsKeyFile;
+    private  String caCertFile; // New field for CA certificate file
     private  int maxReceiveSize;
     private  int reconnectIntervalSeconds;
     private  Boolean keepAlive;
@@ -61,6 +62,7 @@ public abstract class KubeMQClient implements AutoCloseable {
      * @param tls                     Indicates if TLS (Transport Layer Security) is enabled.
      * @param tlsCertFile             The path to the TLS certificate file.
      * @param tlsKeyFile              The path to the TLS key file.
+     * @param caCertFile              The path to the CA cert file.
      * @param maxReceiveSize          The maximum size of the messages to receive (in bytes).
      * @param reconnectIntervalSeconds The interval between reconnect attempted.
      * @param keepAlive               Indicates if the connection should be kept alive.
@@ -69,7 +71,8 @@ public abstract class KubeMQClient implements AutoCloseable {
      * @param logLevel                The logging level to use.
      */
     public KubeMQClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
-                        int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
+                        String caCertFile, int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive,
+                        int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
         if (address == null || clientId == null) {
             throw new IllegalArgumentException("Address and clientId are required");
         }
@@ -83,6 +86,7 @@ public abstract class KubeMQClient implements AutoCloseable {
         this.tls = tls;
         this.tlsCertFile = tlsCertFile;
         this.tlsKeyFile = tlsKeyFile;
+        this.caCertFile = caCertFile;
         this.maxReceiveSize = maxReceiveSize <=0 ?(1024 * 1024 * 100):maxReceiveSize; // 100MB
         this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0 ? (1*1000):(reconnectIntervalSeconds * 1000);
         this.keepAlive = keepAlive;
@@ -116,13 +120,15 @@ public abstract class KubeMQClient implements AutoCloseable {
                         .maxInboundMessageSize(maxReceiveSize)
                         .enableRetry();
 
-                if (tlsCertFile != null || tlsKeyFile != null) {
-                    SslContext sslContext = SslContextBuilder.forClient()
-                            .trustManager(new File(tlsCertFile))
-                            .keyManager(new File(tlsCertFile), new File(tlsKeyFile))
-                            .build();
-                    ncb =ncb.sslContext(sslContext);
+                SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+                if (caCertFile != null && !caCertFile.isEmpty()) {
+                    sslContextBuilder.trustManager(new File(caCertFile));
                 }
+                if (tlsCertFile != null && tlsKeyFile != null) {
+                    sslContextBuilder.keyManager(new File(tlsCertFile), new File(tlsKeyFile));
+                }
+                SslContext sslContext = sslContextBuilder.build();
+                ncb = ncb.sslContext(sslContext);
 
                     if(keepAlive != null){
                     ncb = ncb.keepAliveTime(pingIntervalInSeconds == 0 ? 60 : pingIntervalInSeconds, TimeUnit.SECONDS)

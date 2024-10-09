@@ -20,9 +20,9 @@ public class PubSubClient extends KubeMQClient {
     private EventStreamHelper eventStreamHelper;
 
     @Builder
-    public PubSubClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
+    public PubSubClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,String caCertFile,
                         int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
-        super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
+        super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, caCertFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
         eventStreamHelper =  new EventStreamHelper();
     }
 

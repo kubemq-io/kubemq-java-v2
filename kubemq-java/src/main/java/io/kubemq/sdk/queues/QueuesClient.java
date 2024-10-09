@@ -20,9 +20,9 @@ public class QueuesClient extends KubeMQClient {
    // private final QueueStreamHelper queueStreamHelper;
 
     @Builder
-    public QueuesClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile,
+    public QueuesClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile, String caCertFile,
                         int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
-        super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
+        super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, caCertFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
         //this.queueStreamHelper=new QueueStreamHelper();
     }
 
