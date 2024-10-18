@@ -114,14 +114,7 @@ public class QueueMessageReceived {
 
     private void addTaskToThreadSafeQueue(QueuesDownstreamRequest request) {
         QueueDownStreamProcessor.addTask(() -> {
-            synchronized (responseHandler) {
-                try {
-                    responseHandler.onNext(request);
-                    log.debug("{} message: {}", request.getRequestTypeData(), request.getRequestID());
-                } catch (Exception e) {
-                    log.error("Error processing {}: {}", request.getRequestTypeData(), e.getMessage());
-                }
-            }
+            responseHandler.onNext(request);
         });
     }
 
@@ -197,6 +190,24 @@ public class QueueMessageReceived {
             visibilityTimer.cancel(); // Cancel the existing timer
             visibilitySeconds += additionalSeconds; // Extend the duration
             startVisibilityTimer(); // Restart the timer with the new duration
+    }
+
+    public void resetVisibilityTimer (int newVisibilitySeconds) {
+        if (additionalSeconds <= 0) {
+            throw new IllegalArgumentException("additionalSeconds must be greater than 0");
+        }
+        if (visibilityTimer == null) {
+            throw new IllegalStateException("Cannot extend, timer not active");
+        }
+        if (timerExpired) {
+            throw new IllegalStateException("Cannot extend, timer has expired");
+        }
+        if (messageCompleted) {
+            throw new IllegalStateException("Message transaction is already completed");
+        }
+        visibilityTimer.cancel(); // Cancel the existing timer
+        visibilitySeconds = newVisibilitySeconds; // Reset the duration
+        startVisibilityTimer(); // Restart the timer with the new duration
     }
 
 
