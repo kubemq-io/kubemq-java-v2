@@ -193,7 +193,7 @@ public class QueueMessageReceived {
     }
 
     public void resetVisibilityTimer (int newVisibilitySeconds) {
-        if (additionalSeconds <= 0) {
+        if (newVisibilitySeconds <= 0) {
             throw new IllegalArgumentException("additionalSeconds must be greater than 0");
         }
         if (visibilityTimer == null) {
