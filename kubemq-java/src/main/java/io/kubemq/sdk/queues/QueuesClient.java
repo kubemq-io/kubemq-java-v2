@@ -17,13 +17,16 @@ import java.util.UUID;
 @Slf4j
 public class QueuesClient extends KubeMQClient {
 
-   // private final QueueStreamHelper queueStreamHelper;
+
+    private final QueueDownstreamHandler queueDownstreamHandler;
+    private final QueueUpstreamHandler queueUpstreamHandler;
 
     @Builder
     public QueuesClient(String address, String clientId, String authToken, boolean tls, String tlsCertFile, String tlsKeyFile, String caCertFile,
                         int maxReceiveSize, int reconnectIntervalSeconds, Boolean keepAlive, int pingIntervalInSeconds, int pingTimeoutInSeconds, Level logLevel) {
         super(address, clientId, authToken, tls, tlsCertFile, tlsKeyFile, caCertFile, maxReceiveSize, reconnectIntervalSeconds, keepAlive, pingIntervalInSeconds, pingTimeoutInSeconds, logLevel);
-        //this.queueStreamHelper=new QueueStreamHelper();
+        this.queueDownstreamHandler=new QueueDownstreamHandler(this);
+        this.queueUpstreamHandler=new QueueUpstreamHandler(this);
     }
 
     /**
@@ -63,7 +66,7 @@ public class QueuesClient extends KubeMQClient {
      */
     public QueueSendResult sendQueuesMessage(QueueMessage queueMessage) {
         queueMessage.validate();
-      return new QueueStreamHelper().sendMessage(this, queueMessage.encode(this.getClientId()));
+      return this.queueUpstreamHandler.sendQueuesMessage(queueMessage);
     }
 
     /**
@@ -74,7 +77,7 @@ public class QueuesClient extends KubeMQClient {
      */
     public QueuesPollResponse receiveQueuesMessages(QueuesPollRequest queuesPollRequest) {
         queuesPollRequest.validate();
-        return new QueueStreamHelper().receiveMessage(this, queuesPollRequest);
+        return this.queueDownstreamHandler.receiveQueuesMessages(queuesPollRequest);
     }
 
     /**
@@ -84,7 +87,7 @@ public class QueuesClient extends KubeMQClient {
      * @param maxMessages The maximum number of messages to pull.
      * @param waitTimeoutInSeconds The maximum amount of time to wait for messages in seconds.
      * @return A QueueMessagesWaiting object containing the waiting messages.
-     * @throws IllegalArgumentException if channel is null, maxMessages is less than 1, or waitTimeoutInSeconds is less than 1.
+     * @throws IllegalArgumentException if a channel is null, maxMessages is less than 1, or waitTimeoutInSeconds is less than 1.
      */
     public QueueMessagesWaiting waiting(String channel, int maxMessages, int waitTimeoutInSeconds) {
         log.debug("Get waiting messages from queue: {}", channel);
@@ -129,7 +132,7 @@ public class QueuesClient extends KubeMQClient {
      * @param maxMessages The maximum number of messages to pull.
      * @param waitTimeoutInSeconds The maximum amount of time to wait for messages in seconds.
      * @return A QueueMessagesPulled object containing the pulled messages.
-     * @throws IllegalArgumentException if channel is null, maxMessages is less than 1, or waitTimeoutInSeconds is less than 1.
+     * @throws IllegalArgumentException if a channel is null, maxMessages is less than 1, or waitTimeoutInSeconds is less than 1.
      */
     public QueueMessagesPulled pull(String channel, int maxMessages, int waitTimeoutInSeconds) {
         log.debug("Pulling messages from queue: {}", channel);
