@@ -95,7 +95,7 @@ public class QueriesSubscription {
 
     private void reconnect(CQClient cQClient) {
             try {
-                Thread.sleep(cQClient.getReconnectIntervalSeconds());
+                Thread.sleep(cQClient.getReconnectIntervalInMillis());
                 log.debug("Attempting to re-subscribe...");
                 cQClient.getAsyncClient().subscribeToRequests(this.encode(cQClient.getClientId(), cQClient), this.getObserver());
                 log.debug("Re-subscribed successfully");
