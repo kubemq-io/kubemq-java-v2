@@ -180,7 +180,7 @@ public class EventsStoreSubscription {
 
     private void reconnect(PubSubClient pubSubClient) {
         try {
-            Thread.sleep(pubSubClient.getReconnectIntervalSeconds());
+            Thread.sleep(pubSubClient.getReconnectIntervalInMillis());
             log.debug("Attempting to re-subscribe...");
             pubSubClient.getAsyncClient().subscribeToEvents(this.subscribe, this.getObserver());
             log.debug("Re-subscribed successfully");
