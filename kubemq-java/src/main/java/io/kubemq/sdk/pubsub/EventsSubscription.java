@@ -136,7 +136,7 @@ public class EventsSubscription {
 
     private void reconnect(PubSubClient pubSubClient) {
             try {
-                Thread.sleep(pubSubClient.getReconnectIntervalSeconds());
+                Thread.sleep(pubSubClient.getReconnectIntervalInMillis());
                 log.debug("Attempting to re-subscribe... ");
                 // Your method to subscribe again
                 pubSubClient.getAsyncClient().subscribeToEvents(this.encode(pubSubClient.getClientId(),pubSubClient), this.getObserver());
