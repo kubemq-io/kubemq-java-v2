@@ -43,7 +43,7 @@ public abstract class KubeMQClient implements AutoCloseable {
     private  int pingIntervalInSeconds;
     private  int pingTimeoutInSeconds;
     private  Level logLevel;
-
+    private long reconnectIntervalInMillis;
     @Setter
     private ManagedChannel managedChannel;
     @Setter
@@ -64,7 +64,7 @@ public abstract class KubeMQClient implements AutoCloseable {
      * @param tlsKeyFile              The path to the TLS key file.
      * @param caCertFile              The path to the CA cert file.
      * @param maxReceiveSize          The maximum size of the messages to receive (in bytes).
-     * @param reconnectIntervalSeconds The interval between reconnect attempted.
+     * @param reconnectIntervalSeconds The interval between reconnection attempted.
      * @param keepAlive               Indicates if the connection should be kept alive.
      * @param pingIntervalInSeconds   The interval between ping messages (in seconds).
      * @param pingTimeoutInSeconds    The timeout for ping messages (in seconds).
@@ -88,11 +88,12 @@ public abstract class KubeMQClient implements AutoCloseable {
         this.tlsKeyFile = tlsKeyFile;
         this.caCertFile = caCertFile;
         this.maxReceiveSize = maxReceiveSize <=0 ?(1024 * 1024 * 100):maxReceiveSize; // 100MB
-        this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0 ? (1*1000):(reconnectIntervalSeconds * 1000);
+        this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0 ? 1:reconnectIntervalSeconds;
         this.keepAlive = keepAlive;
         this.pingIntervalInSeconds = pingIntervalInSeconds;
         this.pingTimeoutInSeconds = pingTimeoutInSeconds;
         this.logLevel = logLevel != null ? logLevel : Level.INFO;
+        this.reconnectIntervalInMillis = TimeUnit.SECONDS.toMillis(reconnectIntervalSeconds);
         // Set the logging level
         setLogLevel();
         // Initialize the channel
