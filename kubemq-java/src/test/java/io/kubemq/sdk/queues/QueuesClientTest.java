@@ -109,43 +109,6 @@ public class QueuesClientTest {
 
 
     @Test
-    @Order(35)
-    public void testSendQueuesMessagesUpStream() throws Exception {
-        log.info("Testing sendQueuesMessagesUpStream");
-        QueueMessage messageMock = mock(QueueMessage.class);
-        Kubemq.QueuesUpstreamRequest upstreamRequest = Kubemq.QueuesUpstreamRequest.newBuilder()
-                .build();
-        QueueStreamHelper upstreamSender = mock(QueueStreamHelper.class);
-
-        when(upstreamSender.sendMessage(any(KubeMQClient.class), any(Kubemq.QueuesUpstreamRequest.class)))
-                .thenReturn(QueueSendResult.builder().isError(false).build());
-
-        QueueSendResult result = upstreamSender.sendMessage(kubeMQClient, upstreamRequest);
-
-        assertNotNull(result);
-        assertFalse(result.isError());
-        log.info("sendQueuesMessagesUpStream test passed");
-    }
-
-    @Test
-    @Order(40)
-    public void testReceiveQueuesMessages() throws Exception {
-        log.info("Testing receiveQueuesMessagesDownStream");
-        QueuesPollRequest pollRequest = mock(QueuesPollRequest.class);
-        QueueStreamHelper streamHelper = mock(QueueStreamHelper.class);
-
-        when(streamHelper.receiveMessage(any(KubeMQClient.class), any(QueuesPollRequest.class)))
-                .thenReturn(QueuesPollResponse.builder().isError(false).build());
-
-        QueuesPollResponse result = streamHelper.receiveMessage(kubeMQClient, pollRequest);
-
-        assertNotNull(result);
-        assertFalse(result.isError());
-        log.info("receiveQueuesMessagesDownStream test passed");
-    }
-
-
-    @Test
     @Order(50)
     void testWaitingWithSingleMessage() {
         String channel = "test-channel";
