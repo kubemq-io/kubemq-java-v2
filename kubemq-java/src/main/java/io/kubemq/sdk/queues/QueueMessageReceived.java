@@ -40,7 +40,6 @@ public class QueueMessageReceived {
     private Instant expiredAt;
     private Instant delayedTo;
     private String transactionId;
-    private StreamObserver<QueuesDownstreamRequest> responseHandler;
     private String receiverClientId;
     private int visibilitySeconds;
 
@@ -59,6 +58,14 @@ public class QueueMessageReceived {
     @Setter(AccessLevel.NONE)
     private QueuesPollResponse queuesPollResponse;
 
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private RequestSender requestSender;
+
+
+    void setRequestSender(RequestSender requestSender) {
+        this.requestSender = requestSender;
+    }
     // Method to ack() a message
     public  void ack() {
         doOperation(QueuesDownstreamRequestType.AckRange, null);
@@ -85,7 +92,7 @@ public class QueueMessageReceived {
         if (isTransactionCompleted || messageCompleted) {
             throw new IllegalStateException("Transaction already completed");
         }
-        if (responseHandler == null) {
+        if (requestSender == null) {
             throw new IllegalStateException("Response handler not set");
         }
 
@@ -100,7 +107,7 @@ public class QueueMessageReceived {
             }
 
             QueuesDownstreamRequest request = requestBuilder.build();
-            this.addTaskToThreadSafeQueue(request);
+            requestSender.send(request);
 
             messageCompleted = true;
             if (visibilityTimer != null && !timerExpired) {
@@ -108,22 +115,17 @@ public class QueueMessageReceived {
             }
 
         if(queuesPollResponse != null) {
-            queuesPollResponse.checkAndCloseStream(id);
+            queuesPollResponse.markMessageCompleted(id);
         }
     }
 
-    private void addTaskToThreadSafeQueue(QueuesDownstreamRequest request) {
-        QueueDownStreamProcessor.addTask(() -> {
-            responseHandler.onNext(request);
-        });
-    }
+
 
     public QueueMessageReceived decode(
             QueueMessage message,
             String transactionId,
             boolean transactionIsCompleted,
             String receiverClientId,
-            StreamObserver<QueuesDownstreamRequest> responseHandler,
             int visibilitySeconds,
             boolean isAutoAcked,
             QueuesPollResponse queuesPollResponse
@@ -145,10 +147,10 @@ public class QueueMessageReceived {
         this.transactionId = transactionId;
         this.isTransactionCompleted = transactionIsCompleted;
         this.receiverClientId = receiverClientId;
-        this.responseHandler = responseHandler;
         this.visibilitySeconds = visibilitySeconds;
         this.isAutoAcked = isAutoAcked;
         this.queuesPollResponse = queuesPollResponse;
+
 
         if (this.visibilitySeconds > 0) {
             this.startVisibilityTimer();
