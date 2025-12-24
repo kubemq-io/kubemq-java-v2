@@ -1,6 +1,5 @@
 package io.kubemq.sdk.queues;
 
-import io.grpc.stub.StreamObserver;
 import kubemq.Kubemq.QueueMessage;
 import kubemq.Kubemq.QueuesDownstreamRequest;
 import kubemq.Kubemq.QueuesDownstreamRequestType;
@@ -11,10 +10,10 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Represents a received queue message.
@@ -48,11 +47,23 @@ public class QueueMessageReceived {
     @Getter
     private boolean isAutoAcked;
 
+    private static final ScheduledExecutorService visibilityExecutor =
+        Executors.newScheduledThreadPool(2, r -> {
+            Thread t = new Thread(r, "kubemq-visibility-timer");
+            t.setDaemon(true);
+            return t;
+        });
+
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
-    private Timer visibilityTimer;
+    private ScheduledFuture<?> visibilityFuture;
     private boolean messageCompleted;
     private boolean timerExpired;
+
+    // Expose executor for shutdown hook
+    public static ScheduledExecutorService getVisibilityExecutor() {
+        return visibilityExecutor;
+    }
 
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
@@ -110,8 +121,9 @@ public class QueueMessageReceived {
             requestSender.send(request);
 
             messageCompleted = true;
-            if (visibilityTimer != null && !timerExpired) {
-                visibilityTimer.cancel();
+            if (visibilityFuture != null && !timerExpired) {
+                visibilityFuture.cancel(false);
+                visibilityFuture = null;
             }
 
         if(queuesPollResponse != null) {
@@ -160,27 +172,32 @@ public class QueueMessageReceived {
     }
 
     private void startVisibilityTimer() {
-        visibilityTimer = new Timer();
-        visibilityTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                onVisibilityExpired();
-            }
-        }, visibilitySeconds * 1000);
+        if (visibilitySeconds > 0 && !isAutoAcked) {
+            visibilityFuture = visibilityExecutor.schedule(
+                this::onVisibilityExpired,
+                visibilitySeconds,
+                TimeUnit.SECONDS
+            );
+        }
     }
 
     private void onVisibilityExpired() {
         timerExpired = true;
-        visibilityTimer = null;
-        reject();
-        throw new IllegalStateException("Message visibility expired");
+        visibilityFuture = null;
+        try {
+            reject();
+            log.warn("Message visibility expired, auto-rejected message: {}", id);
+        } catch (Exception e) {
+            log.error("Failed to auto-reject message {} on visibility expiry", id, e);
+        }
+        // Do NOT throw - we're in a background thread
     }
 
     public void extendVisibilityTimer(int additionalSeconds) {
         if (additionalSeconds <= 0) {
             throw new IllegalArgumentException("additionalSeconds must be greater than 0");
         }
-        if (visibilityTimer == null) {
+        if (visibilityFuture == null) {
             throw new IllegalStateException("Cannot extend, timer not active");
         }
         if (timerExpired) {
@@ -189,16 +206,17 @@ public class QueueMessageReceived {
         if (messageCompleted) {
             throw new IllegalStateException("Message transaction is already completed");
         }
-            visibilityTimer.cancel(); // Cancel the existing timer
-            visibilitySeconds += additionalSeconds; // Extend the duration
-            startVisibilityTimer(); // Restart the timer with the new duration
+        visibilityFuture.cancel(false); // Cancel the existing timer
+        visibilityFuture = null;
+        visibilitySeconds += additionalSeconds; // Extend the duration
+        startVisibilityTimer(); // Restart the timer with the new duration
     }
 
-    public void resetVisibilityTimer (int newVisibilitySeconds) {
+    public void resetVisibilityTimer(int newVisibilitySeconds) {
         if (newVisibilitySeconds <= 0) {
             throw new IllegalArgumentException("additionalSeconds must be greater than 0");
         }
-        if (visibilityTimer == null) {
+        if (visibilityFuture == null) {
             throw new IllegalStateException("Cannot extend, timer not active");
         }
         if (timerExpired) {
@@ -207,7 +225,8 @@ public class QueueMessageReceived {
         if (messageCompleted) {
             throw new IllegalStateException("Message transaction is already completed");
         }
-        visibilityTimer.cancel(); // Cancel the existing timer
+        visibilityFuture.cancel(false); // Cancel the existing timer
+        visibilityFuture = null;
         visibilitySeconds = newVisibilitySeconds; // Reset the duration
         startVisibilityTimer(); // Restart the timer with the new duration
     }
@@ -217,8 +236,9 @@ public class QueueMessageReceived {
     public void markTransactionCompleted() {
         messageCompleted = true;
         isTransactionCompleted = true;
-        if (visibilityTimer != null) {
-            visibilityTimer.cancel();
+        if (visibilityFuture != null) {
+            visibilityFuture.cancel(false);
+            visibilityFuture = null;
         }
     }
 }

@@ -44,7 +44,11 @@ public class QueuesPollRequest {
         }
     }
 
-    // Encode method to build the request with visibilitySeconds included
+    /**
+     * Encodes the poll request to a gRPC QueuesDownstreamRequest.
+     * Note: visibilitySeconds is handled client-side via QueueMessageReceived timer,
+     * not sent to server. See {@link QueueMessageReceived#extendVisibilityTimer(int)}.
+     */
     public QueuesDownstreamRequest encode(String clientId) {
         return QueuesDownstreamRequest.newBuilder()
                 .setRequestID(UUID.randomUUID().toString())
@@ -53,7 +57,6 @@ public class QueuesPollRequest {
                 .setMaxItems(pollMaxMessages)
                 .setWaitTimeout(pollWaitTimeoutInSeconds * 1000)
                 .setAutoAck(autoAckMessages)
-                //.setVisibilitySeconds(visibilitySeconds)  // New field included in the encoding, not supported by gRPC
                 .setRequestTypeData(QueuesDownstreamRequestType.Get)
                 .build();
     }

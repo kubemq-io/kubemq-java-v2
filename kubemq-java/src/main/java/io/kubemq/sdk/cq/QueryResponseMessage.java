@@ -59,7 +59,7 @@ public class QueryResponseMessage {
         pbResponseBuilder.setExecuted(this.isExecuted);
         pbResponseBuilder.setError(this.error !=null ? this.error:"");
         pbResponseBuilder.setTimestamp(this.timestamp != null ? (this.timestamp.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() * 1_000_000):Instant.now().toEpochMilli());
-        pbResponseBuilder.setMetadata(this.queryReceived.getMetadata());
+        pbResponseBuilder.setMetadata(this.metadata != null ? this.metadata : "");
         pbResponseBuilder.setBody(com.google.protobuf.ByteString.copyFrom(this.body));
         pbResponseBuilder.putAllTags(this.tags);
         return pbResponseBuilder.build();
