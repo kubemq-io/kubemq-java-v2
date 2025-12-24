@@ -7,8 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -25,6 +24,23 @@ public class QueueDownstreamHandler {
     private final Map<String, CompletableFuture<QueuesPollResponse>> pendingResponses = new ConcurrentHashMap<>();
     private final Map<String, QueuesPollRequest> pendingRequests = new ConcurrentHashMap<>();
 
+    private static final long REQUEST_TIMEOUT_MS = 60000; // 60 seconds
+    private final Map<String, Long> requestTimestamps = new ConcurrentHashMap<>();
+
+    private static final ScheduledExecutorService cleanupExecutor =
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "kubemq-downstream-cleanup");
+            t.setDaemon(true);
+            return t;
+        });
+
+    private volatile boolean cleanupStarted = false;
+
+    // Expose executor for shutdown hook
+    public static ScheduledExecutorService getCleanupExecutor() {
+        return cleanupExecutor;
+    }
+
     public QueueDownstreamHandler(KubeMQClient kubeMQClient) {
         this.kubeMQClient = kubeMQClient;
     }
@@ -39,6 +55,8 @@ public class QueueDownstreamHandler {
                 return;
             }
             try {
+                startCleanupTask();
+
                 responsesObserver = new StreamObserver<Kubemq.QueuesDownstreamResponse>() {
                     @Override
                     public void onNext(Kubemq.QueuesDownstreamResponse messageReceive) {
@@ -46,6 +64,7 @@ public class QueueDownstreamHandler {
 
                         CompletableFuture<QueuesPollResponse> future = pendingResponses.remove(refRequestId);
                         QueuesPollRequest queuesPollRequest = pendingRequests.remove(refRequestId);
+                        requestTimestamps.remove(refRequestId);
 
                         if (future != null && queuesPollRequest != null) {
                             QueuesPollResponse qpResp = QueuesPollResponse.builder()
@@ -117,6 +136,34 @@ public class QueueDownstreamHandler {
 
         pendingRequests.clear();
         pendingResponses.clear();
+        requestTimestamps.clear();
+    }
+
+    private void startCleanupTask() {
+        if (!cleanupStarted) {
+            synchronized (this) {
+                if (!cleanupStarted) {
+                    cleanupExecutor.scheduleAtFixedRate(() -> {
+                        long now = System.currentTimeMillis();
+                        pendingResponses.entrySet().removeIf(entry -> {
+                            Long timestamp = requestTimestamps.get(entry.getKey());
+                            if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
+                                entry.getValue().complete(QueuesPollResponse.builder()
+                                        .error("Request timed out after " + REQUEST_TIMEOUT_MS + "ms")
+                                        .isError(true)
+                                        .build());
+                                pendingRequests.remove(entry.getKey());
+                                requestTimestamps.remove(entry.getKey());
+                                log.warn("Cleaned up stale pending request: {}", entry.getKey());
+                                return true;
+                            }
+                            return false;
+                        });
+                    }, 30, 30, TimeUnit.SECONDS);
+                    cleanupStarted = true;
+                }
+            }
+        }
     }
 
     /**
@@ -129,6 +176,7 @@ public class QueueDownstreamHandler {
 
         pendingResponses.put(requestId, responseFuture);
         pendingRequests.put(requestId, queuesPollRequest);
+        requestTimestamps.put(requestId, System.currentTimeMillis());
 
         try {
             Kubemq.QueuesDownstreamRequest request = queuesPollRequest.encode(kubeMQClient.getClientId())
@@ -140,6 +188,7 @@ public class QueueDownstreamHandler {
         } catch (Exception e) {
             pendingRequests.remove(requestId);
             pendingResponses.remove(requestId);
+            requestTimestamps.remove(requestId);
             log.error("Error polling message: ", e);
             responseFuture.completeExceptionally(e);
         }
@@ -147,16 +196,33 @@ public class QueueDownstreamHandler {
     }
 
     /**
-     * Keep the existing synchronous API, but internally use the async approach.
+     * Keep the existing synchronous API, but internally use the async approach with timeout.
      * Each thread calling here will block on its own future, not block all threads.
      */
     public QueuesPollResponse receiveQueuesMessages(QueuesPollRequest queuesPollRequest) {
         try {
             CompletableFuture<QueuesPollResponse> future = receiveQueuesMessagesAsync(queuesPollRequest);
-            QueuesPollResponse response = future.get();
+            int timeout = Math.max(
+                queuesPollRequest.getPollWaitTimeoutInSeconds() + 5,
+                kubeMQClient.getRequestTimeoutSeconds()
+            );
+            QueuesPollResponse response = future.get(timeout, TimeUnit.SECONDS);
             // Let the response object handle any flow (e.g., Ack) by passing sendRequest back in
             response.complete(this::sendRequest);
             return response;
+        } catch (TimeoutException e) {
+            log.error("Timeout waiting for Queue Message response");
+            return QueuesPollResponse.builder()
+                    .error("Request timed out")
+                    .isError(true)
+                    .build();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Preserve interrupt status
+            log.error("Interrupted waiting for Queue Message response");
+            return QueuesPollResponse.builder()
+                    .error("Request interrupted")
+                    .isError(true)
+                    .build();
         } catch (Exception e) {
             log.error("Error waiting for Queue Message response: ", e);
             throw new RuntimeException("Failed to get response", e);

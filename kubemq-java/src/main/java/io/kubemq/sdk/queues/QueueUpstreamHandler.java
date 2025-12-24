@@ -7,8 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -26,6 +25,23 @@ public class QueueUpstreamHandler {
 
     private final Map<String, CompletableFuture<QueueSendResult>> pendingResponses = new ConcurrentHashMap<>();
 
+    private static final long REQUEST_TIMEOUT_MS = 60000; // 60 seconds
+    private final Map<String, Long> requestTimestamps = new ConcurrentHashMap<>();
+
+    private static final ScheduledExecutorService cleanupExecutor =
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "kubemq-upstream-cleanup");
+            t.setDaemon(true);
+            return t;
+        });
+
+    private volatile boolean cleanupStarted = false;
+
+    // Expose executor for shutdown hook
+    public static ScheduledExecutorService getCleanupExecutor() {
+        return cleanupExecutor;
+    }
+
     public QueueUpstreamHandler(KubeMQClient kubeMQClient) {
         this.kubeMQClient = kubeMQClient;
     }
@@ -40,12 +56,15 @@ public class QueueUpstreamHandler {
                 return;
             }
             try {
+                startCleanupTask();
+
                 responsesObserver = new StreamObserver<Kubemq.QueuesUpstreamResponse>() {
                     @Override
                     public void onNext(Kubemq.QueuesUpstreamResponse receivedResponse) {
                         String refRequestID = receivedResponse.getRefRequestID();
                         CompletableFuture<QueueSendResult> future =
                                 pendingResponses.remove(refRequestID);
+                        requestTimestamps.remove(refRequestID);
 
                         if (future != null) {
                             if (receivedResponse.getIsError()) {
@@ -109,6 +128,33 @@ public class QueueUpstreamHandler {
             );
         });
         pendingResponses.clear();
+        requestTimestamps.clear();
+    }
+
+    private void startCleanupTask() {
+        if (!cleanupStarted) {
+            synchronized (this) {
+                if (!cleanupStarted) {
+                    cleanupExecutor.scheduleAtFixedRate(() -> {
+                        long now = System.currentTimeMillis();
+                        pendingResponses.entrySet().removeIf(entry -> {
+                            Long timestamp = requestTimestamps.get(entry.getKey());
+                            if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
+                                entry.getValue().complete(QueueSendResult.builder()
+                                        .error("Request timed out after " + REQUEST_TIMEOUT_MS + "ms")
+                                        .isError(true)
+                                        .build());
+                                requestTimestamps.remove(entry.getKey());
+                                log.warn("Cleaned up stale pending request: {}", entry.getKey());
+                                return true;
+                            }
+                            return false;
+                        });
+                    }, 30, 30, TimeUnit.SECONDS);
+                    cleanupStarted = true;
+                }
+            }
+        }
     }
 
     /**
@@ -119,6 +165,7 @@ public class QueueUpstreamHandler {
         CompletableFuture<QueueSendResult> responseFuture = new CompletableFuture<>();
 
         pendingResponses.put(requestId, responseFuture);
+        requestTimestamps.put(requestId, System.currentTimeMillis());
         try {
             Kubemq.QueuesUpstreamRequest request = queueMessage.encode(kubeMQClient.getClientId())
                     .toBuilder()
@@ -128,6 +175,7 @@ public class QueueUpstreamHandler {
         } catch (Exception e) {
             // Clean up on failure
             pendingResponses.remove(requestId);
+            requestTimestamps.remove(requestId);
             log.error("Error sending queue message: ", e);
             responseFuture.completeExceptionally(e);
         }
@@ -135,11 +183,25 @@ public class QueueUpstreamHandler {
     }
 
     /**
-     * Synchronous method that blocks on the async call.
+     * Synchronous method that blocks on the async call with timeout.
      */
     public QueueSendResult sendQueuesMessage(QueueMessage queueMessage) {
         try {
-            return sendQueuesMessageAsync(queueMessage).get();
+            return sendQueuesMessageAsync(queueMessage)
+                    .get(kubeMQClient.getRequestTimeoutSeconds(), TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            log.error("Timeout waiting for send Queue Message response");
+            QueueSendResult result = new QueueSendResult();
+            result.setError("Request timed out after " + kubeMQClient.getRequestTimeoutSeconds() + " seconds");
+            result.setIsError(true);
+            return result;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Preserve interrupt status
+            log.error("Interrupted waiting for send Queue Message response");
+            QueueSendResult result = new QueueSendResult();
+            result.setError("Request interrupted");
+            result.setIsError(true);
+            return result;
         } catch (Exception e) {
             log.error("Error waiting for send Queue Message response: ", e);
             throw new RuntimeException("Failed to get response", e);
