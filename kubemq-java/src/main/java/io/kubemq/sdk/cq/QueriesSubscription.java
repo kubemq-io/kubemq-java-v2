@@ -6,6 +6,10 @@ import kubemq.Kubemq.Subscribe;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 @Data
@@ -14,6 +18,21 @@ import java.util.function.Consumer;
 @AllArgsConstructor
 @Slf4j
 public class QueriesSubscription {
+
+    private static final int MAX_RECONNECT_ATTEMPTS = 10;
+    private static final ScheduledExecutorService reconnectExecutor =
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "kubemq-queries-reconnect");
+            t.setDaemon(true);
+            return t;
+        });
+
+    private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
+
+    // Expose executor for shutdown hook
+    public static ScheduledExecutorService getReconnectExecutor() {
+        return reconnectExecutor;
+    }
 
     private String channel;
     private String group;
@@ -94,15 +113,45 @@ public class QueriesSubscription {
     }
 
     private void reconnect(CQClient cQClient) {
-            try {
-                Thread.sleep(cQClient.getReconnectIntervalInMillis());
-                log.debug("Attempting to re-subscribe...");
-                cQClient.getAsyncClient().subscribeToRequests(this.encode(cQClient.getClientId(), cQClient), this.getObserver());
-                log.debug("Re-subscribed successfully");
-            } catch (Exception e) {
-                log.error("Re-subscribe attempt failed", e);
-                this.reconnect(cQClient);
+        int attempt = reconnectAttempts.incrementAndGet();
+
+        if (attempt > MAX_RECONNECT_ATTEMPTS) {
+            log.error("Max reconnection attempts ({}) reached for channel: {}",
+                      MAX_RECONNECT_ATTEMPTS, channel);
+            raiseOnError("Max reconnection attempts reached after " + attempt + " tries");
+            return;
         }
+
+        // Exponential backoff: base * 2^(attempt-1), capped at 60 seconds
+        long delay = Math.min(
+            cQClient.getReconnectIntervalInMillis() * (1L << (attempt - 1)),
+            60000L
+        );
+
+        log.info("Scheduling reconnection attempt {} for channel {} in {}ms",
+                 attempt, channel, delay);
+
+        reconnectExecutor.schedule(() -> {
+            try {
+                cQClient.getAsyncClient().subscribeToRequests(
+                    this.encode(cQClient.getClientId(), cQClient),
+                    this.getObserver()
+                );
+                reconnectAttempts.set(0); // Reset on success
+                log.info("Successfully reconnected to channel {} after {} attempts",
+                         channel, attempt);
+            } catch (Exception e) {
+                log.error("Reconnection attempt {} failed for channel {}", attempt, channel, e);
+                reconnect(cQClient); // Schedule next attempt (not recursive stack)
+            }
+        }, delay, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Resets the reconnection attempt counter. Call this on successful message receive.
+     */
+    public void resetReconnectAttempts() {
+        reconnectAttempts.set(0);
     }
 
     @Override

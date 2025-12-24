@@ -11,6 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -23,6 +27,21 @@ import java.util.function.Consumer;
 @AllArgsConstructor
 @Slf4j
 public class EventsStoreSubscription {
+
+    private static final int MAX_RECONNECT_ATTEMPTS = 10;
+    private static final ScheduledExecutorService reconnectExecutor =
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "kubemq-eventsstore-reconnect");
+            t.setDaemon(true);
+            return t;
+        });
+
+    private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
+
+    // Expose executor for shutdown hook
+    public static ScheduledExecutorService getReconnectExecutor() {
+        return reconnectExecutor;
+    }
 
     /**
      * The channel to which the subscription is made.
@@ -179,15 +198,42 @@ public class EventsStoreSubscription {
     }
 
     private void reconnect(PubSubClient pubSubClient) {
-        try {
-            Thread.sleep(pubSubClient.getReconnectIntervalInMillis());
-            log.debug("Attempting to re-subscribe...");
-            pubSubClient.getAsyncClient().subscribeToEvents(this.subscribe, this.getObserver());
-            log.debug("Re-subscribed successfully");
-        } catch (Exception e) {
-            log.error("Re-subscribe attempt failed", e);
-            this.reconnect(pubSubClient);
+        int attempt = reconnectAttempts.incrementAndGet();
+
+        if (attempt > MAX_RECONNECT_ATTEMPTS) {
+            log.error("Max reconnection attempts ({}) reached for channel: {}",
+                      MAX_RECONNECT_ATTEMPTS, channel);
+            raiseOnError("Max reconnection attempts reached after " + attempt + " tries");
+            return;
         }
+
+        // Exponential backoff: base * 2^(attempt-1), capped at 60 seconds
+        long delay = Math.min(
+            pubSubClient.getReconnectIntervalInMillis() * (1L << (attempt - 1)),
+            60000L
+        );
+
+        log.info("Scheduling reconnection attempt {} for channel {} in {}ms",
+                 attempt, channel, delay);
+
+        reconnectExecutor.schedule(() -> {
+            try {
+                pubSubClient.getAsyncClient().subscribeToEvents(this.subscribe, this.getObserver());
+                reconnectAttempts.set(0); // Reset on success
+                log.info("Successfully reconnected to channel {} after {} attempts",
+                         channel, attempt);
+            } catch (Exception e) {
+                log.error("Reconnection attempt {} failed for channel {}", attempt, channel, e);
+                reconnect(pubSubClient); // Schedule next attempt (not recursive stack)
+            }
+        }, delay, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Resets the reconnection attempt counter. Call this on successful message receive.
+     */
+    public void resetReconnectAttempts() {
+        reconnectAttempts.set(0);
     }
 
     /**
