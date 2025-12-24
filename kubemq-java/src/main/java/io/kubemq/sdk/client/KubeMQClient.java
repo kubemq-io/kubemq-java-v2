@@ -17,7 +17,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * KubeMQClient is a client for communicating with a KubeMQ server using gRPC.
@@ -29,6 +31,11 @@ import java.util.concurrent.TimeUnit;
 @Getter
 @AllArgsConstructor
 public abstract class KubeMQClient implements AutoCloseable {
+
+    // Reference counting for shared executors and shutdown hook
+    private static final AtomicInteger clientCount = new AtomicInteger(0);
+    private static volatile boolean shutdownHookRegistered = false;
+    private static final Object shutdownHookLock = new Object();
 
     private  String address;
     private  String clientId;
@@ -44,6 +51,16 @@ public abstract class KubeMQClient implements AutoCloseable {
     private  int pingTimeoutInSeconds;
     private  Level logLevel;
     private long reconnectIntervalInMillis;
+
+    private int requestTimeoutSeconds;
+
+    /**
+     * Returns the timeout in seconds for synchronous request operations.
+     * @return The request timeout in seconds.
+     */
+    public int getRequestTimeoutSeconds() {
+        return requestTimeoutSeconds;
+    }
     @Setter
     private ManagedChannel managedChannel;
     @Setter
@@ -76,9 +93,8 @@ public abstract class KubeMQClient implements AutoCloseable {
         if (address == null || clientId == null) {
             throw new IllegalArgumentException("Address and clientId are required");
         }
-//        if (tls && (tlsCertFile == null || tlsKeyFile == null)) {
-//            throw new IllegalArgumentException("When TLS is enabled, tlsCertFile and tlsKeyFile are required");
-//        }
+
+        validateTlsConfiguration(tls, tlsCertFile, tlsKeyFile, caCertFile);
 
         this.address = address;
         this.clientId = clientId;
@@ -94,10 +110,148 @@ public abstract class KubeMQClient implements AutoCloseable {
         this.pingTimeoutInSeconds = pingTimeoutInSeconds;
         this.logLevel = logLevel != null ? logLevel : Level.INFO;
         this.reconnectIntervalInMillis = TimeUnit.SECONDS.toMillis(reconnectIntervalSeconds);
+        this.requestTimeoutSeconds = 30;
         // Set the logging level
         setLogLevel();
         // Initialize the channel
         initChannel();
+        // Register shutdown hook and increment client count
+        clientCount.incrementAndGet();
+        registerShutdownHook();
+    }
+
+    /**
+     * Registers a JVM shutdown hook to clean up all static executors.
+     * This is registered once and shared across all client instances.
+     */
+    private static void registerShutdownHook() {
+        if (!shutdownHookRegistered) {
+            synchronized (shutdownHookLock) {
+                if (!shutdownHookRegistered) {
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                        log.info("Shutting down KubeMQ SDK executors...");
+                        shutdownAllExecutors();
+                    }, "kubemq-shutdown"));
+                    shutdownHookRegistered = true;
+                }
+            }
+        }
+    }
+
+    /**
+     * Shuts down all static executors used by the SDK.
+     */
+    private static void shutdownAllExecutors() {
+        // Import and shutdown all static executors
+        try {
+            shutdownExecutor(io.kubemq.sdk.queues.QueueUpstreamHandler.getCleanupExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down QueueUpstreamHandler executor", e);
+        }
+        try {
+            shutdownExecutor(io.kubemq.sdk.queues.QueueDownstreamHandler.getCleanupExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down QueueDownstreamHandler executor", e);
+        }
+        try {
+            shutdownExecutor(io.kubemq.sdk.pubsub.EventStreamHelper.getCleanupExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down EventStreamHelper executor", e);
+        }
+        try {
+            shutdownExecutor(io.kubemq.sdk.queues.QueueMessageReceived.getVisibilityExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down QueueMessageReceived executor", e);
+        }
+        try {
+            shutdownExecutor(io.kubemq.sdk.pubsub.EventsSubscription.getReconnectExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down EventsSubscription executor", e);
+        }
+        try {
+            shutdownExecutor(io.kubemq.sdk.pubsub.EventsStoreSubscription.getReconnectExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down EventsStoreSubscription executor", e);
+        }
+        try {
+            shutdownExecutor(io.kubemq.sdk.cq.CommandsSubscription.getReconnectExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down CommandsSubscription executor", e);
+        }
+        try {
+            shutdownExecutor(io.kubemq.sdk.cq.QueriesSubscription.getReconnectExecutor());
+        } catch (Exception e) {
+            log.debug("Error shutting down QueriesSubscription executor", e);
+        }
+    }
+
+    /**
+     * Helper method to shutdown an executor with timeout.
+     */
+    private static void shutdownExecutor(ExecutorService executor) {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /**
+     * Validates TLS configuration.
+     * Ensures that when TLS is enabled, certificate files are properly configured.
+     */
+    private void validateTlsConfiguration(boolean tlsEnabled, String certFile, String keyFile, String caFile) {
+        if (!tlsEnabled) {
+            return; // TLS not enabled, no validation needed
+        }
+
+        // Validate mutual TLS configuration - cert and key must be provided together
+        boolean hasCert = certFile != null && !certFile.isEmpty();
+        boolean hasKey = keyFile != null && !keyFile.isEmpty();
+
+        if (hasCert != hasKey) {
+            throw new IllegalArgumentException(
+                "When using mutual TLS, both tlsCertFile and tlsKeyFile must be provided together. " +
+                "Got tlsCertFile=" + (hasCert ? "set" : "null") +
+                ", tlsKeyFile=" + (hasKey ? "set" : "null")
+            );
+        }
+
+        // Validate CA cert for server verification if provided
+        if (caFile != null && !caFile.isEmpty()) {
+            File caCertFileObj = new File(caFile);
+            if (!caCertFileObj.exists()) {
+                throw new IllegalArgumentException(
+                    "CA certificate file does not exist: " + caFile
+                );
+            }
+        }
+
+        // Validate client cert files if provided
+        if (hasCert) {
+            File certFileObj = new File(certFile);
+            File keyFileObj = new File(keyFile);
+
+            if (!certFileObj.exists()) {
+                throw new IllegalArgumentException(
+                    "Client certificate file does not exist: " + certFile
+                );
+            }
+            if (!keyFileObj.exists()) {
+                throw new IllegalArgumentException(
+                    "Client key file does not exist: " + keyFile
+                );
+            }
+        }
+
+        log.debug("TLS configuration validated: caCert={}, clientCert={}, clientKey={}",
+                  caFile != null, hasCert, hasKey);
     }
 
     /**
@@ -219,18 +373,25 @@ public abstract class KubeMQClient implements AutoCloseable {
                 managedChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 log.error("Channel shutdown interrupted", e);
+                Thread.currentThread().interrupt();
             }
+        }
+        // Decrement client count
+        int remaining = clientCount.decrementAndGet();
+        if (remaining == 0) {
+            log.debug("Last client closed, executors will be cleaned up on JVM shutdown");
         }
     }
 
     /**
-     * Sets the logging level for the client.
-     * This method configures the log level based on the specified Level enum.
+     * Sets the logging level for the SDK.
+     * This method configures the log level for the io.kubemq.sdk package only.
      */
     private void setLogLevel() {
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-        ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("ROOT");
-        rootLogger.setLevel(ch.qos.logback.classic.Level.valueOf(logLevel.name()));
+        ch.qos.logback.classic.Logger sdkLogger = loggerContext.getLogger("io.kubemq.sdk");
+        sdkLogger.setLevel(ch.qos.logback.classic.Level.valueOf(logLevel.name()));
+        log.debug("Set SDK log level to: {}", logLevel);
     }
 
     /**
