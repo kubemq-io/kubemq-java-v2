@@ -1,41 +1,65 @@
 package io.kubemq.sdk.cq;
 
 import com.google.protobuf.ByteString;
+import io.kubemq.sdk.common.KubeMQUtils;
+import io.kubemq.sdk.exception.ErrorCode;
+import io.kubemq.sdk.exception.ValidationException;
 import kubemq.Kubemq;
 import lombok.Builder;
 import lombok.Data;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
  * Represents a command message that can be sent over a communication channel.
- * This class contains information such as the message ID, channel, metadata, body, tags, and timeout.
+ *
+ * <p><b>Thread Safety:</b> This class is NOT thread-safe. Create a new instance for
+ * each operation. Do not share instances across threads.</p>
+ *
+ * <p>Message objects should be treated as immutable after construction.
+ * Use the builder pattern exclusively. Setter methods are provided for
+ * backward compatibility and will be removed in v3.0.</p>
  */
+@NotThreadSafe
 @Data
 @Builder
 public class CommandMessage {
 
+    /**
+     * Unique message identifier. Auto-generated (UUID) if not set.
+     */
     private String id;
-    private String channel;
-    private String metadata;
-    @Builder.Default
-    private byte[] body = new byte[0];
-    @Builder.Default
-    private Map<String, String> tags = new HashMap<>();
-    private int timeoutInSeconds;
 
     /**
-     * Constructs a CommandMessage instance with the provided attributes.
-     *
-     * @param id The ID of the command message.
-     * @param channel The channel through which the command message will be sent.
-     * @param metadata Additional metadata associated with the command message.
-     * @param body The body of the command message as bytes.
-     * @param tags A dictionary of key-value pairs representing tags associated with the command message.
-     * @param timeoutInSeconds The maximum time in seconds for which the command message is valid.
+     * Target channel for the command. Must not be null or empty.
      */
+    private String channel;
+
+    /**
+     * Application-defined string metadata. May be null.
+     */
+    private String metadata;
+
+    /**
+     * Command payload as raw bytes. Maximum size is 100MB.
+     */
+    @Builder.Default
+    private byte[] body = new byte[0];
+
+    /**
+     * Key-value string pairs for message filtering. May be empty.
+     */
+    @Builder.Default
+    private Map<String, String> tags = new HashMap<>();
+
+    /**
+     * Maximum time in seconds to wait for a response. Must be greater than 0.
+     */
+    private int timeoutInSeconds;
+
     public CommandMessage(String id, String channel, String metadata, byte[] body,
                           Map<String, String> tags, int timeoutInSeconds) {
         this.id = id;
@@ -47,32 +71,61 @@ public class CommandMessage {
     }
 
     /**
+     * Custom builder with build-time channel format validation.
+     */
+    public static class CommandMessageBuilder {
+        public CommandMessage build() {
+            byte[] effectiveBody = this.body$set ? this.body$value : new byte[0];
+            Map<String, String> effectiveTags = this.tags$set ? this.tags$value : new HashMap<>();
+            CommandMessage message = new CommandMessage(id, channel, metadata,
+                effectiveBody, effectiveTags, timeoutInSeconds);
+            if (message.channel != null && !message.channel.isEmpty()) {
+                KubeMQUtils.validateChannelName(message.channel, "CommandMessage.build");
+            }
+            return message;
+        }
+    }
+
+    /**
      * Validates the command message.
      *
      * @return The current CommandMessage instance.
-     * @throws IllegalArgumentException If the message is invalid. This includes cases where:
-     *                                   - The channel is null or empty.
-     *                                   - None of metadata, body, or tags are provided.
-     *                                   - The timeoutInSeconds is less than or equal to 0.
+     * @throws ValidationException If the message is invalid. This includes cases where:
+     *                              - The channel is null or empty.
+     *                              - None of metadata, body, or tags are provided.
+     *                              - The timeoutInSeconds is less than or equal to 0.
      */
     public CommandMessage validate() {
-        if (this.channel == null || this.channel.isEmpty()) {
-            throw new IllegalArgumentException("Command message must have a channel.");
-        }
+        KubeMQUtils.validateChannelName(this.channel, "CommandMessage.validate");
 
         if ((this.metadata == null || this.metadata.isEmpty()) &&
                 (this.body == null || this.body.length == 0) &&
                 (this.tags == null || this.tags.isEmpty())) {
-            throw new IllegalArgumentException("Command message must have at least one of the following: metadata, body, or tags.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Command message must have at least one of the following: metadata, body, or tags.")
+                .operation("CommandMessage.validate")
+                .channel(channel)
+                .build();
         }
 
         final int MAX_BODY_SIZE = 104857600; // 100 MB in bytes
         if (body.length > MAX_BODY_SIZE) {
-            throw new IllegalArgumentException("Queue message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Command message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.")
+                .operation("CommandMessage.validate")
+                .channel(channel)
+                .build();
         }
 
         if (this.timeoutInSeconds <= 0) {
-            throw new IllegalArgumentException("Command message timeout must be a positive integer.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Command message timeout must be a positive integer.")
+                .operation("CommandMessage.validate")
+                .channel(channel)
+                .build();
         }
         return this;
     }

@@ -1,5 +1,6 @@
 package io.kubemq.sdk.unit.queues;
 
+import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.queues.QueuesPollRequest;
 import kubemq.Kubemq.QueuesDownstreamRequest;
 import kubemq.Kubemq.QueuesDownstreamRequestType;
@@ -46,8 +47,8 @@ class QueuesPollRequestTest {
                     .pollMaxMessages(10)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -60,8 +61,8 @@ class QueuesPollRequestTest {
                     .pollMaxMessages(10)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -74,8 +75,8 @@ class QueuesPollRequestTest {
                     .pollMaxMessages(0)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("pollMaxMessages"));
@@ -88,8 +89,8 @@ class QueuesPollRequestTest {
                     .pollMaxMessages(-1)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("pollMaxMessages"));
@@ -102,8 +103,8 @@ class QueuesPollRequestTest {
                     .pollWaitTimeoutInSeconds(0)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("pollWaitTimeoutInSeconds"));
@@ -116,8 +117,8 @@ class QueuesPollRequestTest {
                     .pollWaitTimeoutInSeconds(-1)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("pollWaitTimeoutInSeconds"));
@@ -130,8 +131,8 @@ class QueuesPollRequestTest {
                     .visibilitySeconds(-1)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("Visibility"));
@@ -145,8 +146,8 @@ class QueuesPollRequestTest {
                     .visibilitySeconds(30)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     request::validate
             );
             assertTrue(ex.getMessage().contains("autoAckMessages") && ex.getMessage().contains("visibilitySeconds"));

@@ -1,6 +1,7 @@
 package io.kubemq.sdk.unit.queues;
 
 import com.google.protobuf.ByteString;
+import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.queues.*;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
@@ -333,7 +334,7 @@ class QueuesClientTest {
                     .body("test".getBytes())
                     .build();
 
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(ValidationException.class, () ->
                     client.sendQueuesMessage(invalidMessage)
             );
         }
@@ -352,7 +353,7 @@ class QueuesClientTest {
                     .pollWaitTimeoutInSeconds(5)
                     .build();
 
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(ValidationException.class, () ->
                     client.receiveQueuesMessages(invalidRequest)
             );
         }

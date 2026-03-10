@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.pubsub;
 
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
+import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.pubsub.EventStoreMessageReceived;
 import io.kubemq.sdk.pubsub.EventsStoreSubscription;
 import io.kubemq.sdk.pubsub.EventsStoreType;
@@ -114,8 +115,8 @@ class EventsStoreSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -129,8 +130,8 @@ class EventsStoreSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -143,8 +144,8 @@ class EventsStoreSubscriptionTest {
                     .eventsStoreType(EventsStoreType.StartFromFirst)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("Callback") || ex.getMessage().contains("callback"));
@@ -158,8 +159,8 @@ class EventsStoreSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("events store type"));
@@ -173,8 +174,8 @@ class EventsStoreSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("events store type"));
@@ -189,8 +190,8 @@ class EventsStoreSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("sequence"));
@@ -205,8 +206,8 @@ class EventsStoreSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("start time"));
@@ -294,7 +295,7 @@ class EventsStoreSubscriptionTest {
                     .eventsStoreType(EventsStoreType.StartFromFirst)
                     .onReceiveEventCallback(msg -> {})
                     .onErrorCallback(error -> {
-                        errorMessage.set(error);
+                        errorMessage.set(error.getMessage());
                         latch.countDown();
                     })
                     .build();
@@ -507,10 +508,11 @@ class EventsStoreSubscriptionTest {
                     .channel("test-channel")
                     .eventsStoreType(EventsStoreType.StartFromFirst)
                     .onReceiveEventCallback(msg -> {})
-                    .onErrorCallback(error -> receivedError.set(error))
+                    .onErrorCallback(error -> receivedError.set(error.getMessage()))
                     .build();
 
-            subscription.raiseOnError("Test error message");
+            subscription.raiseOnError(io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                .message("Test error message").build());
 
             assertEquals("Test error message", receivedError.get());
         }
@@ -524,7 +526,9 @@ class EventsStoreSubscriptionTest {
                     .onErrorCallback(null)
                     .build();
 
-            assertDoesNotThrow(() -> subscription.raiseOnError("Test error"));
+            assertDoesNotThrow(() -> subscription.raiseOnError(
+                io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                    .message("Test error").build()));
         }
     }
 }

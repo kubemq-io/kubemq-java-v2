@@ -2,35 +2,38 @@ package io.kubemq.sdk.exception;
 
 /**
  * Exception thrown when there is an error creating a channel.
+ *
+ * @deprecated Since 2.2.0, use {@link ServerException} or {@link ValidationException}.
+ *             This class will be removed in v3.0.
  */
-public class CreateChannelException extends RuntimeException {
+@Deprecated(since = "2.2.0", forRemoval = true)
+public class CreateChannelException extends KubeMQException {
 
-    /**
-     * Constructs a new CreateChannelException with {@code null} as its detail message.
-     * The cause is not initialized.
-     */
+    private static final long serialVersionUID = 1L;
+
     public CreateChannelException() {
-        super();
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.SERVER_INTERNAL)
+            .category(ErrorCategory.FATAL)
+            .retryable(false));
     }
 
-    /**
-     * Constructs a new CreateChannelException with the specified detail message.
-     * The cause is not initialized.
-     *
-     * @param message the detail message. The detail message is saved for later retrieval by the {@link #getMessage()} method.
-     */
     public CreateChannelException(String message) {
-        super(message);
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.SERVER_INTERNAL)
+            .category(ErrorCategory.FATAL)
+            .retryable(false)
+            .message(message)
+            .operation("createChannel"));
     }
 
-    /**
-     * Constructs a new CreateChannelException with the specified detail message and cause.
-     *
-     * @param message the detail message. The detail message is saved for later retrieval by the {@link #getMessage()} method.
-     * @param cause   the cause (which is saved for later retrieval by the {@link #getCause()} method). A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.
-     */
     public CreateChannelException(String message, Throwable cause) {
-        super(message, cause);
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.SERVER_INTERNAL)
+            .category(ErrorCategory.FATAL)
+            .retryable(false)
+            .message(message)
+            .cause(cause)
+            .operation("createChannel"));
     }
-
 }

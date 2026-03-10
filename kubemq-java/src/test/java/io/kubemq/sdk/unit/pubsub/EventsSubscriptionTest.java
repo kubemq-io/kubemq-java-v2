@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.pubsub;
 
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
+import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.pubsub.EventMessageReceived;
 import io.kubemq.sdk.pubsub.EventsSubscription;
 import io.kubemq.sdk.pubsub.PubSubClient;
@@ -63,8 +64,8 @@ class EventsSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -77,8 +78,8 @@ class EventsSubscriptionTest {
                     .onReceiveEventCallback(event -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -90,8 +91,8 @@ class EventsSubscriptionTest {
                     .channel("test-channel")
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("Callback") || ex.getMessage().contains("callback"));
@@ -104,7 +105,7 @@ class EventsSubscriptionTest {
                     .onErrorCallback(error -> {})
                     .build();
 
-            assertThrows(IllegalArgumentException.class, subscription::validate);
+            assertThrows(ValidationException.class, subscription::validate);
         }
     }
 
@@ -181,7 +182,7 @@ class EventsSubscriptionTest {
                     .group("test-group")
                     .onReceiveEventCallback(msg -> {})
                     .onErrorCallback(error -> {
-                        errorMessage.set(error);
+                        errorMessage.set(error.getMessage());
                         latch.countDown();
                     })
                     .build();

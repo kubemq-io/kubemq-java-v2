@@ -12,6 +12,19 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Represents a response to a query request in KubeMQ.
+ *
+ * <p>When handling incoming queries via subscription, construct a response using the builder
+ * and the received query's metadata. When receiving a response from
+ * {@link CQClient#sendQueryRequest(QueryMessage)}, this object contains the responder's reply.</p>
+ */
+/**
+ * Represents the response to a query request in KubeMQ.
+ *
+ * <p>Instances are either constructed by the SDK when decoding a server response,
+ * or built by query handlers to send a reply back to the caller.</p>
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -2,36 +2,38 @@ package io.kubemq.sdk.exception;
 
 /**
  * Exception thrown when there is an error deleting a channel.
+ *
+ * @deprecated Since 2.2.0, use {@link ServerException} or {@link ValidationException}.
+ *             This class will be removed in v3.0.
  */
-public class DeleteChannelException extends RuntimeException {
+@Deprecated(since = "2.2.0", forRemoval = true)
+public class DeleteChannelException extends KubeMQException {
 
-    /**
-     * Constructs a new DeleteChannelException with {@code null} as its detail message.
-     * The cause is not initialized.
-     */
+    private static final long serialVersionUID = 1L;
+
     public DeleteChannelException() {
-        super();
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.SERVER_INTERNAL)
+            .category(ErrorCategory.FATAL)
+            .retryable(false));
     }
 
-    /**
-     * Constructs a new DeleteChannelException with the specified detail message.
-     * The cause is not initialized.
-     *
-     * @param message the detail message. The detail message is saved for later retrieval by the {@link #getMessage()} method.
-     */
     public DeleteChannelException(String message) {
-        super(message);
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.SERVER_INTERNAL)
+            .category(ErrorCategory.FATAL)
+            .retryable(false)
+            .message(message)
+            .operation("deleteChannel"));
     }
 
-    /**
-     * Constructs a new DeleteChannelException with the specified detail message and cause.
-     *
-     * @param message the detail message. The detail message is saved for later retrieval by the {@link #getMessage()} method.
-     * @param cause   the cause (which is saved for later retrieval by the {@link #getCause()} method). A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.
-     */
     public DeleteChannelException(String message, Throwable cause) {
-        super(message, cause);
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.SERVER_INTERNAL)
+            .category(ErrorCategory.FATAL)
+            .retryable(false)
+            .message(message)
+            .cause(cause)
+            .operation("deleteChannel"));
     }
-
 }
-
