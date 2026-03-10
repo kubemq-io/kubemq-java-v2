@@ -35,23 +35,25 @@ class KubeMQClientTest {
         }
 
         @Test
-        void builder_withNullAddress_throwsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                CQClient.builder()
-                        .address(null)
-                        .clientId("test-client")
-                        .build();
-            });
+        void builder_withNullAddress_usesDefault() {
+            CQClient client = CQClient.builder()
+                    .address(null)
+                    .clientId("test-client")
+                    .build();
+            assertNotNull(client);
+            assertEquals("localhost:50000", client.getAddress());
+            client.close();
         }
 
         @Test
-        void builder_withNullClientId_throwsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                CQClient.builder()
-                        .address("localhost:50000")
-                        .clientId(null)
-                        .build();
-            });
+        void builder_withNullClientId_usesDefault() {
+            CQClient client = CQClient.builder()
+                    .address("localhost:50000")
+                    .clientId(null)
+                    .build();
+            assertNotNull(client);
+            assertTrue(client.getClientId().startsWith("kubemq-client-"));
+            client.close();
         }
 
         @Test
@@ -231,6 +233,7 @@ class KubeMQClientTest {
             CQClient client = CQClient.builder()
                     .address("custom-host:12345")
                     .clientId("test")
+                    .tls(false)
                     .build();
 
             assertEquals("custom-host:12345", client.getAddress());
@@ -357,7 +360,6 @@ class KubeMQClientTest {
                     .build();
 
             assertEquals("secret-token-123", client.getAuthToken());
-            assertNotNull(client.getMetadata());
             client.close();
         }
 
@@ -369,12 +371,11 @@ class KubeMQClientTest {
                     .build();
 
             assertNull(client.getAuthToken());
-            assertNull(client.getMetadata());
             client.close();
         }
 
         @Test
-        void builder_withEmptyAuthToken_hasNullMetadata() {
+        void builder_withEmptyAuthToken_hasNullToken() {
             CQClient client = CQClient.builder()
                     .address("localhost:50000")
                     .clientId("empty-auth-client")
@@ -382,7 +383,6 @@ class KubeMQClientTest {
                     .build();
 
             assertEquals("", client.getAuthToken());
-            assertNull(client.getMetadata());
             client.close();
         }
     }

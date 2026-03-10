@@ -5,6 +5,7 @@ import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.cq.CQClient;
 import io.kubemq.sdk.cq.CommandMessageReceived;
 import io.kubemq.sdk.cq.CommandsSubscription;
+import io.kubemq.sdk.exception.ValidationException;
 import kubemq.Kubemq;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
@@ -74,8 +75,8 @@ class CommandsSubscriptionTest {
                     .onReceiveCommandCallback(cmd -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -88,8 +89,8 @@ class CommandsSubscriptionTest {
                     .onReceiveCommandCallback(cmd -> {})
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("channel"));
@@ -101,8 +102,8 @@ class CommandsSubscriptionTest {
                     .channel("test-channel")
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     subscription::validate
             );
             assertTrue(ex.getMessage().contains("callback"));
@@ -115,7 +116,7 @@ class CommandsSubscriptionTest {
                     .onErrorCallback(error -> {})
                     .build();
 
-            assertThrows(IllegalArgumentException.class, subscription::validate);
+            assertThrows(ValidationException.class, subscription::validate);
         }
     }
 
@@ -194,7 +195,7 @@ class CommandsSubscriptionTest {
                     .group("test-group")
                     .onReceiveCommandCallback(msg -> {})
                     .onErrorCallback(error -> {
-                        errorMessage.set(error);
+                        errorMessage.set(error.getMessage());
                         latch.countDown();
                     })
                     .build();

@@ -110,6 +110,7 @@ class EventStreamHelperTest {
         @DisplayName("P-03: sendEventStoreMessage creates stream on first call")
         void sendEventStoreMessage_createsStreamOnFirstCall() throws Exception {
             when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+            when(mockClient.getRequestTimeoutSeconds()).thenReturn(30);
 
             // Capture the result observer to simulate response
             ArgumentCaptor<StreamObserver<Kubemq.Result>> observerCaptor =
@@ -154,6 +155,7 @@ class EventStreamHelperTest {
         @DisplayName("P-04: sendEventStoreMessage reuses existing stream")
         void sendEventStoreMessage_reusesExistingStream() throws Exception {
             when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+            when(mockClient.getRequestTimeoutSeconds()).thenReturn(30);
 
             ArgumentCaptor<StreamObserver<Kubemq.Result>> observerCaptor =
                     ArgumentCaptor.forClass(StreamObserver.class);
@@ -198,6 +200,7 @@ class EventStreamHelperTest {
         @DisplayName("P-05: onNext completes correct per-request future")
         void resultStreamObserver_onNext_completesCorrectFuture() throws Exception {
             when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+            when(mockClient.getRequestTimeoutSeconds()).thenReturn(30);
 
             ArgumentCaptor<StreamObserver<Kubemq.Result>> observerCaptor =
                     ArgumentCaptor.forClass(StreamObserver.class);
@@ -238,6 +241,7 @@ class EventStreamHelperTest {
         @DisplayName("P-06: onError completes all pending futures with error")
         void resultStreamObserver_onError_completesAllPendingFutures() throws Exception {
             when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+            when(mockClient.getRequestTimeoutSeconds()).thenReturn(30);
 
             ArgumentCaptor<StreamObserver<Kubemq.Result>> observerCaptor =
                     ArgumentCaptor.forClass(StreamObserver.class);
@@ -281,6 +285,7 @@ class EventStreamHelperTest {
         @DisplayName("P-08: sendEventStoreMessage returns timeout result after 30 seconds")
         void sendEventStoreMessage_timeout_returnsTimeoutResult() throws Exception {
             when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+            when(mockClient.getRequestTimeoutSeconds()).thenReturn(30);
             when(mockAsyncStub.sendEventsStream(any())).thenReturn(mockEventObserver);
 
             Kubemq.Event event = Kubemq.Event.newBuilder()

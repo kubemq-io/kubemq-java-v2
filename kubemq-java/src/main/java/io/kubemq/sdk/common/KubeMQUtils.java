@@ -3,26 +3,78 @@ import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.cq.CQChannel;
 import io.kubemq.sdk.exception.CreateChannelException;
 import io.kubemq.sdk.exception.DeleteChannelException;
+import io.kubemq.sdk.exception.ErrorCode;
 import io.kubemq.sdk.exception.GRPCException;
 import io.kubemq.sdk.exception.ListChannelsException;
+import io.kubemq.sdk.exception.ValidationException;
+import io.kubemq.sdk.observability.KubeMQLogger;
+import io.kubemq.sdk.observability.KubeMQLoggerFactory;
 import io.kubemq.sdk.pubsub.PubSubChannel;
 import io.kubemq.sdk.queues.QueuesChannel;
 import kubemq.Kubemq;
 import kubemq.Kubemq.Request;
 import kubemq.Kubemq.Response;
-import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
- * Utility class for managing KubeMQ channels.
+ * Internal utility class for managing KubeMQ channels.
+ * Not part of the public API -- may be moved or removed without notice.
+ *
+ * @deprecated Internal use only. Will be moved to the transport layer.
  */
-@Slf4j
+@Deprecated
+@Internal
 public class KubeMQUtils {
 
+    private static final KubeMQLogger log = KubeMQLoggerFactory.getLogger(KubeMQUtils.class);
+
     private static final String REQUESTS_CHANNEL = "kubemq.cluster.internal.requests";
+
+    private static final int MAX_CHANNEL_LENGTH = 256;
+    private static final Pattern CHANNEL_NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9._\\-/:]+$");
+
+    /**
+     * Validates a channel name for publish/send operations.
+     * Channel names must be non-null, non-empty, at most 256 characters,
+     * and contain only alphanumeric characters, dots, dashes, underscores,
+     * forward slashes, and colons.
+     *
+     * @param channel   the channel name to validate
+     * @param operation the operation context for error reporting
+     * @throws ValidationException if channel name is invalid
+     */
+    public static void validateChannelName(String channel, String operation) {
+        if (channel == null || channel.trim().isEmpty()) {
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Channel name is required and cannot be empty.")
+                .operation(operation)
+                .build();
+        }
+        if (channel.length() > MAX_CHANNEL_LENGTH) {
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Channel name must be at most " + MAX_CHANNEL_LENGTH
+                    + " characters. Got: " + channel.length())
+                .operation(operation)
+                .channel(channel)
+                .build();
+        }
+        if (!CHANNEL_NAME_PATTERN.matcher(channel).matches()) {
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Channel name contains invalid characters. "
+                    + "Allowed: alphanumeric, dots, dashes, underscores, forward slashes, colons. "
+                    + "Got: '" + channel + "'")
+                .operation(operation)
+                .channel(channel)
+                .build();
+        }
+    }
 
     /**
      * Creates a channel on the KubeMQ server.
@@ -127,15 +179,22 @@ public class KubeMQUtils {
             if (response != null && response.getExecuted()) {
                 return ChannelDecoder.decodeQueuesChannelList(response.getBody().toByteArray());
             } else if (response != null) {
-                log.error("Client failed to list queue channels, error: {}", response.getError());
+                log.error("Client failed to list queue channels", "error", response.getError());
                 throw new ListChannelsException(response.getError());
             }
         } catch (io.grpc.StatusRuntimeException e) {
-            throw new GRPCException(e);
+            throw io.kubemq.sdk.exception.GrpcErrorMapper.map(e, "listQueuesChannels", null, null, false);
         }
         catch (IOException e) {
             log.error("Failed to decode response body byte array", e);
-            throw new RuntimeException(e);
+            throw io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                .code(io.kubemq.sdk.exception.ErrorCode.UNKNOWN_ERROR)
+                .category(io.kubemq.sdk.exception.ErrorCategory.FATAL)
+                .retryable(false)
+                .message("listQueuesChannels failed: " + e.getMessage())
+                .operation("listQueuesChannels")
+                .cause(e)
+                .build();
         }
         return null;
     }
@@ -168,15 +227,21 @@ public class KubeMQUtils {
             if (response != null && response.getExecuted()) {
                 return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());
             } else if (response != null) {
-                log.error("Client failed to list PubSub channels, error: {}", response.getError());
+                log.error("Client failed to list PubSub channels", "error", response.getError());
                 throw new ListChannelsException(response.getError());
             }
         } catch (io.grpc.StatusRuntimeException e) {
-            throw new GRPCException(e);
+            throw io.kubemq.sdk.exception.GrpcErrorMapper.map(e, "listPubSubChannels", null, null, false);
         }
         catch (IOException e) {
             log.error("Failed to decode response body byte array", e);
-            throw new RuntimeException(e);
+            throw io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                .code(io.kubemq.sdk.exception.ErrorCode.UNKNOWN_ERROR)
+                .category(io.kubemq.sdk.exception.ErrorCategory.FATAL)
+                .retryable(false)
+                .message("listPubSubChannels failed: " + e.getMessage())
+                .operation("listPubSubChannels")
+                .cause(e).build();
         }
         return null;
     }
@@ -210,15 +275,21 @@ public class KubeMQUtils {
             if (response != null && response.getExecuted()) {
                 return ChannelDecoder.decodeCqChannelList(response.getBody().toByteArray());
             } else if (response != null) {
-                log.error("Client failed to list CQ channels, error: {}", response.getError());
+                log.error("Client failed to list CQ channels", "error", response.getError());
                 throw new ListChannelsException(response.getError());
             }
         } catch (io.grpc.StatusRuntimeException e) {
-            throw new GRPCException(e);
+            throw io.kubemq.sdk.exception.GrpcErrorMapper.map(e, "listCQChannels", null, null, false);
         }
         catch (IOException e) {
             log.error("Failed to decode response body byte array", e);
-            throw new RuntimeException(e);
+            throw io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                .code(io.kubemq.sdk.exception.ErrorCode.UNKNOWN_ERROR)
+                .category(io.kubemq.sdk.exception.ErrorCategory.FATAL)
+                .retryable(false)
+                .message("listCQChannels failed: " + e.getMessage())
+                .operation("listCQChannels")
+                .cause(e).build();
         }
         return null;
     }

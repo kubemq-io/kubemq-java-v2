@@ -2,34 +2,46 @@ package io.kubemq.sdk.exception;
 
 /**
  * Exception thrown when there is a gRPC error.
+ *
+ * @deprecated Since 2.2.0, use {@link ConnectionException}, {@link ServerException},
+ *             or the specific subtype returned by {@link GrpcErrorMapper}.
+ *             This class will be removed in v3.0.
  */
-public class GRPCException extends RuntimeException {
+@Deprecated(since = "2.2.0", forRemoval = true)
+public class GRPCException extends KubeMQException {
 
-    /**
-     * Constructs a new GRPCException with {@code null} as its detail message.
-     * The cause is not initialized.
-     */
+    private static final long serialVersionUID = 1L;
+
     public GRPCException() {
-        super();
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.UNKNOWN_ERROR)
+            .category(ErrorCategory.TRANSIENT)
+            .retryable(true));
     }
 
-    /**
-     * Constructs a new GRPCException with the specified detail message.
-     * The cause is not initialized.
-     *
-     * @param message the detail message. The detail message is saved for later retrieval by the {@link #getMessage()} method.
-     */
     public GRPCException(String message) {
-        super(message);
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.UNKNOWN_ERROR)
+            .category(ErrorCategory.TRANSIENT)
+            .retryable(true)
+            .message(message));
     }
 
-    /**
-     * Constructs a new GRPCException with the specified cause and a detail message of {@code (cause==null ? null : cause.toString())}.
-     * This constructor is useful for exceptions that are primarily caused by another throwable.
-     *
-     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method). A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.
-     */
     public GRPCException(Throwable cause) {
-        super(cause);
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.UNKNOWN_ERROR)
+            .category(ErrorCategory.TRANSIENT)
+            .retryable(true)
+            .message(cause != null ? cause.getMessage() : null)
+            .cause(cause));
+    }
+
+    public GRPCException(String message, Throwable cause) {
+        super(KubeMQException.newBuilder()
+            .code(ErrorCode.UNKNOWN_ERROR)
+            .category(ErrorCategory.TRANSIENT)
+            .retryable(true)
+            .message(message)
+            .cause(cause));
     }
 }

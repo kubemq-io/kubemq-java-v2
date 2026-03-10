@@ -10,6 +10,16 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Represents a query message received from a KubeMQ subscription.
+ * Contains the query payload and reply channel for sending responses.
+ */
+/**
+ * Represents a query message received from KubeMQ.
+ *
+ * <p>Contains the query payload and metadata. Query handlers use this to
+ * inspect the incoming request and construct a {@link QueryResponseMessage}.</p>
+ */
 @Data
 @NoArgsConstructor
 public class QueryMessageReceived {

@@ -10,6 +10,19 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Represents the response from polling a queue for messages.
+ *
+ * <p>Contains the list of received messages and metadata about the poll operation.
+ * Check {@link #isError()} before processing messages.</p>
+ */
+/**
+ * Represents the response from polling a KubeMQ queue for messages.
+ *
+ * <p>Contains the list of received messages, transaction metadata, and methods
+ * for bulk operations ({@link #ackAll()}, {@link #rejectAll()}, {@link #reQueueAll(String)}).
+ * Individual messages can be acknowledged or rejected via {@link QueueMessageReceived}.</p>
+ */
 @Getter
 @Setter
 @Builder

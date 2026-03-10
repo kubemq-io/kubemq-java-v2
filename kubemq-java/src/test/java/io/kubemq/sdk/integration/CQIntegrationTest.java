@@ -134,7 +134,7 @@ class CQIntegrationTest extends BaseIntegrationTest {
                                 .build();
                         responderClient.sendResponseMessage(response);
                     })
-                    .onErrorCallback(error -> fail("Responder error: " + error))
+                    .onErrorCallback(error -> fail("Responder error: " + error.getMessage()))
                     .build();
 
             responderClient.subscribeToCommands(subscription);
@@ -186,7 +186,7 @@ class CQIntegrationTest extends BaseIntegrationTest {
                                 .build();
                         responderClient.sendResponseMessage(response);
                     })
-                    .onErrorCallback(error -> fail("Responder error: " + error))
+                    .onErrorCallback(error -> fail("Responder error: " + error.getMessage()))
                     .build();
 
             responderClient.subscribeToQueries(subscription);
