@@ -7,6 +7,12 @@ import lombok.ToString;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents the response from a queue upstream (send) operation.
+ *
+ * <p>Contains the per-message send results and any error information
+ * from the server.</p>
+ */
 @Data
 @ToString
 @Builder

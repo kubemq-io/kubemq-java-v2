@@ -2,33 +2,45 @@ package io.kubemq.sdk.pubsub;
 
 import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.common.SubscribeType;
+import io.kubemq.sdk.common.SubscriptionReconnectHandler;
+import io.kubemq.sdk.exception.ErrorCode;
+import io.kubemq.sdk.exception.GrpcErrorMapper;
+import io.kubemq.sdk.exception.HandlerException;
+import io.kubemq.sdk.exception.KubeMQException;
+import io.kubemq.sdk.exception.ValidationException;
+import io.kubemq.sdk.observability.KubeMQLogger;
+import io.kubemq.sdk.observability.KubeMQLoggerFactory;
 import kubemq.Kubemq;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.concurrent.ThreadSafe;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
  * Represents a subscription to a KubeMQ events store.
- * This class is used to configure and manage an events store subscription.
+ *
+ * <p><b>Thread Safety:</b> This class is thread-safe. The {@link #cancel()} method
+ * can be called from any thread to stop the subscription.</p>
  */
+@ThreadSafe
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
-@Slf4j
 public class EventsStoreSubscription {
 
-    private static final int MAX_RECONNECT_ATTEMPTS = 10;
+    private static final KubeMQLogger log = KubeMQLoggerFactory.getLogger(EventsStoreSubscription.class);
+
     private static final ScheduledExecutorService reconnectExecutor =
         Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "kubemq-eventsstore-reconnect");
@@ -36,71 +48,50 @@ public class EventsStoreSubscription {
             return t;
         });
 
-    private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
+    @Builder.Default
+    private transient SubscriptionReconnectHandler reconnectHandler = null;
 
-    // Expose executor for shutdown hook
     public static ScheduledExecutorService getReconnectExecutor() {
         return reconnectExecutor;
     }
 
-    /**
-     * The channel to which the subscription is made.
-     */
     private String channel;
 
-    /**
-     * The group to which the subscription belongs.
-     */
     private String group;
 
-    /**
-     * The type of events store (e.g., start from sequence, start from time).
-     */
+    @Builder.Default
+    private transient Executor callbackExecutor = null;
+
+    @Builder.Default
+    private int maxConcurrentCallbacks = 1;
+
+    private transient Semaphore callbackSemaphore;
+
     private EventsStoreType eventsStoreType;
 
-    /**
-     * The sequence value for the events store type.
-     */
     private int eventsStoreSequenceValue;
 
-    /**
-     * The start time for the events store type.
-     */
     private Instant eventsStoreStartTime;
 
-    /**
-     * Callback function to be invoked when an event is received.
-     */
     private Consumer<EventStoreMessageReceived> onReceiveEventCallback;
 
     /**
      * Callback function to be invoked when an error occurs.
+     * Receives a typed KubeMQException for rich error classification.
      */
-    private Consumer<String> onErrorCallback;
+    private Consumer<KubeMQException> onErrorCallback;
 
-    /**
-     * Observer for the subscription.
-     * This field is excluded from the builder and setter.
-     */
     @Setter
     private transient StreamObserver<Kubemq.EventReceive> observer;
 
     @Setter
     private transient Kubemq.Subscribe subscribe;
 
-    /**
-     * Default constructor initializing default values.
-     */
     public EventsStoreSubscription() {
         this.eventsStoreType = EventsStoreType.Undefined;
         this.eventsStoreSequenceValue = 0;
     }
 
-    /**
-     * Invokes the onReceiveEventCallback with the given event.
-     *
-     * @param receivedEvent The received event.
-     */
     public void raiseOnReceiveMessage(EventStoreMessageReceived receivedEvent) {
         if (onReceiveEventCallback != null) {
             onReceiveEventCallback.accept(receivedEvent);
@@ -108,19 +99,18 @@ public class EventsStoreSubscription {
     }
 
     /**
-     * Invokes the onErrorCallback with the given error message.
-     *
-     * @param msg The error message.
+     * Raises the onErrorCallback with the given typed exception.
+     * If no callback is registered, logs at ERROR level.
      */
-    public void raiseOnError(String msg) {
+    public void raiseOnError(KubeMQException error) {
         if (onErrorCallback != null) {
-            onErrorCallback.accept(msg);
+            onErrorCallback.accept(error);
+        } else {
+            log.error("Unhandled async error in subscription", error,
+                      "channel", channel);
         }
     }
 
-    /**
-     * Cancel the subscription
-     */
     public void cancel() {
         if (observer != null) {
             observer.onCompleted();
@@ -130,36 +120,64 @@ public class EventsStoreSubscription {
 
 
     /**
-     * Validates the subscription configuration.
+     * Validates the subscription, ensuring that the required fields are set.
      *
-     * @throws IllegalArgumentException if the configuration is invalid.
+     * @throws ValidationException if any required field is not set.
      */
     public void validate() {
         if (channel == null || channel.isEmpty()) {
-            throw new IllegalArgumentException("Event Store subscription must have a channel.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Event Store subscription must have a channel.")
+                .operation("EventsStoreSubscription.validate")
+                .build();
         }
         if (onReceiveEventCallback == null) {
-            throw new IllegalArgumentException("Event Store subscription must have an onReceiveEventCallback function.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Event Store subscription must have an onReceiveEventCallback function.")
+                .operation("EventsStoreSubscription.validate")
+                .channel(channel)
+                .build();
         }
         if (eventsStoreType == null || eventsStoreType == EventsStoreType.Undefined) {
-            throw new IllegalArgumentException("Event Store subscription must have an events store type.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Event Store subscription must have an events store type.")
+                .operation("EventsStoreSubscription.validate")
+                .channel(channel)
+                .build();
         }
         if (eventsStoreType == EventsStoreType.StartAtSequence && eventsStoreSequenceValue == 0) {
-            throw new IllegalArgumentException("Event Store subscription with StartAtSequence events store type must have a sequence value.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Event Store subscription with StartAtSequence events store type must have a sequence value.")
+                .operation("EventsStoreSubscription.validate")
+                .channel(channel)
+                .build();
         }
         if (eventsStoreType == EventsStoreType.StartAtTime && eventsStoreStartTime == null) {
-            throw new IllegalArgumentException("Event Store subscription with StartAtTime events store type must have a start time.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Event Store subscription with StartAtTime events store type must have a start time.")
+                .operation("EventsStoreSubscription.validate")
+                .channel(channel)
+                .build();
         }
     }
 
-    /**
-     * Encodes the subscription into a KubeMQ Subscribe object.
-     *
-     * @param clientId The client ID for the subscription.
-     * @param pubSubClient The client use to reconnect
-     * @return The encoded KubeMQ Subscribe object.
-     */
     public Kubemq.Subscribe encode(String clientId, final PubSubClient pubSubClient) {
+         this.callbackSemaphore = new Semaphore(Math.max(1, maxConcurrentCallbacks));
+         Executor resolvedExecutor = callbackExecutor;
+         if (resolvedExecutor == null) {
+             resolvedExecutor = pubSubClient.getCallbackExecutor();
+         }
+         if (resolvedExecutor == null) {
+             resolvedExecutor = Runnable::run;
+         }
+         final Executor executor = resolvedExecutor;
+         final AtomicInteger inFlight = pubSubClient.getInFlightOperations();
+
          subscribe = Kubemq.Subscribe.newBuilder()
                 .setSubscribeTypeData(Kubemq.Subscribe.SubscribeType.forNumber(SubscribeType.EventsStore.getValue()))
                 .setClientID(clientId)
@@ -172,19 +190,57 @@ public class EventsStoreSubscription {
          observer = new StreamObserver<Kubemq.EventReceive>() {
             @Override
             public void onNext(Kubemq.EventReceive messageReceive) {
-                log.debug("Event Received Event: EventID:'{}', Channel:'{}', Metadata: '{}'", messageReceive.getEventID(), messageReceive.getChannel(), messageReceive.getMetadata());
-                // Send the received message to the consumer
-                raiseOnReceiveMessage(EventStoreMessageReceived.decode(messageReceive));
+                log.debug("Event store message received",
+                          "eventId", messageReceive.getEventID(),
+                          "channel", messageReceive.getChannel());
+                executor.execute(() -> {
+                    if (inFlight != null) {
+                        inFlight.incrementAndGet();
+                    }
+                    try {
+                        callbackSemaphore.acquire();
+                        try {
+                            raiseOnReceiveMessage(EventStoreMessageReceived.decode(messageReceive));
+                        } catch (Exception userException) {
+                            HandlerException handlerError = HandlerException.builder()
+                                .message("User handler threw exception: " + userException.getMessage())
+                                .operation("onReceiveEventStore")
+                                .channel(channel)
+                                .cause(userException)
+                                .build();
+                            raiseOnError(handlerError);
+                        } finally {
+                            callbackSemaphore.release();
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Callback dispatch interrupted", "channel", channel);
+                    } finally {
+                        if (inFlight != null) {
+                            inFlight.decrementAndGet();
+                        }
+                    }
+                });
             }
 
             @Override
             public void onError(Throwable t) {
-                log.error("Error:-- > "+t.getMessage());
-                raiseOnError(t.getMessage());
-                // IF gRPC exception attempt to retry
-                if(t instanceof io.grpc.StatusRuntimeException){
-                    io.grpc.StatusRuntimeException se =(io.grpc.StatusRuntimeException)t;
+                log.error("Subscription stream error", "error", t.getMessage());
+                if (t instanceof io.grpc.StatusRuntimeException) {
+                    KubeMQException mapped = GrpcErrorMapper.map(
+                        (io.grpc.StatusRuntimeException) t, "subscribeToEventsStore", channel, null, false);
+                    raiseOnError(mapped);
+                    if (mapped.isRetryable()) {
                         reconnect(pubSubClient);
+                    }
+                } else {
+                    KubeMQException transportError = io.kubemq.sdk.exception.TransportException.builder()
+                        .message("Stream error: " + t.getMessage())
+                        .operation("subscribeToEventsStore")
+                        .channel(channel)
+                        .cause(t)
+                        .build();
+                    raiseOnError(transportError);
                 }
             }
 
@@ -198,49 +254,22 @@ public class EventsStoreSubscription {
     }
 
     private void reconnect(PubSubClient pubSubClient) {
-        int attempt = reconnectAttempts.incrementAndGet();
-
-        if (attempt > MAX_RECONNECT_ATTEMPTS) {
-            log.error("Max reconnection attempts ({}) reached for channel: {}",
-                      MAX_RECONNECT_ATTEMPTS, channel);
-            raiseOnError("Max reconnection attempts reached after " + attempt + " tries");
-            return;
+        if (reconnectHandler == null) {
+            reconnectHandler = new SubscriptionReconnectHandler(
+                reconnectExecutor, pubSubClient.getReconnectIntervalInMillis(),
+                channel, "subscribeToEventsStore");
         }
-
-        // Exponential backoff: base * 2^(attempt-1), capped at 60 seconds
-        long delay = Math.min(
-            pubSubClient.getReconnectIntervalInMillis() * (1L << (attempt - 1)),
-            60000L
-        );
-
-        log.info("Scheduling reconnection attempt {} for channel {} in {}ms",
-                 attempt, channel, delay);
-
-        reconnectExecutor.schedule(() -> {
-            try {
-                pubSubClient.getAsyncClient().subscribeToEvents(this.subscribe, this.getObserver());
-                reconnectAttempts.set(0); // Reset on success
-                log.info("Successfully reconnected to channel {} after {} attempts",
-                         channel, attempt);
-            } catch (Exception e) {
-                log.error("Reconnection attempt {} failed for channel {}", attempt, channel, e);
-                reconnect(pubSubClient); // Schedule next attempt (not recursive stack)
-            }
-        }, delay, TimeUnit.MILLISECONDS);
+        reconnectHandler.scheduleReconnect(() -> {
+            pubSubClient.getAsyncClient().subscribeToEvents(this.subscribe, this.getObserver());
+        }, this::raiseOnError);
     }
 
-    /**
-     * Resets the reconnection attempt counter. Call this on successful message receive.
-     */
     public void resetReconnectAttempts() {
-        reconnectAttempts.set(0);
+        if (reconnectHandler != null) {
+            reconnectHandler.resetAttempts();
+        }
     }
 
-    /**
-     * Returns a string representation of the events store subscription.
-     *
-     * @return A string containing the subscription details.
-     */
     @Override
     public String toString() {
         return String.format("EventsStoreSubscription: channel=%s, group=%s, eventsStoreType=%s, eventsStoreSequenceValue=%d, eventsStoreStartTime=%s",

@@ -16,7 +16,10 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Represents a received queue message.
+ * Represents a message received from a KubeMQ queue.
+ *
+ * <p>After processing, call {@link #ack()} to acknowledge, {@link #reject()} to return
+ * the message to the queue, or {@link #reQueue(String)} to route it to a different channel.</p>
  */
 @Data
 @Builder
@@ -24,19 +27,45 @@ import java.util.concurrent.TimeUnit;
 @AllArgsConstructor
 @Slf4j
 public class QueueMessageReceived {
+
+    /** Unique message identifier. */
     private String id;
+
+    /** Queue channel from which the message was received. */
     private String channel;
+
+    /** Application-defined metadata. */
     private String metadata;
+
+    /** Message payload as raw bytes. */
     private byte[] body;
+
+    /** Client ID of the message sender. */
     private String fromClientId;
+
+    /** Key-value tags attached to the message. */
     @Builder.Default
     private Map<String, String> tags = new HashMap<>();
+
+    /** Timestamp when the message was originally sent. */
     private Instant timestamp;
+
+    /** Server-assigned sequence number. */
     private long sequence;
+
+    /** Number of times this message has been received (for retry tracking). */
     private int receiveCount;
+
+    /** Whether this message was re-routed from another queue. */
     private boolean isReRouted;
+
+    /** Original queue channel if the message was re-routed. */
     private String reRouteFromQueue;
+
+    /** Expiration timestamp, or null if no expiration was set. */
     private Instant expiredAt;
+
+    /** Delayed delivery timestamp, or null if no delay was set. */
     private Instant delayedTo;
     private String transactionId;
     private String receiverClientId;

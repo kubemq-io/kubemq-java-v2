@@ -14,6 +14,7 @@ import java.util.List;
  * ChannelDecoder provides utility methods for decoding channel data from byte arrays.
  * This class uses Jackson's ObjectMapper to convert JSON byte arrays into lists of channel objects.
  */
+@Internal
 public class ChannelDecoder {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();

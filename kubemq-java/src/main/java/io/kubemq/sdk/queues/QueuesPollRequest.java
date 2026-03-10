@@ -1,46 +1,100 @@
 package io.kubemq.sdk.queues;
 
+import io.kubemq.sdk.exception.ErrorCode;
+import io.kubemq.sdk.exception.ValidationException;
 import kubemq.Kubemq.QueuesDownstreamRequest;
 import kubemq.Kubemq.QueuesDownstreamRequestType;
 import lombok.Builder;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.UUID;
 
 /**
  * Class representing a request to poll messages from a queue.
+ *
+ * <p><b>Thread Safety:</b> This class is NOT thread-safe. Create a new instance for
+ * each operation. Do not share instances across threads.</p>
  */
+@NotThreadSafe
 @Data
 @Builder
-@Slf4j
 public class QueuesPollRequest {
+    /**
+     * Queue channel to poll messages from. Must not be null or empty.
+     */
     private String channel;
+
+    /**
+     * Maximum number of messages to return per poll. Default: 1.
+     */
     @Builder.Default
     private int pollMaxMessages = 1;
+
+    /**
+     * Maximum time in seconds to wait for messages. Default: 60.
+     */
     @Builder.Default
     private int pollWaitTimeoutInSeconds = 60;
+
+    /**
+     * When true, messages are automatically acknowledged upon receipt. Default: false.
+     * Cannot be combined with {@link #visibilitySeconds}.
+     */
     @Builder.Default
     private boolean autoAckMessages = false;
-    @Builder.Default
-    private int visibilitySeconds = 0;  // New field added with default value
 
-    // Validate method to check the validity of input fields
+    /**
+     * Duration in seconds that received messages are hidden from other consumers.
+     * 0 = no visibility timeout. Cannot be combined with {@link #autoAckMessages}.
+     */
+    @Builder.Default
+    private int visibilitySeconds = 0;
+
+    /**
+     * Validates the poll request fields.
+     *
+     * @throws ValidationException if any field is invalid.
+     */
     public void validate() {
         if (channel == null || channel.isEmpty()) {
-            throw new IllegalArgumentException("Queue subscription must have a channel.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Queue subscription must have a channel.")
+                .operation("QueuesPollRequest.validate")
+                .build();
         }
         if (pollMaxMessages < 1) {
-            throw new IllegalArgumentException("pollMaxMessages must be greater than 0.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("pollMaxMessages must be greater than 0.")
+                .operation("QueuesPollRequest.validate")
+                .channel(channel)
+                .build();
         }
         if (pollWaitTimeoutInSeconds < 1) {
-            throw new IllegalArgumentException("pollWaitTimeoutInSeconds must be greater than 0.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("pollWaitTimeoutInSeconds must be greater than 0.")
+                .operation("QueuesPollRequest.validate")
+                .channel(channel)
+                .build();
         }
         if (visibilitySeconds < 0) {
-            throw new IllegalArgumentException("Visibility timeout must be a non-negative integer.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Visibility timeout must be a non-negative integer.")
+                .operation("QueuesPollRequest.validate")
+                .channel(channel)
+                .build();
         }
         if (autoAckMessages && visibilitySeconds > 0) {
-            throw new IllegalArgumentException("autoAckMessages and visibilitySeconds cannot be set together.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("autoAckMessages and visibilitySeconds cannot be set together.")
+                .operation("QueuesPollRequest.validate")
+                .channel(channel)
+                .build();
         }
     }
 

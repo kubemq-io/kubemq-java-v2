@@ -117,7 +117,7 @@ class PubSubIntegrationTest extends BaseIntegrationTest {
                         receivedEvent.set(event);
                         latch.countDown();
                     })
-                    .onErrorCallback(errorMessage::set)
+                    .onErrorCallback(error -> errorMessage.set(error.getMessage()))
                     .build();
 
             client.subscribeToEvents(subscription);
@@ -204,7 +204,7 @@ class PubSubIntegrationTest extends BaseIntegrationTest {
                     .onReceiveEventCallback(event -> {
                         latch.countDown();
                     })
-                    .onErrorCallback(errorMessage::set)
+                    .onErrorCallback(error -> errorMessage.set(error.getMessage()))
                     .build();
 
             client.subscribeToEventsStore(subscription);
