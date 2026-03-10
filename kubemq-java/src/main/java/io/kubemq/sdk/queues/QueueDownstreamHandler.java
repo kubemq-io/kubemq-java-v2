@@ -2,16 +2,28 @@ package io.kubemq.sdk.queues;
 
 import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
+import io.kubemq.sdk.common.Internal;
+import io.kubemq.sdk.observability.KubeMQLogger;
+import io.kubemq.sdk.observability.KubeMQLoggerFactory;
 import kubemq.Kubemq;
-import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Slf4j
+/**
+ * Manages downstream queue message receiving over a gRPC bidirectional stream.
+ *
+ * <p><b>Thread Safety:</b> This class is thread-safe. Stream writes are
+ * serialized via {@code synchronized(sendRequestLock)}.</p>
+ */
+@ThreadSafe
+@Internal
 public class QueueDownstreamHandler {
+
+    private static final KubeMQLogger log = KubeMQLoggerFactory.getLogger(QueueDownstreamHandler.class);
 
     private final AtomicBoolean isConnected = new AtomicBoolean(false);
     private final Object sendRequestLock = new Object();
@@ -95,7 +107,7 @@ public class QueueDownstreamHandler {
 
                     @Override
                     public void onError(Throwable t) {
-                        log.error("Error in QueuesDownstreamResponse StreamObserver: ", t);
+                        log.error("Error in QueuesDownstreamResponse StreamObserver", t);
                         closeStreamWithError(t.getMessage(), t);
                     }
 
@@ -111,7 +123,7 @@ public class QueueDownstreamHandler {
                 isConnected.set(true);
 
             } catch (Exception e) {
-                log.error("Error in QueuesDownstreamResponse StreamObserver: ", e);
+                log.error("Error in QueuesDownstreamResponse StreamObserver", e);
                 // Mark as disconnected so future attempts to connect can retry
                 isConnected.set(false);
             }
@@ -154,7 +166,7 @@ public class QueueDownstreamHandler {
                                         .build());
                                 pendingRequests.remove(entry.getKey());
                                 requestTimestamps.remove(entry.getKey());
-                                log.warn("Cleaned up stale pending request: {}", entry.getKey());
+                                log.warn("Cleaned up stale pending request", "requestId", entry.getKey());
                                 return true;
                             }
                             return false;
@@ -170,7 +182,7 @@ public class QueueDownstreamHandler {
      * Asynchronous call that returns a CompletableFuture. Each call is independent,
      * so multiple threads calling this can run concurrently.
      */
-    private CompletableFuture<QueuesPollResponse> receiveQueuesMessagesAsync(QueuesPollRequest queuesPollRequest) {
+    public CompletableFuture<QueuesPollResponse> receiveQueuesMessagesAsync(QueuesPollRequest queuesPollRequest) {
         String requestId = generateRequestId();
         CompletableFuture<QueuesPollResponse> responseFuture = new CompletableFuture<>();
 
@@ -189,7 +201,7 @@ public class QueueDownstreamHandler {
             pendingRequests.remove(requestId);
             pendingResponses.remove(requestId);
             requestTimestamps.remove(requestId);
-            log.error("Error polling message: ", e);
+            log.error("Error polling message", e);
             responseFuture.completeExceptionally(e);
         }
         return responseFuture;
@@ -224,8 +236,15 @@ public class QueueDownstreamHandler {
                     .isError(true)
                     .build();
         } catch (Exception e) {
-            log.error("Error waiting for Queue Message response: ", e);
-            throw new RuntimeException("Failed to get response", e);
+            log.error("Error waiting for Queue Message response", e);
+            throw io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                .code(io.kubemq.sdk.exception.ErrorCode.UNKNOWN_ERROR)
+                .category(io.kubemq.sdk.exception.ErrorCategory.FATAL)
+                .retryable(false)
+                .message("Failed to get response: " + e.getMessage())
+                .operation("receiveQueuesMessages")
+                .cause(e)
+                .build();
         }
     }
 

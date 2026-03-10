@@ -1,5 +1,6 @@
 package io.kubemq.sdk.unit.queues;
 
+import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.queues.QueueMessage;
 import kubemq.Kubemq;
 import org.junit.jupiter.api.Test;
@@ -57,11 +58,11 @@ class QueueMessageTest {
                     .body("test".getBytes())
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
-            assertTrue(ex.getMessage().contains("channel"));
+            assertTrue(ex.getMessage().contains("channel") || ex.getMessage().contains("Channel"));
         }
 
         @Test
@@ -71,11 +72,11 @@ class QueueMessageTest {
                     .body("test".getBytes())
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
-            assertTrue(ex.getMessage().contains("channel"));
+            assertTrue(ex.getMessage().contains("channel") || ex.getMessage().contains("Channel"));
         }
 
         @Test
@@ -84,8 +85,8 @@ class QueueMessageTest {
                     .channel("test-channel")
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("metadata, body, or tags"));
@@ -99,8 +100,8 @@ class QueueMessageTest {
                     .delayInSeconds(-1)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("delay"));
@@ -114,8 +115,8 @@ class QueueMessageTest {
                     .expirationInSeconds(-1)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("expiration"));
@@ -129,8 +130,8 @@ class QueueMessageTest {
                     .attemptsBeforeDeadLetterQueue(-1)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("attempts"));

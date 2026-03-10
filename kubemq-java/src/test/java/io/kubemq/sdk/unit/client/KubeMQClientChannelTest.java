@@ -222,44 +222,43 @@ class KubeMQClientChannelTest {
 
     @Nested
     @DisplayName("Metadata Interceptor Tests")
-    class MetadataInterceptorTests {
+    class AuthInterceptorTests {
 
         @Test
-        @DisplayName("C-09: Client with auth token has metadata")
-        void builder_withAuthToken_hasMetadata() {
+        @DisplayName("C-09: Client with auth token stores token")
+        void builder_withAuthToken_hasToken() {
             CQClient testClient = CQClient.builder()
                     .address("localhost:50000")
                     .clientId("auth-test")
                     .authToken("test-token-123")
                     .build();
 
-            assertNotNull(testClient.getMetadata());
             assertEquals("test-token-123", testClient.getAuthToken());
             testClient.close();
         }
 
         @Test
-        @DisplayName("Client without auth token has null metadata")
-        void builder_withoutAuthToken_hasNullMetadata() {
+        @DisplayName("Client without auth token has null token")
+        void builder_withoutAuthToken_hasNullToken() {
             CQClient testClient = CQClient.builder()
                     .address("localhost:50000")
                     .clientId("no-auth-test")
                     .build();
 
-            assertNull(testClient.getMetadata());
+            assertNull(testClient.getAuthToken());
             testClient.close();
         }
 
         @Test
-        @DisplayName("Client with empty auth token has null metadata")
-        void builder_withEmptyAuthToken_hasNullMetadata() {
+        @DisplayName("Client with empty auth token has empty token")
+        void builder_withEmptyAuthToken_hasEmptyToken() {
             CQClient testClient = CQClient.builder()
                     .address("localhost:50000")
                     .clientId("empty-auth-test")
                     .authToken("")
                     .build();
 
-            assertNull(testClient.getMetadata());
+            assertEquals("", testClient.getAuthToken());
             testClient.close();
         }
     }
