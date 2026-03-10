@@ -1,6 +1,9 @@
 package io.kubemq.sdk.queues;
 
 import com.google.protobuf.ByteString;
+import io.kubemq.sdk.common.KubeMQUtils;
+import io.kubemq.sdk.exception.ErrorCode;
+import io.kubemq.sdk.exception.ValidationException;
 import kubemq.Kubemq;
 import kubemq.Kubemq.QueueMessagePolicy;
 import kubemq.Kubemq.QueuesUpstreamRequest;
@@ -8,94 +11,142 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
  * A class representing a message in a queue.
+ *
+ * <p><b>Thread Safety:</b> This class is NOT thread-safe. Create a new instance for
+ * each operation. Do not share instances across threads.</p>
+ *
+ * <p>Message objects should be treated as immutable after construction.
+ * Use the builder pattern exclusively. Setter methods are provided for
+ * backward compatibility and will be removed in v3.0.</p>
  */
+@NotThreadSafe
 @Data
 @Builder
 @AllArgsConstructor
 public class QueueMessage {
 
     /**
-     * The unique identifier for the message.
+     * Unique message identifier. Auto-generated (UUID) if not set.
      */
     private String id;
 
     /**
-     * The channel of the message.
+     * Target queue channel name. Must not be null or empty.
      */
     private String channel;
 
     /**
-     * The metadata associated with the message.
+     * Application-defined string metadata. May be null.
      */
     private String metadata;
 
     /**
-     * The body of the message.
+     * Message payload as raw bytes. Maximum size is 100MB.
      */
     @Builder.Default
-    private byte[] body =new byte[0];
+    private byte[] body = new byte[0];
 
     /**
-     * The tags associated with the message.
+     * Key-value string pairs for message filtering. May be empty.
      */
     @Builder.Default
     private Map<String, String> tags = new HashMap<>();
 
     /**
-     * The delay in seconds before the message becomes available in the queue.
+     * Delay delivery of the message by this many seconds. 0 = immediate delivery.
      */
     private int delayInSeconds;
 
     /**
-     * The expiration time in seconds for the message.
+     * Message expires after this many seconds. 0 = no expiration.
      */
     private int expirationInSeconds;
 
     /**
-     * The number of receive attempts allowed for the message before it is moved to the dead letter queue.
+     * Number of receive attempts before routing to the dead letter queue. 0 = disabled.
      */
     private int attemptsBeforeDeadLetterQueue;
 
     /**
-     * The dead letter queue where the message will be moved after reaching the maximum receive attempts.
+     * Channel name for the dead letter queue. Used when {@link #attemptsBeforeDeadLetterQueue} is exceeded.
      */
     private String deadLetterQueue;
 
     /**
+     * Custom builder with build-time channel format validation.
+     */
+    public static class QueueMessageBuilder {
+        public QueueMessage build() {
+            byte[] effectiveBody = this.body$set ? this.body$value : new byte[0];
+            Map<String, String> effectiveTags = this.tags$set ? this.tags$value : new HashMap<>();
+            QueueMessage message = new QueueMessage(id, channel, metadata, effectiveBody, effectiveTags,
+                delayInSeconds, expirationInSeconds, attemptsBeforeDeadLetterQueue, deadLetterQueue);
+            if (message.channel != null && !message.channel.isEmpty()) {
+                KubeMQUtils.validateChannelName(message.channel, "QueueMessage.build");
+            }
+            return message;
+        }
+    }
+
+    /**
      * Validates the message attributes and ensures that the required attributes are set.
      *
-     * @throws IllegalArgumentException if any of the required attributes are not set or invalid.
+     * @throws ValidationException if any of the required attributes are not set or invalid.
      */
     public void validate() {
-        if (channel == null || channel.isEmpty()) {
-            throw new IllegalArgumentException("Queue message must have a channel.");
-        }
+        KubeMQUtils.validateChannelName(channel, "QueueMessage.validate");
 
         if ((metadata == null || metadata.isEmpty()) && body.length == 0 && tags.isEmpty()) {
-            throw new IllegalArgumentException("Queue message must have at least one of the following: metadata, body, or tags.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Queue message must have at least one of the following: metadata, body, or tags.")
+                .operation("QueueMessage.validate")
+                .channel(channel)
+                .build();
         }
 
         final int MAX_BODY_SIZE = 104857600; // 100 MB in bytes
         if (body.length > MAX_BODY_SIZE) {
-            throw new IllegalArgumentException("Queue message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Queue message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.")
+                .operation("QueueMessage.validate")
+                .channel(channel)
+                .build();
         }
 
         if (attemptsBeforeDeadLetterQueue < 0) {
-            throw new IllegalArgumentException("Queue message attempts_before_dead_letter_queue must be a positive number.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Queue message attempts_before_dead_letter_queue must be a positive number.")
+                .operation("QueueMessage.validate")
+                .channel(channel)
+                .build();
         }
 
         if (delayInSeconds < 0) {
-            throw new IllegalArgumentException("Queue message delay_in_seconds must be a positive number.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Queue message delay_in_seconds must be a positive number.")
+                .operation("QueueMessage.validate")
+                .channel(channel)
+                .build();
         }
 
         if (expirationInSeconds < 0) {
-            throw new IllegalArgumentException("Queue message expiration_in_seconds must be a positive number.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Queue message expiration_in_seconds must be a positive number.")
+                .operation("QueueMessage.validate")
+                .channel(channel)
+                .build();
         }
     }
 

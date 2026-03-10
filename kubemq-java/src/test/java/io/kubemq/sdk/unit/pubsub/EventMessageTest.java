@@ -1,5 +1,6 @@
 package io.kubemq.sdk.unit.pubsub;
 
+import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.pubsub.EventMessage;
 import kubemq.Kubemq;
 import org.junit.jupiter.api.Test;
@@ -57,11 +58,11 @@ class EventMessageTest {
                     .body("test".getBytes())
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
-            assertTrue(ex.getMessage().contains("channel"));
+            assertTrue(ex.getMessage().contains("channel") || ex.getMessage().contains("Channel"));
         }
 
         @Test
@@ -71,11 +72,11 @@ class EventMessageTest {
                     .body("test".getBytes())
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
-            assertTrue(ex.getMessage().contains("channel"));
+            assertTrue(ex.getMessage().contains("channel") || ex.getMessage().contains("Channel"));
         }
 
         @Test
@@ -84,8 +85,8 @@ class EventMessageTest {
                     .channel("test-channel")
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("metadata, body, or tags"));

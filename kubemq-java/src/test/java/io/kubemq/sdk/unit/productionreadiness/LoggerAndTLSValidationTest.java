@@ -73,15 +73,12 @@ class LoggerAndTLSValidationTest {
 
     @Test
     @Order(1)
-    @DisplayName("HIGH-3 FIX: Creating SDK client modifies SDK logger, not ROOT logger")
+    @DisplayName("HIGH-3 FIX: Creating SDK client does not modify ROOT logger (setLogLevel is deprecated no-op)")
     void creatingClient_modifiesSdkLogger_notRoot() {
-        // Capture current ROOT level
         ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("ROOT");
-        ch.qos.logback.classic.Logger sdkLogger = loggerContext.getLogger("io.kubemq.sdk");
 
         Level rootLevelBefore = rootLogger.getLevel();
 
-        // Create a client with ERROR log level
         CQClient client = CQClient.builder()
                 .address("localhost:50000")
                 .clientId("logger-test")
@@ -89,18 +86,11 @@ class LoggerAndTLSValidationTest {
                 .build();
 
         try {
-            // Check ROOT logger level after client creation
             Level rootLevelAfter = rootLogger.getLevel();
-            Level sdkLevelAfter = sdkLogger.getLevel();
 
-            // HIGH-3 FIX VERIFICATION: ROOT logger should NOT have changed
             assertEquals(rootLevelBefore, rootLevelAfter,
                     "ROOT logger level should NOT have changed. " +
                     "Before: " + rootLevelBefore + ", After: " + rootLevelAfter);
-
-            // SDK logger should have been changed
-            assertEquals(Level.ERROR, sdkLevelAfter,
-                    "SDK logger (io.kubemq.sdk) should be set to ERROR");
 
         } finally {
             client.close();
@@ -109,18 +99,15 @@ class LoggerAndTLSValidationTest {
 
     @Test
     @Order(2)
-    @DisplayName("HIGH-3 FIX: SDK log level does not affect application loggers")
+    @DisplayName("HIGH-3 FIX: SDK log level does not affect application loggers (setLogLevel is deprecated no-op)")
     void sdkLogLevel_doesNotAffectApplicationLoggers() {
-        // Create an application logger (simulating user's own logger)
         ch.qos.logback.classic.Logger appLogger =
                 loggerContext.getLogger("com.mycompany.myapp");
 
-        // Set app logger to DEBUG
         appLogger.setLevel(Level.DEBUG);
         assertEquals(Level.DEBUG, appLogger.getEffectiveLevel(),
                 "App logger should be DEBUG before SDK client creation");
 
-        // Create SDK client with WARN level
         QueuesClient client = QueuesClient.builder()
                 .address("localhost:50000")
                 .clientId("logger-test-2")
@@ -128,35 +115,26 @@ class LoggerAndTLSValidationTest {
                 .build();
 
         try {
-            // Check if app logger is affected
             Level appLoggerLevelAfter = appLogger.getEffectiveLevel();
 
-            // HIGH-3 FIX VERIFICATION: App logger should still be DEBUG
             assertEquals(Level.DEBUG, appLoggerLevelAfter,
-                    "Application logger should NOT be affected by SDK log level change. " +
+                    "Application logger should NOT be affected by SDK client creation. " +
                     "Expected DEBUG, got " + appLoggerLevelAfter);
-
-            // SDK logger should be WARN
-            ch.qos.logback.classic.Logger sdkLogger = loggerContext.getLogger("io.kubemq.sdk");
-            assertEquals(Level.WARN, sdkLogger.getLevel(),
-                    "SDK logger should be set to WARN");
 
         } finally {
             client.close();
-            appLogger.setLevel(null); // Restore app logger
+            appLogger.setLevel(null);
         }
     }
 
     @Test
     @Order(3)
-    @DisplayName("HIGH-3 FIX: Verify setLogLevel modifies SDK logger, not ROOT")
+    @DisplayName("HIGH-3 FIX: setLogLevel is deprecated no-op, ROOT logger unchanged")
     void verifySetLogLevel_modifiesSdkLogger() {
         ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("ROOT");
-        ch.qos.logback.classic.Logger sdkLogger = loggerContext.getLogger("io.kubemq.sdk");
 
         Level rootBefore = rootLogger.getLevel();
 
-        // Create client
         PubSubClient client = PubSubClient.builder()
                 .address("localhost:50000")
                 .clientId("logger-test-3")
@@ -165,15 +143,9 @@ class LoggerAndTLSValidationTest {
 
         try {
             Level rootAfter = rootLogger.getLevel();
-            Level sdkAfter = sdkLogger.getLevel();
 
-            // HIGH-3 FIX VERIFICATION: ROOT was NOT modified
             assertEquals(rootBefore, rootAfter,
                     "ROOT logger should NOT have been modified");
-
-            // SDK logger should have been modified
-            assertEquals(Level.TRACE, sdkAfter,
-                    "SDK logger (io.kubemq.sdk) should be set to TRACE");
 
         } finally {
             client.close();
@@ -182,21 +154,18 @@ class LoggerAndTLSValidationTest {
 
     @Test
     @Order(4)
-    @DisplayName("HIGH-3 FIX: Multiple clients with different log levels don't conflict")
+    @DisplayName("HIGH-3 FIX: Multiple clients with different log levels don't affect ROOT (setLogLevel is deprecated)")
     void multipleClients_logLevelsDontConflict() {
         ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger("ROOT");
-        ch.qos.logback.classic.Logger sdkLogger = loggerContext.getLogger("io.kubemq.sdk");
 
         Level rootBefore = rootLogger.getLevel();
 
-        // Create first client with DEBUG
         CQClient client1 = CQClient.builder()
                 .address("localhost:50000")
                 .clientId("logger-test-4a")
                 .logLevel(KubeMQClient.Level.DEBUG)
                 .build();
 
-        // Create second client with ERROR
         QueuesClient client2 = QueuesClient.builder()
                 .address("localhost:50000")
                 .clientId("logger-test-4b")
@@ -204,13 +173,8 @@ class LoggerAndTLSValidationTest {
                 .build();
 
         try {
-            // ROOT should not have changed
             assertEquals(rootBefore, rootLogger.getLevel(),
                     "ROOT logger should not change regardless of SDK clients");
-
-            // SDK logger should have the last set value (ERROR from client2)
-            assertEquals(Level.ERROR, sdkLogger.getLevel(),
-                    "SDK logger should reflect the last configured level");
 
         } finally {
             client1.close();
@@ -374,24 +338,17 @@ class LoggerAndTLSValidationTest {
         Level rootBefore = rootLogger.getLevel();
 
         try {
-            // Create a client with both TLS and log level configuration
             CQClient client = CQClient.builder()
                     .address("localhost:50000")
                     .clientId("combined-security-test")
-                    .tls(true)           // TLS enabled (server-only)
-                    .logLevel(KubeMQClient.Level.WARN)  // SDK logger only
+                    .tls(true)
+                    .logLevel(KubeMQClient.Level.WARN)
                     .build();
 
             try {
-                // ROOT logger should NOT have changed
                 assertEquals(rootBefore, rootLogger.getLevel(),
                         "ROOT logger should not change");
 
-                // SDK logger should be WARN
-                assertEquals(Level.WARN, sdkLogger.getLevel(),
-                        "SDK logger should be WARN");
-
-                // TLS should be enabled
                 assertTrue(client.isTls(),
                         "TLS should be enabled");
 
@@ -400,8 +357,7 @@ class LoggerAndTLSValidationTest {
             }
 
         } catch (Exception e) {
-            // If connection fails, that's expected without a server
-            // The important thing is validation passed
+            // Connection failure expected without a server
         }
     }
 

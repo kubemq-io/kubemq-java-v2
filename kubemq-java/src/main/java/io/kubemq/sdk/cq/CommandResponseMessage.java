@@ -6,6 +6,20 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
+/**
+ * Represents a response to a command request in KubeMQ.
+ *
+ * <p>When handling incoming commands via subscription, construct a response using the builder
+ * with the received command's metadata. When receiving a response from
+ * {@link CQClient#sendCommandRequest(CommandMessage)}, this object indicates whether
+ * the command was executed successfully.</p>
+ */
+/**
+ * Represents the response to a command request in KubeMQ.
+ *
+ * <p>Instances are either constructed by the SDK when decoding a server response,
+ * or built by command handlers to send an execution acknowledgment back to the caller.</p>
+ */
 @Getter
 @Setter
 @Builder

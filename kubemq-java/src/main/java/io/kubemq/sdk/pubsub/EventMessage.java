@@ -1,14 +1,27 @@
 package io.kubemq.sdk.pubsub;
 
 import com.google.protobuf.ByteString;
+import io.kubemq.sdk.common.KubeMQUtils;
+import io.kubemq.sdk.exception.ErrorCode;
+import io.kubemq.sdk.exception.ValidationException;
 import kubemq.Kubemq;
 import lombok.*;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.*;
 
 /**
  * Represents an event message to be sent to KubeMQ.
+ *
+ * <p><b>Thread Safety:</b> This class is NOT thread-safe. Create a new instance for
+ * each send operation. Do not share instances across threads. Use the builder pattern
+ * to construct instances.</p>
+ *
+ * <p>Message objects should be treated as immutable after construction.
+ * Use the builder pattern exclusively. Setter methods are provided for
+ * backward compatibility and will be removed in v3.0.</p>
  */
+@NotThreadSafe
 @Getter
 @Setter
 @Builder
@@ -17,51 +30,78 @@ import java.util.*;
 public class EventMessage {
 
     /**
-     * Unique identifier for the event message.
+     * Unique message identifier. Auto-generated (UUID) if not set.
      */
     private String id;
 
     /**
-     * The channel to which the event message is sent.
-     * This field is mandatory.
+     * Target channel name for this event.
+     * Must not be null or empty. Channels are created automatically on first publish.
      */
     private String channel;
 
     /**
-     * Metadata associated with the event message.
+     * Application-defined string metadata. Not indexed by the server.
+     * Use {@link #tags} for filterable key-value data. May be null.
      */
     private String metadata;
 
     /**
-     * Body of the event message in bytes.
+     * Message payload as raw bytes.
+     * Maximum size is 100MB (configurable server-side). An empty array is permitted.
      */
     @Builder.Default
     private byte[] body = new byte[0];
 
     /**
-     * Tags associated with the event message as key-value pairs.
+     * Key-value string pairs for message filtering and routing.
+     * May be null or empty.
      */
     @Builder.Default
     private Map<String, String> tags = new HashMap<>();
 
     /**
+     * Custom builder with build-time channel format validation.
+     * Lombok generates all builder fields and setters; only build() is overridden.
+     */
+    public static class EventMessageBuilder {
+        public EventMessage build() {
+            byte[] effectiveBody = this.body$set ? this.body$value : new byte[0];
+            Map<String, String> effectiveTags = this.tags$set ? this.tags$value : new HashMap<>();
+            EventMessage message = new EventMessage(id, channel, metadata, effectiveBody, effectiveTags);
+            if (message.channel != null && !message.channel.isEmpty()) {
+                KubeMQUtils.validateChannelName(message.channel, "EventMessage.build");
+            }
+            return message;
+        }
+    }
+
+    /**
      * Validates the event message.
      * Ensures that the channel is not null or empty and that at least one of metadata, body, or tags is present.
      *
-     * @throws IllegalArgumentException if validation fails.
+     * @throws ValidationException if validation fails.
      */
     public void validate() {
-        if (channel == null || channel.isEmpty()) {
-            throw new IllegalArgumentException("Event message must have a channel.");
-        }
+        KubeMQUtils.validateChannelName(channel, "EventMessage.validate");
 
         if (metadata == null && body.length == 0 && (tags == null || tags.isEmpty())) {
-            throw new IllegalArgumentException("Event message must have at least one of the following: metadata, body, or tags.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Event message must have at least one of the following: metadata, body, or tags.")
+                .operation("EventMessage.validate")
+                .channel(channel)
+                .build();
         }
 
         final int MAX_BODY_SIZE = 104857600; // 100 MB in bytes
         if (body.length > MAX_BODY_SIZE) {
-            throw new IllegalArgumentException("Queue message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.");
+            throw ValidationException.builder()
+                .code(ErrorCode.INVALID_ARGUMENT)
+                .message("Event message body size exceeds the maximum allowed size of " + MAX_BODY_SIZE + " bytes.")
+                .operation("EventMessage.validate")
+                .channel(channel)
+                .build();
         }
     }
 

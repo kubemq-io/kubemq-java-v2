@@ -2,16 +2,32 @@ package io.kubemq.sdk.queues;
 
 import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
+import io.kubemq.sdk.common.Internal;
+import io.kubemq.sdk.observability.KubeMQLogger;
+import io.kubemq.sdk.observability.KubeMQLoggerFactory;
 import kubemq.Kubemq;
-import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Slf4j
+/**
+ * Manages upstream queue message sending over a gRPC bidirectional stream.
+ *
+ * <p><b>Thread Safety:</b> This class is thread-safe. Multiple threads may call
+ * {@link #sendQueuesMessage(QueueMessage)} concurrently. Stream writes are
+ * serialized via {@code synchronized(sendRequestLock)}.</p>
+ */
+@ThreadSafe
+@Internal
 public class QueueUpstreamHandler {
+
+    private static final KubeMQLogger log = KubeMQLoggerFactory.getLogger(QueueUpstreamHandler.class);
 
     private final KubeMQClient kubeMQClient;
     private final AtomicBoolean isConnected = new AtomicBoolean(false);
@@ -24,6 +40,7 @@ public class QueueUpstreamHandler {
     private volatile StreamObserver<Kubemq.QueuesUpstreamResponse> responsesObserver;
 
     private final Map<String, CompletableFuture<QueueSendResult>> pendingResponses = new ConcurrentHashMap<>();
+    private final Map<String, CompletableFuture<List<QueueSendResult>>> pendingBatchResponses = new ConcurrentHashMap<>();
 
     private static final long REQUEST_TIMEOUT_MS = 60000; // 60 seconds
     private final Map<String, Long> requestTimestamps = new ConcurrentHashMap<>();
@@ -62,13 +79,14 @@ public class QueueUpstreamHandler {
                     @Override
                     public void onNext(Kubemq.QueuesUpstreamResponse receivedResponse) {
                         String refRequestID = receivedResponse.getRefRequestID();
-                        CompletableFuture<QueueSendResult> future =
-                                pendingResponses.remove(refRequestID);
-                        requestTimestamps.remove(refRequestID);
 
-                        if (future != null) {
+                        CompletableFuture<QueueSendResult> singleFuture =
+                                pendingResponses.remove(refRequestID);
+
+                        if (singleFuture != null) {
+                            requestTimestamps.remove(refRequestID);
                             if (receivedResponse.getIsError()) {
-                                future.complete(QueueSendResult.builder()
+                                singleFuture.complete(QueueSendResult.builder()
                                         .id(refRequestID)
                                         .isError(true)
                                         .error(receivedResponse.getError())
@@ -76,24 +94,44 @@ public class QueueUpstreamHandler {
                                 return;
                             }
                             if (receivedResponse.getResultsCount() == 0) {
-                                future.complete(QueueSendResult.builder()
+                                singleFuture.complete(QueueSendResult.builder()
                                         .id(refRequestID)
                                         .isError(true)
                                         .error("no results")
                                         .build());
                                 return;
                             }
-
-                            // Success path
                             Kubemq.SendQueueMessageResult result = receivedResponse.getResults(0);
                             QueueSendResult queueSendResult = new QueueSendResult().decode(result);
-                            future.complete(queueSendResult);
+                            singleFuture.complete(queueSendResult);
+                            return;
+                        }
+
+                        CompletableFuture<List<QueueSendResult>> batchFuture =
+                                pendingBatchResponses.remove(refRequestID);
+                        if (batchFuture != null) {
+                            requestTimestamps.remove(refRequestID);
+                            if (receivedResponse.getIsError()) {
+                                List<QueueSendResult> errorResults = new ArrayList<>();
+                                errorResults.add(QueueSendResult.builder()
+                                        .id(refRequestID)
+                                        .isError(true)
+                                        .error(receivedResponse.getError())
+                                        .build());
+                                batchFuture.complete(errorResults);
+                                return;
+                            }
+                            List<QueueSendResult> results = new ArrayList<>();
+                            for (Kubemq.SendQueueMessageResult r : receivedResponse.getResultsList()) {
+                                results.add(new QueueSendResult().decode(r));
+                            }
+                            batchFuture.complete(results);
                         }
                     }
 
                     @Override
                     public void onError(Throwable t) {
-                        log.error("Error in QueuesUpstreamResponse StreamObserver: ", t);
+                        log.error("Error in QueuesUpstreamResponse StreamObserver", t);
                         closeStreamWithError(t.getMessage());
                     }
 
@@ -108,7 +146,7 @@ public class QueueUpstreamHandler {
                 requestsObserver = kubeMQClient.getAsyncClient().queuesUpstream(responsesObserver);
                 isConnected.set(true);
             } catch (Exception e) {
-                log.error("Error initializing QueuesUpstreamResponse StreamObserver: ", e);
+                log.error("Error initializing QueuesUpstreamResponse StreamObserver", e);
                 isConnected.set(false);
             }
         }
@@ -128,6 +166,15 @@ public class QueueUpstreamHandler {
             );
         });
         pendingResponses.clear();
+        pendingBatchResponses.forEach((id, future) -> {
+            future.complete(Collections.singletonList(
+                    QueueSendResult.builder()
+                            .error(message)
+                            .isError(true)
+                            .build()
+            ));
+        });
+        pendingBatchResponses.clear();
         requestTimestamps.clear();
     }
 
@@ -145,7 +192,21 @@ public class QueueUpstreamHandler {
                                         .isError(true)
                                         .build());
                                 requestTimestamps.remove(entry.getKey());
-                                log.warn("Cleaned up stale pending request: {}", entry.getKey());
+                                log.warn("Cleaned up stale pending request", "requestId", entry.getKey());
+                                return true;
+                            }
+                            return false;
+                        });
+                        pendingBatchResponses.entrySet().removeIf(entry -> {
+                            Long timestamp = requestTimestamps.get(entry.getKey());
+                            if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
+                                entry.getValue().complete(Collections.singletonList(
+                                        QueueSendResult.builder()
+                                                .error("Batch request timed out after " + REQUEST_TIMEOUT_MS + "ms")
+                                                .isError(true)
+                                                .build()));
+                                requestTimestamps.remove(entry.getKey());
+                                log.warn("Cleaned up stale pending batch request", "requestId", entry.getKey());
                                 return true;
                             }
                             return false;
@@ -160,7 +221,7 @@ public class QueueUpstreamHandler {
     /**
      * Asynchronously send a single message upstream and return a CompletableFuture.
      */
-    private CompletableFuture<QueueSendResult> sendQueuesMessageAsync(QueueMessage queueMessage) {
+    public CompletableFuture<QueueSendResult> sendQueuesMessageAsync(QueueMessage queueMessage) {
         String requestId = generateRequestId();
         CompletableFuture<QueueSendResult> responseFuture = new CompletableFuture<>();
 
@@ -176,7 +237,7 @@ public class QueueUpstreamHandler {
             // Clean up on failure
             pendingResponses.remove(requestId);
             requestTimestamps.remove(requestId);
-            log.error("Error sending queue message: ", e);
+            log.error("Error sending queue message", e);
             responseFuture.completeExceptionally(e);
         }
         return responseFuture;
@@ -203,8 +264,80 @@ public class QueueUpstreamHandler {
             result.setIsError(true);
             return result;
         } catch (Exception e) {
-            log.error("Error waiting for send Queue Message response: ", e);
-            throw new RuntimeException("Failed to get response", e);
+            log.error("Error waiting for send Queue Message response", e);
+            throw io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                .code(io.kubemq.sdk.exception.ErrorCode.UNKNOWN_ERROR)
+                .category(io.kubemq.sdk.exception.ErrorCategory.FATAL)
+                .retryable(false)
+                .message("Failed to get response: " + e.getMessage())
+                .operation("sendQueuesMessage")
+                .cause(e)
+                .build();
+        }
+    }
+
+    /**
+     * Sends multiple messages in a single QueuesUpstreamRequest.
+     * Uses the same stream as single-message sends.
+     */
+    public List<QueueSendResult> sendQueuesMessages(List<QueueMessage> queueMessages) {
+        String requestId = generateRequestId();
+        CompletableFuture<List<QueueSendResult>> responseFuture = new CompletableFuture<>();
+
+        pendingBatchResponses.put(requestId, responseFuture);
+        requestTimestamps.put(requestId, System.currentTimeMillis());
+
+        try {
+            Kubemq.QueuesUpstreamRequest.Builder requestBuilder =
+                    Kubemq.QueuesUpstreamRequest.newBuilder()
+                            .setRequestID(requestId);
+
+            for (QueueMessage msg : queueMessages) {
+                requestBuilder.addMessages(msg.encodeMessage(kubeMQClient.getClientId()));
+            }
+
+            sendRequest(requestBuilder.build());
+
+            return responseFuture.get(kubeMQClient.getRequestTimeoutSeconds(), TimeUnit.SECONDS);
+
+        } catch (TimeoutException e) {
+            pendingBatchResponses.remove(requestId);
+            requestTimestamps.remove(requestId);
+            log.error("Timeout waiting for batch send response");
+            List<QueueSendResult> errorResults = new ArrayList<>();
+            for (int i = 0; i < queueMessages.size(); i++) {
+                QueueSendResult r = new QueueSendResult();
+                r.setError("Batch request timed out after "
+                        + kubeMQClient.getRequestTimeoutSeconds() + " seconds");
+                r.setIsError(true);
+                errorResults.add(r);
+            }
+            return errorResults;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            pendingBatchResponses.remove(requestId);
+            requestTimestamps.remove(requestId);
+            log.error("Interrupted waiting for batch send response");
+            List<QueueSendResult> errorResults = new ArrayList<>();
+            for (int i = 0; i < queueMessages.size(); i++) {
+                QueueSendResult r = new QueueSendResult();
+                r.setError("Batch request interrupted");
+                r.setIsError(true);
+                errorResults.add(r);
+            }
+            return errorResults;
+        } catch (Exception e) {
+            pendingBatchResponses.remove(requestId);
+            requestTimestamps.remove(requestId);
+            log.error("Error sending batch queue messages", e);
+            throw io.kubemq.sdk.exception.KubeMQException.newBuilder()
+                    .code(io.kubemq.sdk.exception.ErrorCode.UNKNOWN_ERROR)
+                    .category(io.kubemq.sdk.exception.ErrorCategory.FATAL)
+                    .retryable(false)
+                    .message("Failed to send batch: " + e.getMessage())
+                    .operation("sendQueuesMessages")
+                    .cause(e)
+                    .build();
         }
     }
 

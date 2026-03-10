@@ -58,6 +58,7 @@ class EventStreamHelperConcurrencyTest {
     @DisplayName("CRITICAL-1 FIX: Concurrent sendEventStoreMessage calls each receive their own response")
     void concurrentSendEventStoreMessage_shouldReceiveCorrectResponses() throws Exception {
         when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+        when(mockClient.getRequestTimeoutSeconds()).thenReturn(30);
 
         // Capture the result observer and event observer to simulate responses
         ArgumentCaptor<StreamObserver<Kubemq.Result>> resultObserverCaptor =
@@ -150,6 +151,7 @@ class EventStreamHelperConcurrencyTest {
     @DisplayName("CRITICAL-1 FIX: Second concurrent call does not overwrite first call's future")
     void secondConcurrentCall_shouldNotOverwriteFirstFuture() throws Exception {
         when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+        when(mockClient.getRequestTimeoutSeconds()).thenReturn(30);
 
         List<String> sentEventIds = new CopyOnWriteArrayList<>();
 

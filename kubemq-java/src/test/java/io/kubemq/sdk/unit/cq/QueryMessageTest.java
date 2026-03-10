@@ -1,6 +1,7 @@
 package io.kubemq.sdk.unit.cq;
 
 import io.kubemq.sdk.cq.QueryMessage;
+import io.kubemq.sdk.exception.ValidationException;
 import kubemq.Kubemq;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
@@ -61,11 +62,11 @@ class QueryMessageTest {
                     .timeoutInSeconds(30)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
-            assertTrue(ex.getMessage().contains("channel"));
+            assertTrue(ex.getMessage().contains("channel") || ex.getMessage().contains("Channel"));
         }
 
         @Test
@@ -76,11 +77,11 @@ class QueryMessageTest {
                     .timeoutInSeconds(30)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
-            assertTrue(ex.getMessage().contains("channel"));
+            assertTrue(ex.getMessage().contains("channel") || ex.getMessage().contains("Channel"));
         }
 
         @Test
@@ -90,8 +91,8 @@ class QueryMessageTest {
                     .timeoutInSeconds(30)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("metadata, body, or tags"));
@@ -105,8 +106,8 @@ class QueryMessageTest {
                     .timeoutInSeconds(0)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("timeout"));
@@ -120,8 +121,8 @@ class QueryMessageTest {
                     .timeoutInSeconds(-1)
                     .build();
 
-            IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class,
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
                     msg::validate
             );
             assertTrue(ex.getMessage().contains("timeout"));

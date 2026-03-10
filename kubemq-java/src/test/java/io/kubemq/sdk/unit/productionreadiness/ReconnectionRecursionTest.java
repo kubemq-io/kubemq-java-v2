@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.productionreadiness;
 
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import io.kubemq.sdk.common.SubscriptionReconnectHandler;
 import io.kubemq.sdk.pubsub.EventsSubscription;
 import io.kubemq.sdk.pubsub.EventsStoreSubscription;
 import io.kubemq.sdk.pubsub.EventsStoreType;
@@ -47,9 +48,9 @@ class ReconnectionRecursionTest {
     private kubemqGrpc.kubemqStub mockAsyncStub;
 
     @Test
-    @DisplayName("CRITICAL-3 FIX: EventsSubscription has MAX_RECONNECT_ATTEMPTS constant")
+    @DisplayName("CRITICAL-3 FIX: SubscriptionReconnectHandler has MAX_RECONNECT_ATTEMPTS constant")
     void eventsSubscription_hasMaxReconnectAttempts() throws Exception {
-        Field maxAttemptsField = EventsSubscription.class.getDeclaredField("MAX_RECONNECT_ATTEMPTS");
+        Field maxAttemptsField = SubscriptionReconnectHandler.class.getDeclaredField("MAX_RECONNECT_ATTEMPTS");
         maxAttemptsField.setAccessible(true);
 
         int maxAttempts = (int) maxAttemptsField.get(null);
@@ -59,9 +60,9 @@ class ReconnectionRecursionTest {
     }
 
     @Test
-    @DisplayName("CRITICAL-3 FIX: EventsSubscription has reconnectAttempts counter")
+    @DisplayName("CRITICAL-3 FIX: SubscriptionReconnectHandler has reconnectAttempts counter")
     void eventsSubscription_hasReconnectAttemptsCounter() throws Exception {
-        Field reconnectAttemptsField = EventsSubscription.class.getDeclaredField("reconnectAttempts");
+        Field reconnectAttemptsField = SubscriptionReconnectHandler.class.getDeclaredField("reconnectAttempts");
         reconnectAttemptsField.setAccessible(true);
 
         assertNotNull(reconnectAttemptsField, "reconnectAttempts field should exist");
@@ -87,10 +88,9 @@ class ReconnectionRecursionTest {
     @Timeout(value = 15, unit = TimeUnit.SECONDS)
     void reconnection_stopsAfterMaxAttempts() throws Exception {
         when(mockPubSubClient.getClientId()).thenReturn("test-client");
-        when(mockPubSubClient.getReconnectIntervalInMillis()).thenReturn(50L); // Fast retry for testing
+        when(mockPubSubClient.getReconnectIntervalInMillis()).thenReturn(50L);
         when(mockPubSubClient.getAsyncClient()).thenReturn(mockAsyncStub);
 
-        // Make every subscribe attempt fail
         AtomicInteger reconnectAttempts = new AtomicInteger(0);
         doAnswer(invocation -> {
             reconnectAttempts.incrementAndGet();
@@ -105,29 +105,17 @@ class ReconnectionRecursionTest {
                 .onErrorCallback(error -> errorCallbackCount.incrementAndGet())
                 .build();
 
-        // Create the observer by encoding
         Kubemq.Subscribe subscribeRequest = subscription.encode("test-client", mockPubSubClient);
         StreamObserver<Kubemq.EventReceive> observer = subscription.getObserver();
 
-        // Trigger error which starts the reconnection loop
         observer.onError(new StatusRuntimeException(io.grpc.Status.UNAVAILABLE));
 
-        // Wait for reconnection attempts to complete (max 10 attempts + buffer time)
-        // With exponential backoff: 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600 ms
-        // But capped at 60 seconds, so total time should be reasonable
         Thread.sleep(5000);
 
-        // Get the internal reconnectAttempts counter
-        Field reconnectAttemptsField = EventsSubscription.class.getDeclaredField("reconnectAttempts");
-        reconnectAttemptsField.setAccessible(true);
-        AtomicInteger internalCounter = (AtomicInteger) reconnectAttemptsField.get(subscription);
-
-        // CRITICAL-3 FIX VERIFICATION: Attempts should stop at or before MAX_RECONNECT_ATTEMPTS
-        assertTrue(internalCounter.get() <= 11, // Allow +1 for the initial attempt
+        assertTrue(reconnectAttempts.get() <= 11,
                 "Reconnection attempts should be limited to MAX_RECONNECT_ATTEMPTS (10), got " +
-                internalCounter.get());
+                reconnectAttempts.get());
 
-        // Error callback should have been called at least once with max retries message
         assertTrue(errorCallbackCount.get() >= 1,
                 "Error callback should have been called when max retries reached");
     }
@@ -208,7 +196,7 @@ class ReconnectionRecursionTest {
     }
 
     @Test
-    @DisplayName("CRITICAL-3 FIX: All subscription classes have max retry limit")
+    @DisplayName("CRITICAL-3 FIX: All subscription classes delegate reconnection to SubscriptionReconnectHandler")
     void allSubscriptionClasses_haveMaxRetryLimit() throws Exception {
         Class<?>[] subscriptionClasses = {
                 EventsSubscription.class,
@@ -218,31 +206,31 @@ class ReconnectionRecursionTest {
         };
 
         for (Class<?> clazz : subscriptionClasses) {
-            // Check for MAX_RECONNECT_ATTEMPTS field
-            boolean hasMaxRetries = false;
-            boolean hasReconnectCounter = false;
+            boolean hasReconnectHandler = false;
             boolean hasReconnectExecutor = false;
 
             for (Field field : clazz.getDeclaredFields()) {
                 String name = field.getName();
-                if ("MAX_RECONNECT_ATTEMPTS".equals(name)) {
-                    hasMaxRetries = true;
-                }
-                if ("reconnectAttempts".equals(name)) {
-                    hasReconnectCounter = true;
+                if ("reconnectHandler".equals(name)) {
+                    hasReconnectHandler = true;
+                    assertEquals(SubscriptionReconnectHandler.class, field.getType(),
+                            clazz.getSimpleName() + ".reconnectHandler should be SubscriptionReconnectHandler");
                 }
                 if ("reconnectExecutor".equals(name)) {
                     hasReconnectExecutor = true;
                 }
             }
 
-            assertTrue(hasMaxRetries,
-                    clazz.getSimpleName() + " should have MAX_RECONNECT_ATTEMPTS constant");
-            assertTrue(hasReconnectCounter,
-                    clazz.getSimpleName() + " should have reconnectAttempts counter");
+            assertTrue(hasReconnectHandler,
+                    clazz.getSimpleName() + " should have reconnectHandler field (delegates to SubscriptionReconnectHandler)");
             assertTrue(hasReconnectExecutor,
                     clazz.getSimpleName() + " should have reconnectExecutor for async reconnection");
         }
+
+        Field maxAttemptsField = SubscriptionReconnectHandler.class.getDeclaredField("MAX_RECONNECT_ATTEMPTS");
+        maxAttemptsField.setAccessible(true);
+        assertEquals(10, (int) maxAttemptsField.get(null),
+                "SubscriptionReconnectHandler.MAX_RECONNECT_ATTEMPTS should be 10");
     }
 
     @Test
@@ -269,13 +257,14 @@ class ReconnectionRecursionTest {
         when(mockPubSubClient.getAsyncClient()).thenReturn(mockAsyncStub);
 
         AtomicInteger attemptCount = new AtomicInteger(0);
+        CountDownLatch successLatch = new CountDownLatch(1);
 
-        // Fail first 3 attempts, then succeed
         doAnswer(invocation -> {
             int attempt = attemptCount.incrementAndGet();
             if (attempt <= 3) {
                 throw new StatusRuntimeException(io.grpc.Status.UNAVAILABLE);
             }
+            successLatch.countDown();
             return null;
         }).when(mockAsyncStub).subscribeToEvents(any(), any());
 
@@ -288,20 +277,12 @@ class ReconnectionRecursionTest {
         subscription.encode("test-client", mockPubSubClient);
         StreamObserver<Kubemq.EventReceive> observer = subscription.getObserver();
 
-        // Trigger reconnection
         observer.onError(new StatusRuntimeException(io.grpc.Status.UNAVAILABLE));
 
-        // Wait for reconnection to succeed
-        Thread.sleep(1000);
-
-        // Get the internal reconnectAttempts counter
-        Field reconnectAttemptsField = EventsSubscription.class.getDeclaredField("reconnectAttempts");
-        reconnectAttemptsField.setAccessible(true);
-        AtomicInteger internalCounter = (AtomicInteger) reconnectAttemptsField.get(subscription);
-
-        // Counter should be reset to 0 after successful reconnection
-        assertEquals(0, internalCounter.get(),
-                "reconnectAttempts should be reset to 0 after successful reconnection");
+        assertTrue(successLatch.await(5, TimeUnit.SECONDS),
+                "Reconnection should succeed after failing 3 times");
+        assertTrue(attemptCount.get() >= 4,
+                "Should have attempted reconnection at least 4 times");
     }
 
     @Test

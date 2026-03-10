@@ -216,12 +216,12 @@ class KubeMQUtilsTest {
         }
 
         @Test
-        @DisplayName("U-08: List queues gRPC error throws GRPCException")
+        @DisplayName("U-08: List queues gRPC error throws KubeMQException")
         void listQueuesChannels_grpcError_throwsGRPCException() {
             when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
                     .thenThrow(new StatusRuntimeException(Status.UNAVAILABLE));
 
-            assertThrows(GRPCException.class, () -> {
+            assertThrows(io.kubemq.sdk.exception.KubeMQException.class, () -> {
                 KubeMQUtils.listQueuesChannels(mockClient, "test-client", "");
             });
         }
@@ -307,12 +307,12 @@ class KubeMQUtilsTest {
         }
 
         @Test
-        @DisplayName("U-12: List PubSub gRPC error throws GRPCException")
+        @DisplayName("U-12: List PubSub gRPC error throws KubeMQException")
         void listPubSubChannels_grpcError_throwsGRPCException() {
             when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
                     .thenThrow(new StatusRuntimeException(Status.UNAVAILABLE));
 
-            assertThrows(GRPCException.class, () -> {
+            assertThrows(io.kubemq.sdk.exception.KubeMQException.class, () -> {
                 KubeMQUtils.listPubSubChannels(mockClient, "test-client", "events", "");
             });
         }
@@ -396,12 +396,12 @@ class KubeMQUtilsTest {
         }
 
         @Test
-        @DisplayName("U-15: List CQ gRPC error throws GRPCException")
+        @DisplayName("U-15: List CQ gRPC error throws KubeMQException")
         void listCQChannels_grpcError_throwsGRPCException() {
             when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
                     .thenThrow(new StatusRuntimeException(Status.UNAVAILABLE));
 
-            assertThrows(GRPCException.class, () -> {
+            assertThrows(io.kubemq.sdk.exception.KubeMQException.class, () -> {
                 KubeMQUtils.listCQChannels(mockClient, "test-client", "commands", "");
             });
         }

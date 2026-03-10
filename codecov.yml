@@ -1,0 +1,20 @@
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "40...80"
+
+  status:
+    project:
+      default:
+        # Phase 2 threshold — update as SDK matures
+        target: 60%
+        threshold: 2%
+    patch:
+      default:
+        target: 60%
+
+ignore:
+  - "kubemq-java/src/main/java/kubemq/**"  # Generated protobuf
