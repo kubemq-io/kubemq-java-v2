@@ -1,0 +1,24 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <servers>
+    <server>
+      <id>central</id>
+      <username>0InpB1</username>
+      <password>3uGDO5hpn0yw6kLbkDeivPLfHlJt1ZJf1</password>
+    </server>
+  </servers>
+  <profiles>
+    <profile>
+      <id>central</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <gpg.executable>gpg</gpg.executable>
+        <gpg.keyname>0F9D4ACC4D55D2A37F2A05C4EF4AC12F3C94AD91</gpg.keyname>
+      </properties>
+    </profile>
+  </profiles>
+  <localRepository>${user.home}/.m2/repository</localRepository>
+</settings>

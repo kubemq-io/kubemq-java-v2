@@ -25,39 +25,28 @@ package io.kubemq.sdk.common;
 
 import lombok.Getter;
 
-/**
- * Enum representing different types of requests that can be made to KubeMQ.
- */
+/** Enum representing different types of requests that can be made to KubeMQ. */
 @Getter
 public enum RequestType {
 
-    /**
-     * Unknown request type.
-     */
-    RequestTypeUnknown(0),
+  /** Unknown request type. */
+  RequestTypeUnknown(0),
 
-    /**
-     * Command request type.
-     */
-    Command(1),
+  /** Command request type. */
+  Command(1),
 
-    /**
-     * Query request type.
-     */
-    Query(2);
+  /** Query request type. */
+  Query(2);
 
-    /**
-     * The integer value associated with the request type.
-     */
-    private final int value;
+  /** The integer value associated with the request type. */
+  private final int value;
 
-    /**
-     * Private constructor to associate an integer value with each request type.
-     *
-     * @param value the integer value representing the request type.
-     */
-    RequestType(int value) {
-        this.value = value;
-    }
-
+  /**
+   * Private constructor to associate an integer value with each request type.
+   *
+   * @param value the integer value representing the request type.
+   */
+  RequestType(int value) {
+    this.value = value;
+  }
 }

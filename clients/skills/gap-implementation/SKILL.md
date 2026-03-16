@@ -324,6 +324,17 @@ For each sequential WU (in WU-number order, respecting dependency chain):
 3. **Launch agent** using IMPL-AGENT-PROMPT with all variables substituted.
 4. **Wait for completion.** The agent writes its results to `{SPECS_DIR}/wu-{N}-output.md`.
 5. **Merge output:** Read `wu-{N}-output.md`. Update PROGRESS.md's Status Table (status, build, tests, REQs done count) and WU Detail Log (REQ checkboxes, notes).
+5b. **Deferred-work detection:** After reading `wu-{N}-output.md`, scan the Notes section and
+    REQ Status entries for keywords: "deferred", "integration pending", "standalone infrastructure",
+    "wiring owned by", "not yet wired", "will be integrated later". For each match:
+    - If the deferred work references a specific future WU: verify that WU exists in
+      IMPLEMENTATION-PLAN.md and is PENDING. Log in ORCHESTRATOR-STATE.md Notes:
+      "WU-{N} deferred integration for {component} to WU-{M}"
+    - If the deferred work does NOT reference a specific WU: create a remediation entry in
+      ORCHESTRATOR-STATE.md Notes: "UNASSIGNED INTEGRATION: WU-{N} created {component} but
+      integration is not assigned to any WU. Must be resolved before phase completion."
+    - Mark the affected REQ as PARTIAL (not COMPLETED) in PROGRESS.md unless the integration
+      is explicitly assigned to a later WU.
 6. **Build verification:** Run `{BUILD_CMD}`. If it times out, try `{BUILD_CMD_INCR}`. If both fail and the agent didn't already mark BLOCKED, mark as BLOCKED.
 7. **Update ORCHESTRATOR-STATE.md:** Record completed WU, increment Phase Metrics, set next WU.
 
@@ -362,6 +373,52 @@ Write results to {SPECS_DIR}/type-verification-phase{PHASE_NUM}.md
 2. If a spec file is updated, note the change in ORCHESTRATOR-STATE.md
 
 Skip this step after Phase 3 (no next phase).
+
+---
+
+## Step 3.6: Integration Wiring Verification (after each phase)
+
+After each phase completes (and after Step 3.5), verify that new components are actually used
+in production code. This is a hard gate — do NOT proceed to QA with unwired components.
+
+### Process
+
+1. From PROGRESS.md, collect all REQs completed in this phase that have "Integration Verification
+   Criteria" in their spec.
+
+2. For each such REQ, read the spec's Integration Verification Criteria table. For each row:
+   - Verify the "Must Be Imported By" file actually imports the new component
+   - Use grep/rg to search for the component class name in production source files (exclude
+     test directories)
+   - Record result: WIRED (import found in production code) or UNWIRED (only in tests or
+     _internal/ with no production import)
+
+3. Write results to `{SPECS_DIR}/integration-verification-phase{PHASE_NUM}.md`:
+
+```
+# Integration Wiring Verification — Phase {PHASE_NUM}
+
+| Component | Expected Import Location | Status          | Evidence                     |
+| --------- | ------------------------ | --------------- | ---------------------------- |
+| {name}    | {file from spec}         | WIRED / UNWIRED | {grep result or "not found"} |
+
+## Unwired Components
+
+{list any UNWIRED components with the WU that created them}
+
+## Remediation
+
+{for each UNWIRED component: is integration assigned to a future WU? If not, flag.}
+```
+
+4. **Gate decision:**
+   - If ALL components are WIRED: proceed to QA
+   - If UNWIRED components exist AND their integration is assigned to a future-phase WU:
+     proceed with a warning logged in ORCHESTRATOR-STATE.md
+   - If UNWIRED components exist with NO assigned integration WU: STOP. Create a remediation
+     WU for the current phase. The orchestrator must either:
+     (a) Launch a targeted agent to wire the component, or
+     (b) Ask the user whether to proceed without wiring
 
 ---
 
@@ -451,11 +508,14 @@ The skill executes 3 phases, each consisting of an execution step and a QA pass:
 |------|--------|--------------|
 | Step 3 (Phase 1) | Execute Phase 1 WUs | Step 3 Generic with PHASE_NUM=1 |
 | Step 3.5 | Type verification Phase 1 → Phase 2 | Step 3.5 with PHASE_NUM=1 |
+| Step 3.6 | Integration wiring verification Phase 1 | Step 3.6 with PHASE_NUM=1 |
 | Step 4 (QA 1) | QA Pass for Phase 1 | Step 4 Generic with PHASE_NUM=1 |
 | Step 5 (Phase 2) | Execute Phase 2 WUs | Step 3 Generic with PHASE_NUM=2 |
 | Step 5.5 | Type verification Phase 2 → Phase 3 | Step 3.5 with PHASE_NUM=2 |
+| Step 5.6 | Integration wiring verification Phase 2 | Step 3.6 with PHASE_NUM=2 |
 | Step 6 (QA 2) | QA Pass for Phase 2 | Step 4 Generic with PHASE_NUM=2 |
 | Step 7 (Phase 3) | Execute Phase 3 WUs | Step 3 Generic with PHASE_NUM=3 |
+| Step 7.6 | Integration wiring verification Phase 3 | Step 3.6 with PHASE_NUM=3 |
 | Step 8 (QA 3) | QA Pass for Phase 3 | Step 4 Generic with PHASE_NUM=3 |
 
 **Phase-specific notes (verify from SPEC-SUMMARY.md, do not assume):**
@@ -510,6 +570,22 @@ Analyze all 3 IMPL-REVIEW-PHASE-*.md files. Categorize and count issues:
 
 ### Root Cause Analysis
 {For the top 3 most frequent issue types, explain why they occurred and how to prevent them}
+
+## 1b. Integration Wiring Analysis
+
+Read all `integration-verification-phase*.md` files. Summarize:
+
+| Phase | Components Created | Components Wired | Components Unwired | Remediated |
+|-------|-------------------|-----------------|-------------------|------------|
+| 1 | {n} | {n} | {n} | {n} |
+| 2 | {n} | {n} | {n} | {n} |
+| 3 | {n} | {n} | {n} | {n} |
+
+### Unwired Components at Final Assessment
+{List any components that remained unwired after all phases completed, with root cause}
+
+### Wiring Gap Patterns
+{Were certain spec categories more prone to creating unwired infrastructure? Which ones?}
 
 ## 2. Rules to Add to IMPL-AGENT-PROMPT
 
@@ -700,6 +776,21 @@ After implementing all items:
    - If a new test cannot be fixed, disable it using `{TEST_DISABLE}` with a descriptive reason and mark as PARTIAL
    - Never fix or modify pre-existing test failures
 
+3. **Integration wiring verification.** For each REQ in your scope, check if the spec has an
+   "Integration Verification Criteria" table. If it does, verify EACH row:
+   - The new component IS imported by the listed production file (not just test files)
+   - The component IS instantiated or called in the listed method
+   - Run a targeted search (e.g., grep/rg for the class name in the production source directory,
+     excluding test directories) to confirm
+   - If the component is NOT imported by any production code:
+     a. If the integration target is in YOUR scope: implement the wiring NOW
+     b. If the integration target belongs to a different WU/spec: mark the REQ as **PARTIAL**
+        with note: "Component created but wiring owned by WU-{N} / spec {XX}. Integration
+        pending."
+   - **CRITICAL:** Do NOT mark a REQ as COMPLETED if its Integration Verification Criteria
+     has unmet rows. "Deferred to later" is not an acceptable completion status for rows
+     that are in your scope.
+
 ### Phase D: Write Output File
 
 Write your results to `{SPECS_DIR}/wu-{WU_NUM}-output.md` (the orchestrator will merge this into PROGRESS.md):
@@ -770,6 +861,11 @@ Write your results to `{SPECS_DIR}/wu-{WU_NUM}-output.md` (the orchestrator will
 16. **Verify all method references.** Every method call in your implementation must reference a method that either exists in the current codebase or that you are creating in this work unit. Do not reference methods from future work units.
 
 17. **Breaking change annotation.** When your spec includes a breaking change, record it in your output file's "Breaking Changes Applied" section.
+
+18. **Integration wiring is mandatory.** If the spec's "Integration Verification Criteria" table
+    lists a production file that should import your new component, you MUST verify that import
+    exists before marking the REQ as COMPLETED. A component that exists only in _internal/ with
+    test coverage but zero production imports is PARTIAL, not COMPLETED.
 
 {SCOPE_FILTER_RULES}
 </prompt-template>
@@ -843,6 +939,10 @@ Additionally, always check: cross-spec type consistency (names, packages, signat
 4. Proper exception/error handling and resource cleanup
 5. API consistency across the new types
 6. Import correctness (no undefined imports, no standard library name collisions)
+7. Spec integration compliance — for each REQ implemented in this phase, verify that new
+   components created by the spec are actually imported and called by production code (not just
+   tests). If a spec's "Integration Verification Criteria" table exists, verify each row.
+   Flag CRITICAL if a component has zero production imports.
 
 ## Process
 Use `git diff` and `git status` to identify all changed/new files under {SDK_ROOT}.
