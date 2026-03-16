@@ -19,11 +19,14 @@ public class FanOutExample {
     private static final String CHANNEL = "java-patterns.fan-out";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         ServerInfo info = client.ping();
         System.out.println("Connected to: " + info.getHost());
+        // Create the events channel
         client.createEventsChannel(CHANNEL);
 
+        // Subscribe multiple handlers (each receives all messages)
         int numSubscribers = 3;
         int numMessages = 3;
         AtomicInteger[] counts = new AtomicInteger[numSubscribers];
@@ -43,10 +46,12 @@ public class FanOutExample {
                         latch.countDown();
                     })
                     .onErrorCallback(err -> {}).build();
+            // Subscribe each subscriber to the channel
             client.subscribeToEvents(subs[i]);
         }
         Thread.sleep(500);
 
+        // Publish messages (fan-out to all subscribers)
         System.out.println("Publishing " + numMessages + " messages to " + numSubscribers + " subscribers...\n");
         for (int i = 1; i <= numMessages; i++) {
             client.sendEventsMessage(EventMessage.builder()
@@ -61,6 +66,7 @@ public class FanOutExample {
             System.out.println("  Subscriber " + (i + 1) + ": " + counts[i].get() + " messages");
         }
 
+        // Clean up resources
         for (EventsSubscription s : subs) { s.cancel(); }
         client.deleteEventsChannel(CHANNEL);
         client.close();

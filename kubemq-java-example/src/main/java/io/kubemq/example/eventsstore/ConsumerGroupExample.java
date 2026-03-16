@@ -18,8 +18,10 @@ public class ConsumerGroupExample {
     private static final String CHANNEL = "java-eventsstore.consumer-group";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the events store channel
         client.createEventsStoreChannel(CHANNEL);
 
         String groupName = "store-processors";
@@ -39,11 +41,13 @@ public class ConsumerGroupExample {
                 .onReceiveEventCallback(e -> { proc2.incrementAndGet(); System.out.println("  Processor 2: " + new String(e.getBody())); latch.countDown(); })
                 .onErrorCallback(err -> {}).build();
 
+        // Subscribe two processors in the same group (load-balanced)
         client.subscribeToEventsStore(sub1);
         client.subscribeToEventsStore(sub2);
         System.out.println("Two processors in group: " + groupName);
         Thread.sleep(500);
 
+        // Send events (distributed across processors in the group)
         for (int i = 1; i <= 6; i++) {
             client.sendEventsStoreMessage(EventStoreMessage.builder()
                     .id("event-" + i).channel(CHANNEL)
@@ -54,6 +58,7 @@ public class ConsumerGroupExample {
         latch.await(5, TimeUnit.SECONDS);
         System.out.println("\nProcessor 1: " + proc1.get() + ", Processor 2: " + proc2.get());
 
+        // Clean up resources
         sub1.cancel(); sub2.cancel();
         client.deleteEventsStoreChannel(CHANNEL);
         client.close();

@@ -11,10 +11,13 @@ public class ConsumerGroupExample {
     private static final String CHANNEL = "java-queries.consumer-group";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         CQClient client = CQClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the queries channel
         client.createQueriesChannel(CHANNEL);
 
+        // Subscribe multiple handlers in a consumer group (load-balanced)
         String group = "query-handlers";
         AtomicInteger[] counts = new AtomicInteger[3];
         QueriesSubscription[] subs = new QueriesSubscription[3];
@@ -35,10 +38,12 @@ public class ConsumerGroupExample {
                                 .body(("Handler " + id).getBytes()).tags(respTags).build());
                     })
                     .onErrorCallback(err -> {}).build();
+            // Subscribe each handler to the consumer group
             client.subscribeToQueries(subs[i]);
         }
         Thread.sleep(500);
 
+        // Send queries to the group (distributed across handlers)
         System.out.println("Sending 9 queries to group '" + group + "'...\n");
         for (int i = 1; i <= 9; i++) {
             try {
@@ -51,6 +56,7 @@ public class ConsumerGroupExample {
         System.out.println("\nDistribution:");
         for (int i = 0; i < 3; i++) { System.out.println("  Handler " + (i + 1) + ": " + counts[i].get()); }
 
+        // Clean up resources
         for (QueriesSubscription s : subs) { s.cancel(); }
         client.deleteQueriesChannel(CHANNEL);
         client.close();

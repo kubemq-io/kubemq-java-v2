@@ -10,11 +10,15 @@ public class BatchSendExample {
     private static final String CHANNEL = "java-queues.batch-send";
 
     public static void main(String[] args) {
+        // Create a queues client connected to the KubeMQ server
         QueuesClient client = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
+        // Verify connection to the server
         ServerInfo info = client.ping();
         System.out.println("Connected to: " + info.getHost());
+        // Create the queue channel
         client.createQueuesChannel(CHANNEL);
 
+        // Send a batch of messages
         int batchSize = 10;
         int success = 0;
         long start = System.currentTimeMillis();
@@ -36,6 +40,7 @@ public class BatchSendExample {
         System.out.println("Batch complete: " + success + "/" + batchSize + " in " + elapsed + "ms");
         System.out.println("Throughput: " + (batchSize * 1000 / Math.max(elapsed, 1)) + " msg/sec");
 
+        // Clean up resources
         client.deleteQueuesChannel(CHANNEL);
         client.close();
     }

@@ -18,16 +18,20 @@ public class DeadLetterPolicyExample {
      * and automatic routing to a dead letter queue.
      */
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         try (QueuesClient client = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID).build()) {
+            // Create main queue and dead letter queue channels
             client.createQueuesChannel(CHANNEL);
             client.createQueuesChannel(DLQ);
 
+            // Send a message with DLQ policy (moves to DLQ after 2 rejections)
             client.sendQueuesMessage(QueueMessage.builder()
                     .id(UUID.randomUUID().toString()).channel(CHANNEL)
                     .body("Poison message".getBytes())
                     .attemptsBeforeDeadLetterQueue(2).deadLetterQueue(DLQ).build());
             System.out.println("Sent message with DLQ policy (max 2 attempts).\n");
 
+            // Reject the message twice; on third attempt it should be in DLQ
             for (int attempt = 1; attempt <= 3; attempt++) {
                 QueuesPollResponse resp = client.receiveQueuesMessages(QueuesPollRequest.builder()
                         .channel(CHANNEL).pollMaxMessages(1).pollWaitTimeoutInSeconds(2).build());
@@ -41,12 +45,14 @@ public class DeadLetterPolicyExample {
                 Thread.sleep(500);
             }
 
+            // Read the message from the dead letter queue
             QueuesPollResponse dlqResp = client.receiveQueuesMessages(QueuesPollRequest.builder()
                     .channel(DLQ).pollMaxMessages(1).pollWaitTimeoutInSeconds(2).autoAckMessages(true).build());
             if (!dlqResp.getMessages().isEmpty()) {
                 System.out.println("\nDLQ message: " + new String(dlqResp.getMessages().get(0).getBody()));
             }
 
+            // Clean up resources
             client.deleteQueuesChannel(CHANNEL);
             client.deleteQueuesChannel(DLQ);
         }

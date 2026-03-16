@@ -20,10 +20,13 @@ public class StartFromLastExample {
     private static final String CHANNEL = "java-eventsstore.start-from-last";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the events store channel
         client.createEventsStoreChannel(CHANNEL);
 
+        // Send historical messages before subscribing
         for (int i = 1; i <= 5; i++) {
             client.sendEventsStoreMessage(EventStoreMessage.builder()
                     .id("hist-" + i).channel(CHANNEL)
@@ -46,9 +49,11 @@ public class StartFromLastExample {
                 .onErrorCallback(err -> System.err.println("Error: " + err))
                 .build();
 
+        // Subscribe with StartFromLast (most recent + new messages only)
         client.subscribeToEventsStore(sub);
         Thread.sleep(500);
 
+        // Send new messages after subscribing
         for (int i = 1; i <= 2; i++) {
             client.sendEventsStoreMessage(EventStoreMessage.builder()
                     .id("new-" + i).channel(CHANNEL)
@@ -59,6 +64,7 @@ public class StartFromLastExample {
         latch.await(5, TimeUnit.SECONDS);
         System.out.println("\nReceived " + received.get() + " (1 last + 2 new).");
 
+        // Clean up resources
         sub.cancel();
         client.deleteEventsStoreChannel(CHANNEL);
         client.close();

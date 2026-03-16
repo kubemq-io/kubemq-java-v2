@@ -17,6 +17,7 @@ public class ConnectionErrorExample {
     public static void main(String[] args) {
         System.out.println("=== Connection Error Handling ===\n");
 
+        // Test 1: Connection to invalid address (expect failure)
         System.out.println("1. Attempting connection to wrong address...");
         try {
             PubSubClient badClient = PubSubClient.builder()
@@ -27,6 +28,7 @@ public class ConnectionErrorExample {
             System.out.println("   Failed (expected): " + e.getClass().getSimpleName());
         }
 
+        // Test 2: Connection to valid address (expect success)
         System.out.println("\n2. Attempting connection to valid address...");
         try {
             PubSubClient goodClient = PubSubClient.builder()
@@ -38,6 +40,7 @@ public class ConnectionErrorExample {
             System.out.println("   Failed: " + e.getMessage());
         }
 
+        // Test 3: Queue operations with error checking
         System.out.println("\n3. Queue operation error handling...");
         try (QueuesClient client = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID).build()) {
             client.ping();

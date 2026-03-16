@@ -9,10 +9,13 @@ public class HandleCommandExample {
     private static final String CHANNEL = "java-commands.handle-command";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         CQClient client = CQClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the commands channel
         client.createCommandsChannel(CHANNEL);
 
+        // Subscribe to handle incoming commands
         CommandsSubscription sub = CommandsSubscription.builder()
                 .channel(CHANNEL)
                 .onReceiveCommandCallback(cmd -> {
@@ -22,20 +25,24 @@ public class HandleCommandExample {
                     CommandResponseMessage response = CommandResponseMessage.builder()
                             .commandReceived(cmd).isExecuted(success)
                             .error(success ? "" : "Processing failed").build();
+                    // Send response back to the command sender
                     client.sendResponseMessage(response);
                     System.out.println("Response sent: executed=" + success);
                 })
                 .onErrorCallback(err -> System.err.println("Error: " + err))
                 .build();
 
+        // Start the command handler subscription
         client.subscribeToCommands(sub);
         System.out.println("Command handler listening on: " + CHANNEL);
         Thread.sleep(300);
 
+        // Send a command and wait for the response
         CommandResponseMessage resp = client.sendCommandRequest(CommandMessage.builder()
                 .channel(CHANNEL).body("Process order #123".getBytes()).timeoutInSeconds(10).build());
         System.out.println("Result: " + resp.isExecuted());
 
+        // Clean up resources
         sub.cancel();
         client.deleteCommandsChannel(CHANNEL);
         client.close();
