@@ -42,7 +42,7 @@ public class OpenTelemetrySetupExample {
         System.out.println("  3. Propagate trace context across messages");
         System.out.println("  4. Add structured log context\n");
 
-        // Create client with DEBUG logging to see OTel integration
+        // Create a client (OTel auto-detected when agent/SDK present)
         try (PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
@@ -52,11 +52,11 @@ public class OpenTelemetrySetupExample {
             ServerInfo info = client.ping();
             System.out.println("Connected to: " + info.getHost() + " v" + info.getVersion());
 
-            // Create a channel and send/receive to generate telemetry
+            // Create channel for send/receive (generates OTel spans)
             String channel = "java-observability.otel-setup";
             client.createEventsStoreChannel(channel);
 
-            // Send some messages (generates send spans and metrics)
+            // Send messages (generates send spans and metrics)
             System.out.println("\nSending messages (generates OTel spans)...");
             for (int i = 1; i <= 3; i++) {
                 EventStoreMessage message = EventStoreMessage.builder()
@@ -84,6 +84,7 @@ public class OpenTelemetrySetupExample {
             client.subscribeToEventsStore(sub);
             Thread.sleep(2000);
 
+            // Clean up resources
             sub.cancel();
             client.deleteEventsStoreChannel(channel);
 

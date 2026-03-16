@@ -19,6 +19,7 @@ public class CloseExample {
     public void tryWithResourcesExample() {
         System.out.println("=== Try-With-Resources Pattern ===\n");
 
+        // Client auto-closes when leaving try block
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID + "-twr")
@@ -38,6 +39,7 @@ public class CloseExample {
     public void explicitCloseExample() {
         System.out.println("=== Explicit Close Pattern ===\n");
 
+        // Create client and close explicitly in finally block
         PubSubClient client = null;
         try {
             client = PubSubClient.builder()
@@ -61,6 +63,7 @@ public class CloseExample {
     public void multiClientCloseExample() {
         System.out.println("=== Multi-Client Close ===\n");
 
+        // Create multiple clients and close in reverse order
         PubSubClient pubSubClient = null;
         QueuesClient queuesClient = null;
         CQClient cqClient = null;

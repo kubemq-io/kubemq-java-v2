@@ -21,6 +21,7 @@ public class ConnectExample {
     public void basicConfiguration() {
         System.out.println("=== Basic Configuration ===\n");
 
+        // Create a client with minimal configuration
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId("java-connection-connect-client")
@@ -40,6 +41,7 @@ public class ConnectExample {
     public void keepAliveConfiguration() {
         System.out.println("=== Keep-Alive Configuration ===\n");
 
+        // Create a client with keep-alive enabled
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId("java-connection-connect-keepalive-client")
@@ -62,6 +64,7 @@ public class ConnectExample {
     public void reconnectionConfiguration() {
         System.out.println("=== Reconnection Configuration ===\n");
 
+        // Create a client with reconnection interval configured
         try (PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId("java-connection-connect-reconnect-client")
@@ -83,6 +86,7 @@ public class ConnectExample {
 
         int maxSize = 200 * 1024 * 1024;
 
+        // Create a client with custom max receive size
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId("java-connection-connect-largemsg-client")
@@ -102,6 +106,7 @@ public class ConnectExample {
     public void loggingConfiguration() {
         System.out.println("=== Logging Configuration ===\n");
 
+        // Create a client with DEBUG log level
         try (QueuesClient debugClient = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId("java-connection-connect-debug-client")
@@ -119,6 +124,7 @@ public class ConnectExample {
     public void productionConfiguration() {
         System.out.println("=== Production-Ready Configuration ===\n");
 
+        // Create a client with production-ready settings
         try (CQClient client = CQClient.builder()
                 .address(ADDRESS)
                 .clientId("java-connection-connect-prod-client")
@@ -175,3 +181,51 @@ public class ConnectExample {
         System.out.println("Connect examples completed.");
     }
 }
+
+// Expected output:
+// === Basic Configuration ===
+//
+// Connected with basic config:
+//   Server: <host>
+//   Version: <version>
+//   Uptime: <seconds> seconds
+//
+// === Keep-Alive Configuration ===
+//
+// Connected with keep-alive enabled:
+//   Ping Interval: 30 seconds
+//   Ping Timeout: 10 seconds
+//   Server: <host>
+//
+// === Reconnection Configuration ===
+//
+// Connected with reconnection configured:
+//   Base Reconnect Interval: 1 second
+//   Server: <host>
+//
+// === Message Size Configuration ===
+//
+// Connected with custom message size:
+//   Max Receive Size: 200 MB
+//   Server: <host>
+//
+// === Logging Configuration ===
+//
+// DEBUG logging client connected.
+//
+// === Production-Ready Configuration ===
+//
+// Production configuration active.
+// Connected to: <host> v<version>
+//
+// === Configuration Validation ===
+//
+// Test 1: Missing address...
+//   Caught: <exception-class>
+//   Message: <message>
+//
+// Test 2: Missing clientId...
+//   Caught: <exception-class>
+//   Message: <message>
+//
+// Connect examples completed.

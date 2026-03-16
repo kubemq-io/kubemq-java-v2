@@ -21,6 +21,7 @@ public class MtlsSetupExample {
     public void connectWithMutualTLS() {
         System.out.println("=== Mutual TLS (mTLS) Connection ===\n");
 
+        // Create a client with mTLS (client cert + key + CA cert)
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
@@ -31,6 +32,7 @@ public class MtlsSetupExample {
                 .logLevel(KubeMQClient.Level.INFO)
                 .build()) {
 
+            // Verify mTLS connection
             ServerInfo serverInfo = client.ping();
             System.out.println("Connected with mTLS. Server: " + serverInfo);
 
@@ -42,6 +44,7 @@ public class MtlsSetupExample {
     public void connectWithMutualTLSFromPemBytes() {
         System.out.println("=== Mutual TLS from PEM bytes ===\n");
 
+        // Load certs from PEM bytes instead of files
         byte[] caCertPem = "-----BEGIN CERTIFICATE-----\n... CA cert ...\n-----END CERTIFICATE-----".getBytes();
         byte[] clientCertPem = "-----BEGIN CERTIFICATE-----\n... client cert ...\n-----END CERTIFICATE-----".getBytes();
         byte[] clientKeyPem = "-----BEGIN PRIVATE KEY-----\n... client key ...\n-----END PRIVATE KEY-----".getBytes();

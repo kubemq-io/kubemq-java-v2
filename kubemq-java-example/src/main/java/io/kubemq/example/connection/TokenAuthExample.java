@@ -18,6 +18,7 @@ public class TokenAuthExample {
     public void connectWithAuthToken() {
         System.out.println("=== Connecting with Authentication Token ===\n");
 
+        // Create a client with JWT or API key authentication
         try {
             QueuesClient client = QueuesClient.builder()
                     .address(ADDRESS)
@@ -26,10 +27,12 @@ public class TokenAuthExample {
                     .logLevel(KubeMQClient.Level.INFO)
                     .build();
 
+            // Verify connection with authenticated ping
             ServerInfo serverInfo = client.ping();
             System.out.println("Successfully authenticated and connected!");
             System.out.println("Server Info: " + serverInfo);
 
+            // Clean up resources
             client.close();
             System.out.println("Connection closed.\n");
 
@@ -41,6 +44,7 @@ public class TokenAuthExample {
     public void connectWithEnvToken() {
         System.out.println("=== Connecting with Token from Environment ===\n");
 
+        // Read token from environment variable
         String token = System.getenv("KUBEMQ_AUTH_TOKEN");
 
         if (token == null || token.isEmpty()) {
@@ -49,12 +53,14 @@ public class TokenAuthExample {
             return;
         }
 
+        // Create a client using token from environment
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
                 .authToken(token)
                 .build()) {
 
+            // Verify connection
             ServerInfo serverInfo = client.ping();
             System.out.println("Connected with environment token!");
             System.out.println("Server: " + serverInfo.getHost() + " v" + serverInfo.getVersion());

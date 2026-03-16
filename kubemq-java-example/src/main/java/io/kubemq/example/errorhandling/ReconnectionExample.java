@@ -16,6 +16,7 @@ public class ReconnectionExample {
     public static void main(String[] args) throws InterruptedException {
         System.out.println("=== Reconnection Handling ===\n");
 
+        // Create a client with reconnection enabled
         PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
@@ -23,8 +24,10 @@ public class ReconnectionExample {
                 .build();
 
         client.ping();
+        // Create channel for the subscription
         client.createEventsChannel("java-errorhandling.reconnect-test");
 
+        // Subscribe with error callback (SDK auto-reconnects on errors)
         EventsSubscription subscription = EventsSubscription.builder()
                 .channel("java-errorhandling.reconnect-test")
                 .onReceiveEventCallback(event ->
@@ -35,15 +38,18 @@ public class ReconnectionExample {
                 })
                 .build();
 
+        // Start the subscription
         client.subscribeToEvents(subscription);
         System.out.println("Subscription active with automatic reconnection.\n");
 
+        // Send a test message
         client.sendEventsMessage(EventMessage.builder()
                 .channel("java-errorhandling.reconnect-test")
                 .body("Test message".getBytes()).build());
 
         Thread.sleep(500);
 
+        // Clean up resources
         subscription.cancel();
         client.deleteEventsChannel("java-errorhandling.reconnect-test");
         client.close();

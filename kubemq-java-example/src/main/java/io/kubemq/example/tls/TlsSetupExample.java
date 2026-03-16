@@ -18,6 +18,7 @@ public class TlsSetupExample {
     public void connectWithServerTLS() {
         System.out.println("=== Server-Side TLS Connection ===\n");
 
+        // Create a client with server-side TLS (CA cert for verification)
         try {
             QueuesClient client = QueuesClient.builder()
                     .address(ADDRESS)
@@ -27,9 +28,11 @@ public class TlsSetupExample {
                     .logLevel(KubeMQClient.Level.INFO)
                     .build();
 
+            // Verify TLS connection
             ServerInfo serverInfo = client.ping();
             System.out.println("Successfully connected with server-side TLS!");
             System.out.println("Server Info: " + serverInfo);
+            // Clean up resources
             client.close();
 
         } catch (Exception e) {
@@ -40,6 +43,7 @@ public class TlsSetupExample {
     public void connectWithTLSValidation() {
         System.out.println("=== TLS Validation ===\n");
 
+        // Test that incomplete TLS config (cert without key) fails validation
         try {
             System.out.println("Testing incomplete TLS configuration...");
             QueuesClient client = QueuesClient.builder()
