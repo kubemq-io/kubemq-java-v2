@@ -12,14 +12,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Represents a response to a query request in KubeMQ.
+ * Represents the response to a query request in KubeMQ.
  *
  * <p>When handling incoming queries via subscription, construct a response using the builder and
  * the received query's metadata. When receiving a response from {@link
  * CQClient#sendQueryRequest(QueryMessage)}, this object contains the responder's reply.
- */
-/**
- * Represents the response to a query request in KubeMQ.
  *
  * <p>Instances are either constructed by the SDK when decoding a server response, or built by query
  * handlers to send a reply back to the caller.
@@ -30,14 +27,31 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class QueryResponseMessage {
 
+  /** The query message that this response replies to. */
   private QueryMessageReceived queryReceived;
+
+  /** Client ID of the responder. */
   private String clientId;
+
+  /** Request ID correlating this response to the original query request. */
   private String requestId;
+
+  /** Whether the query was executed successfully. */
   private boolean isExecuted;
+
+  /** Timestamp when the response was created. */
   private LocalDateTime timestamp;
+
+  /** Error message if execution failed; null or empty if successful. */
   private String error;
+
+  /** Optional metadata associated with the response. */
   private String metadata;
+
+  /** Response payload; empty byte array if no body. */
   @Builder.Default private byte[] body = new byte[0];
+
+  /** Key-value tags for routing or filtering. */
   @Builder.Default private Map<String, String> tags = new HashMap<>();
 
   /**

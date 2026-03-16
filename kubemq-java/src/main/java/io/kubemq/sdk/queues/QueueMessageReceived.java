@@ -72,11 +72,19 @@ public class QueueMessageReceived {
   /** Delayed delivery timestamp, or null if no delay was set. */
   private Instant delayedTo;
 
+  /** Unique identifier for the queue transaction. */
   private String transactionId;
+
+  /** The client ID of the receiver. */
   private String receiverClientId;
+
+  /** Number of seconds the message remains invisible after being received. */
   private int visibilitySeconds;
 
+  /** Whether the transaction has been completed. */
   @Getter private boolean isTransactionCompleted;
+
+  /** Whether the message was auto-acknowledged. */
   @Getter private boolean isAutoAcked;
 
   private static final ScheduledExecutorService VISIBILITY_EXECUTOR =
@@ -92,7 +100,10 @@ public class QueueMessageReceived {
   @Setter(AccessLevel.NONE)
   private ScheduledFuture<?> visibilityFuture;
 
+  /** Whether the message operation (ack/reject/reQueue) has been completed. */
   private boolean messageCompleted;
+
+  /** Whether the visibility timer has expired. */
   private boolean timerExpired;
 
   // Expose executor for shutdown hook

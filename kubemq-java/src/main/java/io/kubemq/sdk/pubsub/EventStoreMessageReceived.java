@@ -8,7 +8,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Represents a message received from the event store in KubeMQ. */
+/**
+ * Represents a message received from the event store in KubeMQ.
+ *
+ * @see PubSubClient#subscribeToEventsStore
+ */
 @Getter
 @Setter
 @NoArgsConstructor

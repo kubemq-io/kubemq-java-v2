@@ -16,7 +16,8 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
- * A class representing a message in a queue.
+ * Encapsulates the content, metadata, and delivery policy for a message sent to a KubeMQ queue
+ * channel.
  *
  * <p><b>Thread Safety:</b> This class is NOT thread-safe. Create a new instance for each operation.
  * Do not share instances across threads.

@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 /**
  * Represents a received command message. This class contains information such as the message ID,
  * client ID, timestamp, channel, metadata, body, reply channel, and tags.
+ *
+ * @see CQClient#subscribeToCommands
  */
 @Data
 @Builder
@@ -19,13 +21,28 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CommandMessageReceived {
 
+  /** Unique message identifier. */
   private String id;
+
+  /** Sender's client identifier. */
   private String fromClientId;
+
+  /** Server timestamp when message was received. */
   private Instant timestamp;
+
+  /** The channel name the command was received on. */
   private String channel;
+
+  /** Additional metadata string. */
   private String metadata;
+
+  /** Message payload as byte array. */
   private byte[] body;
+
+  /** Channel for sending the response back. */
   private String replyChannel;
+
+  /** Key-value metadata tags. */
   @Builder.Default private Map<String, String> tags = new HashMap<>();
 
   /**

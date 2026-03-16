@@ -9,7 +9,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** QueueSendResult represents the result of sending a message to a queue. */
+/**
+ * Contains the server-assigned message ID, send timestamp, and delivery status returned after a
+ * queue send operation.
+ *
+ * @see QueuesClient#sendQueueMessage
+ */
 @Getter
 @Builder
 @NoArgsConstructor

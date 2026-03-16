@@ -10,15 +10,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Represents a response to a command request in KubeMQ.
+ * Represents the response to a command request in KubeMQ.
  *
  * <p>When handling incoming commands via subscription, construct a response using the builder with
  * the received command's metadata. When receiving a response from {@link
  * CQClient#sendCommandRequest(CommandMessage)}, this object indicates whether the command was
  * executed successfully.
- */
-/**
- * Represents the response to a command request in KubeMQ.
  *
  * <p>Instances are either constructed by the SDK when decoding a server response, or built by
  * command handlers to send an execution acknowledgment back to the caller.
@@ -30,14 +27,22 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CommandResponseMessage {
 
+  /** The command message that this response acknowledges. */
   private CommandMessageReceived commandReceived;
 
   /** Client ID of the responder. */
   private String clientId;
 
+  /** Request ID correlating this response to the original command request. */
   private String requestId;
+
+  /** Whether the command was executed successfully. */
   private boolean isExecuted;
+
+  /** Timestamp when the response was created. */
   private LocalDateTime timestamp;
+
+  /** Error message if execution failed; null or empty if successful. */
   private String error;
 
   /**

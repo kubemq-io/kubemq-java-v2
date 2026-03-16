@@ -7,7 +7,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Represents the statistics for a Pub/Sub channel, including message counts and volume. */
+/**
+ * Represents the statistics for a Pub/Sub channel, including message counts and volume.
+ *
+ * @see PubSubClient#listEventsChannels
+ */
 @Getter
 @Setter
 @Builder
