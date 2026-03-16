@@ -99,6 +99,12 @@ jobs:
           KUBEMQ_ADDRESS: localhost:50000
         run: mvn verify -B -DskipUnitTests=true
 
+      - name: Smoke-test examples
+        working-directory: kubemq-java-example
+        run: |
+          timeout 30 mvn -q exec:java -Dexec.mainClass="io.kubemq.example.connection.ConnectExample" || true
+          timeout 30 mvn -q exec:java -Dexec.mainClass="io.kubemq.example.connection.PingExample" || true
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest

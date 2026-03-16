@@ -8,23 +8,29 @@ public class PurgeQueueExample {
     private static final String CHANNEL = "java-management.purge-queue";
 
     public static void main(String[] args) {
+        // Create a client connected to the KubeMQ server
         try (QueuesClient client = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID).build()) {
+            // Create the queue channel
             client.createQueuesChannel(CHANNEL);
 
+            // Send messages to the queue
             for (int i = 1; i <= 5; i++) {
                 client.sendQueuesMessage(QueueMessage.builder()
                         .channel(CHANNEL).body(("Message " + i).getBytes()).build());
             }
 
+            // Check message count before purge
             QueueMessagesWaiting before = client.waiting(CHANNEL, 10, 2);
             System.out.println("Messages before purge: " + before.getMessages().size());
 
+            // Purge all messages from the queue
             client.purgeQueue(CHANNEL);
             System.out.println("Queue purged.");
 
             QueueMessagesWaiting after = client.waiting(CHANNEL, 10, 2);
             System.out.println("Messages after purge: " + after.getMessages().size());
 
+            // Clean up resources
             client.deleteQueuesChannel(CHANNEL);
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());

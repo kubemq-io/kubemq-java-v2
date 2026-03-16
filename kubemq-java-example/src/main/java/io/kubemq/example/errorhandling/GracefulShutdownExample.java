@@ -20,6 +20,7 @@ public class GracefulShutdownExample {
     public static void main(String[] args) throws InterruptedException {
         System.out.println("=== Graceful Shutdown ===\n");
 
+        // Create multiple clients
         PubSubClient pubSubClient = PubSubClient.builder()
                 .address(ADDRESS).clientId(CLIENT_ID + "-pubsub").build();
         QueuesClient queuesClient = QueuesClient.builder()
@@ -29,15 +30,17 @@ public class GracefulShutdownExample {
 
         System.out.println("Created 3 clients.");
 
+        // Create channel and subscribe
         pubSubClient.createEventsChannel("java-errorhandling.shutdown-test");
         EventsSubscription sub = EventsSubscription.builder()
                 .channel("java-errorhandling.shutdown-test")
                 .onReceiveEventCallback(e -> {}).onErrorCallback(err -> {}).build();
+        // Start the subscription
         pubSubClient.subscribeToEvents(sub);
 
         System.out.println("Subscription active.\n");
 
-        // Send some messages
+        // Send messages before shutdown
         for (int i = 1; i <= 3; i++) {
             pubSubClient.sendEventsMessage(EventMessage.builder()
                     .channel("java-errorhandling.shutdown-test")
@@ -45,22 +48,22 @@ public class GracefulShutdownExample {
         }
         Thread.sleep(300);
 
-        // GRACEFUL SHUTDOWN
+        // Graceful shutdown sequence
         System.out.println("--- Initiating Graceful Shutdown ---\n");
 
-        // 1. Cancel subscriptions
+        // Step 1: Cancel subscriptions
         sub.cancel();
         System.out.println("1. Subscriptions cancelled.");
 
-        // 2. Wait for pending ops
+        // Step 2: Wait for pending operations
         Thread.sleep(200);
         System.out.println("2. Pending operations completed.");
 
-        // 3. Cleanup channels
+        // Step 3: Clean up channels
         try { pubSubClient.deleteEventsChannel("java-errorhandling.shutdown-test"); } catch (Exception e) {}
         System.out.println("3. Channels cleaned up.");
 
-        // 4. Close clients in reverse order
+        // Step 4: Close clients in reverse order
         cqClient.close();
         queuesClient.close();
         pubSubClient.close();

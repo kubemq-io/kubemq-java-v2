@@ -11,21 +11,26 @@ public class CreateChannelExample {
     public static void main(String[] args) {
         System.out.println("=== Create Channels ===\n");
 
+        // Create PubSub channels (events and events-store)
         try (PubSubClient pubsub = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID + "-pubsub").build()) {
             pubsub.createEventsChannel("java-management.events-test");
             System.out.println("Events channel created.");
             pubsub.createEventsStoreChannel("java-management.store-test");
             System.out.println("EventsStore channel created.");
+            // Clean up: delete the created channels
             pubsub.deleteEventsChannel("java-management.events-test");
             pubsub.deleteEventsStoreChannel("java-management.store-test");
         }
 
+        // Create Queues channel
         try (QueuesClient queues = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID + "-queues").build()) {
             queues.createQueuesChannel("java-management.queues-test");
             System.out.println("Queues channel created.");
+            // Clean up: delete the created channel
             queues.deleteQueuesChannel("java-management.queues-test");
         }
 
+        // Create Commands and Queries channels
         try (CQClient cq = CQClient.builder().address(ADDRESS).clientId(CLIENT_ID + "-cq").build()) {
             cq.createCommandsChannel("java-management.commands-test");
             System.out.println("Commands channel created.");
