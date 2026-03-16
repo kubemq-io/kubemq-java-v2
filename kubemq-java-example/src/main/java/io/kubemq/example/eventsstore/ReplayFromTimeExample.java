@@ -20,10 +20,13 @@ public class ReplayFromTimeExample {
     private static final String CHANNEL = "java-eventsstore.replay-from-time";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the events store channel
         client.createEventsStoreChannel(CHANNEL);
 
+        // Send messages to create history
         for (int i = 1; i <= 5; i++) {
             client.sendEventsStoreMessage(EventStoreMessage.builder()
                     .id("msg-" + i).channel(CHANNEL)
@@ -48,12 +51,14 @@ public class ReplayFromTimeExample {
                 .onErrorCallback(err -> System.err.println("Error: " + err))
                 .build();
 
+        // Subscribe with StartAtTime (replay from specific timestamp)
         client.subscribeToEventsStore(sub);
         System.out.println("Subscribed with StartAtTime (1 hour ago).");
 
         latch.await(10, TimeUnit.SECONDS);
         System.out.println("\nReceived " + received.get() + " messages.");
 
+        // Clean up resources
         sub.cancel();
         client.deleteEventsStoreChannel(CHANNEL);
         client.close();

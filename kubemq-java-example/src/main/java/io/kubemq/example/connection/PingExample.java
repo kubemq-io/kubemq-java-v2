@@ -16,6 +16,7 @@ public class PingExample {
     public void pingServer() {
         System.out.println("=== Ping KubeMQ Server ===\n");
 
+        // Create a client and verify connectivity with ping
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
@@ -36,6 +37,7 @@ public class PingExample {
     public void pingWithValidateOnBuild() {
         System.out.println("\n=== Ping via validateOnBuild ===\n");
 
+        // Create a client that validates connectivity on build
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID + "-validate")

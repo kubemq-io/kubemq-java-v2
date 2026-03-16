@@ -16,9 +16,12 @@ public class DelayPolicyExample {
      * to implement scheduled delivery policies.
      */
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         try (QueuesClient client = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID).build()) {
+            // Create the queue channel
             client.createQueuesChannel(CHANNEL);
 
+            // Send messages with different delay values (scheduled delivery)
             int[] delays = {1, 3, 5};
             for (int delay : delays) {
                 client.sendQueuesMessage(QueueMessage.builder()
@@ -28,6 +31,7 @@ public class DelayPolicyExample {
                 System.out.println("Sent message with " + delay + "s delay.");
             }
 
+            // Poll as messages become available after their delay
             System.out.println("\nPolling as messages become available...");
             for (int i = 0; i < 3; i++) {
                 QueuesPollResponse response = client.receiveQueuesMessages(QueuesPollRequest.builder()
@@ -37,6 +41,7 @@ public class DelayPolicyExample {
                 }
             }
 
+            // Clean up resources
             client.deleteQueuesChannel(CHANNEL);
         }
     }

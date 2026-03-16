@@ -10,10 +10,13 @@ public class SendQueryExample {
     private static final String CHANNEL = "java-queries.send-query";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         CQClient client = CQClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the queries channel
         client.createQueriesChannel(CHANNEL);
 
+        // Subscribe to handle incoming queries
         QueriesSubscription sub = QueriesSubscription.builder()
                 .channel(CHANNEL)
                 .onReceiveQueryCallback(query -> {
@@ -24,6 +27,7 @@ public class SendQueryExample {
                 })
                 .onErrorCallback(err -> System.err.println("Error: " + err))
                 .build();
+        // Start the query handler subscription
         client.subscribeToQueries(sub);
         Thread.sleep(300);
 
@@ -34,12 +38,19 @@ public class SendQueryExample {
                 .channel(CHANNEL).body("Get user data".getBytes())
                 .metadata("Query metadata").tags(tags).timeoutInSeconds(10).build();
 
+        // Send a query and wait for the response
         QueryResponseMessage response = client.sendQueryRequest(query);
         System.out.println("Query executed: " + response.isExecuted());
         System.out.println("Response body: " + new String(response.getBody()));
 
+        // Clean up resources
         sub.cancel();
         client.deleteQueriesChannel(CHANNEL);
         client.close();
     }
 }
+
+// Expected output:
+//   Handler received: Get user data
+// Query executed: true
+// Response body: {"result": "data"}

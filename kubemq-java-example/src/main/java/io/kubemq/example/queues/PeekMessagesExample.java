@@ -8,12 +8,15 @@ public class PeekMessagesExample {
     private static final String CHANNEL = "java-queues.peek-messages";
 
     public static void main(String[] args) {
+        // Create a queues client connected to the KubeMQ server
         try (QueuesClient client = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID).build()) {
+            // Send messages to the queue
             for (int i = 1; i <= 3; i++) {
                 client.sendQueuesMessage(QueueMessage.builder()
                         .channel(CHANNEL).body(("Peek message " + i).getBytes()).build());
             }
 
+            // Peek at waiting messages without consuming them (non-destructive)
             System.out.println("=== Peeking at waiting messages (non-destructive) ===");
             QueueMessagesWaiting waiting = client.waiting(CHANNEL, 10, 5);
             if (waiting.isError()) {

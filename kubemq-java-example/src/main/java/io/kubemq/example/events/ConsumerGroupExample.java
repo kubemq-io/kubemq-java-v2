@@ -20,13 +20,16 @@ public class ConsumerGroupExample {
     private static final String CHANNEL = "java-events.consumer-group";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
                 .build();
 
+        // Verify connection to the server
         ServerInfo info = client.ping();
         System.out.println("Connected to: " + info.getHost());
+        // Create the events channel
         client.createEventsChannel(CHANNEL);
 
         String groupName = "workers-group";
@@ -53,12 +56,15 @@ public class ConsumerGroupExample {
                     .onErrorCallback(err -> System.err.println("Error: " + err))
                     .build();
 
+            // Subscribe each worker to the channel with a shared group (load-balanced)
             client.subscribeToEvents(subscriptions[i]);
         }
 
         System.out.println("Created " + numWorkers + " workers in group: " + groupName);
+        // Wait for subscribers to be ready
         Thread.sleep(500);
 
+        // Send messages (distributed across workers in the group)
         System.out.println("Sending " + numMessages + " messages...\n");
         for (int i = 1; i <= numMessages; i++) {
             client.sendEventsMessage(EventMessage.builder()
@@ -69,8 +75,10 @@ public class ConsumerGroupExample {
             Thread.sleep(100);
         }
 
+        // Wait for all messages to be received
         latch.await(10, TimeUnit.SECONDS);
 
+        // Handle response: print distribution across workers
         System.out.println("\nMessage Distribution:");
         int total = 0;
         for (int i = 0; i < numWorkers; i++) {
@@ -80,6 +88,7 @@ public class ConsumerGroupExample {
         }
         System.out.println("  Total: " + total);
 
+        // Clean up resources
         for (EventsSubscription sub : subscriptions) { sub.cancel(); }
         client.deleteEventsChannel(CHANNEL);
         client.close();

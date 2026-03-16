@@ -18,10 +18,13 @@ public class ReplayFromSequenceExample {
     private static final String CHANNEL = "java-eventsstore.replay-from-sequence";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the events store channel
         client.createEventsStoreChannel(CHANNEL);
 
+        // Send messages to create history
         for (int i = 1; i <= 10; i++) {
             client.sendEventsStoreMessage(EventStoreMessage.builder()
                     .id("msg-" + i).channel(CHANNEL)
@@ -45,12 +48,14 @@ public class ReplayFromSequenceExample {
                 .onErrorCallback(err -> System.err.println("Error: " + err))
                 .build();
 
+        // Subscribe with StartAtSequence (replay from specific sequence number)
         client.subscribeToEventsStore(sub);
         System.out.println("Subscribed at sequence " + startSequence + ".");
 
         latch.await(10, TimeUnit.SECONDS);
         System.out.println("\nReceived " + received.get() + " messages (starting from seq " + startSequence + ").");
 
+        // Clean up resources
         sub.cancel();
         client.deleteEventsStoreChannel(CHANNEL);
         client.close();
