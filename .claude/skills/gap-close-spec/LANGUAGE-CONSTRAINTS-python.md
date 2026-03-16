@@ -1562,3 +1562,23 @@ async def stream(self):
 ```
 
 **Reference:** gRPC Python asyncio docs. The KubeMQ codebase uses streaming in `queues/upstream_sender.py` and `queues/downstream_receiver.py`.
+
+---
+
+## Rules Added from Implementation Retrospective (2026-03-11)
+
+### PY-54: Eager Initialization of Shared Locks/Semaphores
+
+Lazy-initialized `threading.Semaphore`, `threading.Lock`, `asyncio.Semaphore`, or `asyncio.Lock` objects MUST be eagerly constructed in `__init__` or guarded by a dedicated `threading.Lock` to avoid race conditions when multiple threads/tasks access the accessor concurrently.
+
+### PY-55: Buffer Drain Data Fate
+
+Buffer drain operations (`drain_all()`, `flush()`) MUST either replay buffered items to their destination, invoke a notification/callback with the drained data, or explicitly document that data is discarded. Never silently discard buffered data on the success path.
+
+### PY-56: Zero-Capacity Buffer Guard
+
+When `max_bytes=0` or `max_size=0` is a valid configuration for a bounded buffer/queue, every `put()`/`enqueue()` method MUST raise an appropriate error immediately rather than blocking forever. This applies to all overflow modes including `"block"`.
+
+### PY-57: Exception Handler Logging Must Preserve Tracebacks
+
+All `logger.error()` or `logger.warning()` calls inside `except` blocks MUST include `exc_info=True` to preserve the full traceback for debugging. Alternatively, use `logger.exception()` which includes `exc_info=True` by default.

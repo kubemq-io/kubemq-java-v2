@@ -8,156 +8,218 @@ import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongUpDownCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.MeterProvider;
-
 import java.util.List;
 
 /**
- * Centralized metrics instrumentation for the KubeMQ SDK.
- * Implements the {@link Metrics} interface and is loaded only when OTel API
- * is confirmed available on the classpath (via {@link MetricsFactory}).
- * <p>
- * When no OTel SDK is registered, all instruments are no-ops with near-zero overhead.
+ * Centralized metrics instrumentation for the KubeMQ SDK. Implements the {@link Metrics} interface
+ * and is loaded only when OTel API is confirmed available on the classpath (via {@link
+ * MetricsFactory}).
+ *
+ * <p>When no OTel SDK is registered, all instruments are no-ops with near-zero overhead.
  */
 public final class KubeMQMetrics implements Metrics {
 
-    private final DoubleHistogram operationDuration;
-    private final LongCounter sentMessages;
-    private final LongCounter consumedMessages;
-    private final LongUpDownCounter connectionCount;
-    private final LongCounter reconnections;
-    private final LongCounter retryAttempts;
-    private final LongCounter retryExhausted;
-    private final CardinalityManager cardinalityManager;
+  private final DoubleHistogram operationDuration;
+  private final LongCounter sentMessages;
+  private final LongCounter consumedMessages;
+  private final LongUpDownCounter connectionCount;
+  private final LongCounter reconnections;
+  private final LongCounter retryAttempts;
+  private final LongCounter retryExhausted;
+  private final CardinalityManager cardinalityManager;
 
-    private static final List<Double> HISTOGRAM_BOUNDARIES = List.of(
-            0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-            0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0
-    );
+  private static final List<Double> HISTOGRAM_BOUNDARIES =
+      List.of(
+          0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5,
+          10.0, 30.0, 60.0);
 
-    /**
-     * Constructor called reflectively by {@link MetricsFactory}.
-     *
-     * @param meterProviderObj  OTel MeterProvider (null = use GlobalOpenTelemetry)
-     * @param sdkVersion        SDK version for instrumentation scope
-     * @param cardinalityConfig cardinality management configuration (null for defaults)
-     */
-    public KubeMQMetrics(Object meterProviderObj, String sdkVersion,
-                          CardinalityConfig cardinalityConfig) {
-        MeterProvider provider;
-        if (meterProviderObj != null) {
-            provider = (MeterProvider) meterProviderObj;
-        } else {
-            provider = GlobalOpenTelemetry.getMeterProvider();
-        }
-
-        Meter meter = provider.meterBuilder(KubeMQSemconv.INSTRUMENTATION_SCOPE_NAME)
-                .setInstrumentationVersion(sdkVersion != null ? sdkVersion : "unknown")
-                .build();
-
-        this.operationDuration = meter.histogramBuilder("messaging.client.operation.duration")
-                .setUnit("s")
-                .setDescription("Duration of each messaging operation")
-                .setExplicitBucketBoundariesAdvice(HISTOGRAM_BOUNDARIES)
-                .build();
-
-        this.sentMessages = meter.counterBuilder("messaging.client.sent.messages")
-                .setUnit("{message}")
-                .setDescription("Total messages sent")
-                .build();
-
-        this.consumedMessages = meter.counterBuilder("messaging.client.consumed.messages")
-                .setUnit("{message}")
-                .setDescription("Total messages consumed")
-                .build();
-
-        this.connectionCount = meter.upDownCounterBuilder("messaging.client.connection.count")
-                .setUnit("{connection}")
-                .setDescription("Active connections")
-                .build();
-
-        this.reconnections = meter.counterBuilder("messaging.client.reconnections")
-                .setUnit("{attempt}")
-                .setDescription("Reconnection attempts")
-                .build();
-
-        this.retryAttempts = meter.counterBuilder("kubemq.client.retry.attempts")
-                .setUnit("{attempt}")
-                .setDescription("Retry attempts")
-                .build();
-
-        this.retryExhausted = meter.counterBuilder("kubemq.client.retry.exhausted")
-                .setUnit("{attempt}")
-                .setDescription("Retries exhausted")
-                .build();
-
-        this.cardinalityManager = new CardinalityManager(
-                cardinalityConfig != null ? cardinalityConfig : CardinalityConfig.defaults());
+  /**
+   * Constructor called reflectively by {@link MetricsFactory}.
+   *
+   * @param meterProviderObj OTel MeterProvider (null = use GlobalOpenTelemetry)
+   * @param sdkVersion SDK version for instrumentation scope
+   * @param cardinalityConfig cardinality management configuration (null for defaults)
+   */
+  public KubeMQMetrics(
+      Object meterProviderObj, String sdkVersion, CardinalityConfig cardinalityConfig) {
+    MeterProvider provider;
+    if (meterProviderObj != null) {
+      provider = (MeterProvider) meterProviderObj;
+    } else {
+      provider = GlobalOpenTelemetry.getMeterProvider();
     }
 
-    @Override
-    public void recordOperationDuration(double durationSeconds,
-                                         String operationName,
-                                         String channel,
-                                         String errorType) {
-        AttributesBuilder attrs = baseChannelAttrs(operationName, channel);
-        if (errorType != null) {
-            attrs.put(KubeMQSemconv.ERROR_TYPE, errorType);
-        }
-        operationDuration.record(durationSeconds, attrs.build());
-    }
+    Meter meter =
+        provider
+            .meterBuilder(KubeMQSemconv.INSTRUMENTATION_SCOPE_NAME)
+            .setInstrumentationVersion(sdkVersion != null ? sdkVersion : "unknown")
+            .build();
 
-    @Override
-    public void recordSentMessage(String operationName, String channel) {
-        sentMessages.add(1, baseChannelAttrs(operationName, channel).build());
-    }
+    this.operationDuration =
+        meter
+            .histogramBuilder("messaging.client.operation.duration")
+            .setUnit("s")
+            .setDescription("Duration of each messaging operation")
+            .setExplicitBucketBoundariesAdvice(HISTOGRAM_BOUNDARIES)
+            .build();
 
-    @Override
-    public void recordConsumedMessage(String operationName, String channel) {
-        consumedMessages.add(1, baseChannelAttrs(operationName, channel).build());
-    }
+    this.sentMessages =
+        meter
+            .counterBuilder("messaging.client.sent.messages")
+            .setUnit("{message}")
+            .setDescription("Total messages sent")
+            .build();
 
-    @Override
-    public void recordConnectionOpened() {
-        connectionCount.add(1, Attributes.of(
-                KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
-    }
+    this.consumedMessages =
+        meter
+            .counterBuilder("messaging.client.consumed.messages")
+            .setUnit("{message}")
+            .setDescription("Total messages consumed")
+            .build();
 
-    @Override
-    public void recordConnectionClosed() {
-        connectionCount.add(-1, Attributes.of(
-                KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
-    }
+    this.connectionCount =
+        meter
+            .upDownCounterBuilder("messaging.client.connection.count")
+            .setUnit("{connection}")
+            .setDescription("Active connections")
+            .build();
 
-    @Override
-    public void recordReconnectionAttempt() {
-        reconnections.add(1, Attributes.of(
-                KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
-    }
+    this.reconnections =
+        meter
+            .counterBuilder("messaging.client.reconnections")
+            .setUnit("{attempt}")
+            .setDescription("Reconnection attempts")
+            .build();
 
-    @Override
-    public void recordRetryAttempt(String operationName, String errorType) {
-        retryAttempts.add(1, retryAttrs(operationName, errorType));
-    }
+    this.retryAttempts =
+        meter
+            .counterBuilder("kubemq.client.retry.attempts")
+            .setUnit("{attempt}")
+            .setDescription("Retry attempts")
+            .build();
 
-    @Override
-    public void recordRetryExhausted(String operationName, String errorType) {
-        retryExhausted.add(1, retryAttrs(operationName, errorType));
-    }
+    this.retryExhausted =
+        meter
+            .counterBuilder("kubemq.client.retry.exhausted")
+            .setUnit("{attempt}")
+            .setDescription("Retries exhausted")
+            .build();
 
-    private AttributesBuilder baseChannelAttrs(String operationName, String channel) {
-        AttributesBuilder attrs = Attributes.builder()
-                .put(KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE)
-                .put(KubeMQSemconv.MESSAGING_OPERATION_NAME, operationName);
-        if (channel != null && cardinalityManager.shouldIncludeChannel(channel)) {
-            attrs.put(KubeMQSemconv.MESSAGING_DESTINATION_NAME, channel);
-        }
-        return attrs;
-    }
+    this.cardinalityManager =
+        new CardinalityManager(
+            cardinalityConfig != null ? cardinalityConfig : CardinalityConfig.defaults());
+  }
 
-    private static Attributes retryAttrs(String operationName, String errorType) {
-        return Attributes.of(
-                KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE,
-                KubeMQSemconv.MESSAGING_OPERATION_NAME, operationName,
-                KubeMQSemconv.ERROR_TYPE, errorType != null ? errorType : "unknown");
+  /**
+   * Records the operation duration.
+   *
+   * @param durationSeconds the duration seconds
+   * @param operationName the operation name
+   * @param channel the channel
+   * @param errorType the error type
+   */
+  @Override
+  public void recordOperationDuration(
+      double durationSeconds, String operationName, String channel, String errorType) {
+    AttributesBuilder attrs = baseChannelAttrs(operationName, channel);
+    if (errorType != null) {
+      attrs.put(KubeMQSemconv.ERROR_TYPE, errorType);
     }
+    operationDuration.record(durationSeconds, attrs.build());
+  }
+
+  /**
+   * Records the sent message.
+   *
+   * @param operationName the operation name
+   * @param channel the channel
+   */
+  @Override
+  public void recordSentMessage(String operationName, String channel) {
+    sentMessages.add(1, baseChannelAttrs(operationName, channel).build());
+  }
+
+  /**
+   * Performs the record consumed message operation.
+   *
+   * @param operationName the operation name
+   * @param channel the channel
+   */
+  @Override
+  public void recordConsumedMessage(String operationName, String channel) {
+    consumedMessages.add(1, baseChannelAttrs(operationName, channel).build());
+  }
+
+  /** Records the connection opened. */
+  @Override
+  public void recordConnectionOpened() {
+    connectionCount.add(
+        1, Attributes.of(KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
+  }
+
+  /** Records the connection closed. */
+  @Override
+  public void recordConnectionClosed() {
+    connectionCount.add(
+        -1,
+        Attributes.of(
+            KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
+  }
+
+  /** Records the reconnection attempt. */
+  @Override
+  public void recordReconnectionAttempt() {
+    reconnections.add(
+        1, Attributes.of(KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
+  }
+
+  /**
+   * Records the retry attempt.
+   *
+   * @param operationName the operation name
+   * @param errorType the error type
+   */
+  @Override
+  public void recordRetryAttempt(String operationName, String errorType) {
+    retryAttempts.add(1, retryAttrs(operationName, errorType));
+  }
+
+  /**
+   * Records the retry exhausted.
+   *
+   * @param operationName the operation name
+   * @param errorType the error type
+   */
+  @Override
+  public void recordRetryExhausted(String operationName, String errorType) {
+    retryExhausted.add(1, retryAttrs(operationName, errorType));
+  }
+
+  private AttributesBuilder baseChannelAttrs(String operationName, String channel) {
+    AttributesBuilder attrs =
+        Attributes.builder()
+            .put(KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE)
+            .put(KubeMQSemconv.MESSAGING_OPERATION_NAME, operationName);
+    if (channel != null && cardinalityManager.shouldIncludeChannel(channel)) {
+      attrs.put(KubeMQSemconv.MESSAGING_DESTINATION_NAME, channel);
+    }
+    return attrs;
+  }
+
+  /**
+   * Builds OTel attributes for retry-related metrics.
+   *
+   * @param operationName the operation name
+   * @param errorType the error type
+   * @return the attributes for the retry metric
+   */
+  private static Attributes retryAttrs(String operationName, String errorType) {
+    return Attributes.of(
+        KubeMQSemconv.MESSAGING_SYSTEM,
+        KubeMQSemconv.MESSAGING_SYSTEM_VALUE,
+        KubeMQSemconv.MESSAGING_OPERATION_NAME,
+        operationName,
+        KubeMQSemconv.ERROR_TYPE,
+        errorType != null ? errorType : "unknown");
+  }
 }

@@ -1079,6 +1079,23 @@ public void close() {
 }
 ```
 
+**Reconnection note:** When reconnecting (e.g., after a connection failure), always shut down the old `ManagedChannel` before creating a new one. Failing to do so leaks the old channel's threads and connections.
+```java
+// WRONG — leaks old channel on reconnect
+private void reconnect() {
+    this.channel = ManagedChannelBuilder.forTarget(address).build(); // old channel leaked
+}
+
+// RIGHT — shutdown old channel first
+private void reconnect() {
+    ManagedChannel old = this.channel;
+    if (old != null) {
+        old.shutdownNow(); // force-close old channel
+    }
+    this.channel = ManagedChannelBuilder.forTarget(address).build();
+}
+```
+
 **References:** gRPC-java issue #11020 (channel lifecycle). Best practice: one channel per target, stubs are lightweight and can be created per-call.
 
 ### J-37: `ClientInterceptor` chain ordering matters [P1]
@@ -1897,6 +1914,51 @@ Class.forName(
 
 **References:** JDBC `DriverManager` uses context classloader. SLF4J 2.x uses `ServiceLoader` with context classloader.
 
+### J-60: Stub/placeholder methods must log warnings, never silently discard [P1]
+
+Methods that are intentionally incomplete (e.g., `sendBufferedMessage()` during graceful shutdown, or features not yet implemented) must log at WARN level describing what they are NOT doing. Never silently discard data or operations.
+
+```java
+// WRONG — silent no-op (user loses messages with no indication)
+public void sendBufferedMessage(QueueMessage msg) {
+    // no-op
+}
+
+// RIGHT — warn about discarded operation
+public void sendBufferedMessage(QueueMessage msg) {
+    log.atWarn()
+        .addKeyValue("messageId", msg.getId())
+        .log("Discarding message — buffer send not implemented");
+}
+```
+
+**Source:** Implementation retrospective — silent stubs caused data loss that was invisible during testing. Only caught during QA deep review.
+
+### J-61: `@SuppressWarnings("deprecation")` on internal callers of deprecated aliases [P2]
+
+When implementing a `@Deprecated` method alias (e.g., for backward compatibility) and an internal method calls it, the internal caller must add `@SuppressWarnings("deprecation")` to avoid noisy compiler warnings during builds.
+
+```java
+// The deprecated alias
+@Deprecated
+public void setChannel(String channel) {
+    this.channelName = channel;
+}
+
+// WRONG — internal caller triggers deprecation warning in build output
+public void initFromConfig(Config config) {
+    setChannel(config.getChannel()); // compiler warning: setChannel is deprecated
+}
+
+// RIGHT — suppress on internal caller
+@SuppressWarnings("deprecation")
+public void initFromConfig(Config config) {
+    setChannel(config.getChannel()); // no warning
+}
+```
+
+**Source:** Implementation retrospective — noisy deprecation warnings in build output from SDK-internal code calling its own deprecated methods.
+
 ---
 
 ## K8s Ecosystem SDK Pattern Summary
@@ -1979,3 +2041,5 @@ Class.forName(
 | J-57 | Additional Pitfalls | P1 | Do not use `Executors.newFixedThreadPool` without naming threads |
 | J-58 | Additional Pitfalls | P1 | Daemon threads for SDK-managed pools |
 | J-59 | Additional Pitfalls | P2 | Avoid `ClassLoader` assumptions |
+| J-60 | Additional Pitfalls | P1 | Stub/placeholder methods must log warnings |
+| J-61 | Additional Pitfalls | P2 | `@SuppressWarnings("deprecation")` on internal callers of deprecated aliases |

@@ -1,13 +1,15 @@
 package io.kubemq.sdk.queues;
 
-import lombok.*;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-/**
- * Represents a response received when requesting pulled queue messages.
- */
+/** Represents a response received when requesting pulled queue messages. */
 @Getter
 @Setter
 @Builder
@@ -15,29 +17,24 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QueueMessagesPulled {
-    /**
-     * The list of messages received in this response.
-     */
-    private List<QueueMessageWaitingPulled> messages;
+  /** The list of messages received in this response. */
+  private List<QueueMessageWaitingPulled> messages;
 
-    /**
-     * Indicates if there was an error.
-     */
-    private boolean isError;
+  /** Indicates if there was an error. */
+  private boolean isError;
 
-    /**
-     * The error message, if any.
-     */
-    private String error;
+  /** The error message, if any. */
+  private String error;
 
-    /**
-     * The number of messages received.
-     * @return
-     */
-    public List<QueueMessageWaitingPulled> getMessages() {
-        if(messages == null){
-            messages = new ArrayList<>();
-        }
-        return messages;
+  /**
+   * Returns the list of pulled messages.
+   *
+   * @return the list of pulled messages
+   */
+  public List<QueueMessageWaitingPulled> getMessages() {
+    if (messages == null) {
+      messages = new ArrayList<>();
     }
+    return messages;
+  }
 }

@@ -565,7 +565,7 @@ Artifacts referenced by multiple categories. Ownership must be assigned during t
 4. **Dependency ordering matters.** Some gaps can't be fixed until others are done (e.g., retry needs error classification first). Map ALL dependencies.
 5. **Language-idiomatic.** Remediation must respect {SDK_LABEL}'s conventions. Go uses functional options, Java uses builders, Python uses kwargs, C# uses options objects, JS/TS uses options literals.
 6. **Don't invent current state.** If the assessment doesn't mention a feature, it's MISSING or NOT_ASSESSED. Don't assume things exist without evidence.
-7. **Honest priority assignment.** Apply P0-P3 rules strictly. P0 applies when a Tier 1 CATEGORY has 3+ REQ-* items with MISSING status (not just acceptance criteria within a single REQ). A single REQ-* with 3+ MISSING acceptance criteria is also P0.
+7. **Honest priority assignment.** Apply P0-P3 rules strictly. P0 applies when a Tier 1 CATEGORY has 3+ REQ-* items with MISSING status (not just acceptance criteria within a single REQ). A single REQ-* with 3+ MISSING acceptance criteria is also P0. VALIDATION: For each P0 category, verify at least one P0 REQ exists within it. A P2 REQ inside a P0 category is inconsistent — it should be at least P1 unless it has zero MISSING criteria.
 8. **Research only, no code changes.** Read files, analyze, write the report. Do not modify any source code.
 9. **Post-assessment requirements.** Requirements added after the assessment (via adjudication) will have no assessment coverage. Mark as NOT_ASSESSED with note "Added post-assessment. Requires fresh evaluation."
 10. **EXCESS items.** If the SDK has features that contradict the Golden Standard (e.g., REST transport when GS says gRPC-only), mark as EXCESS and list in "Features to Remove or Deprecate."
@@ -578,14 +578,19 @@ Artifacts referenced by multiple categories. Ownership must be assigned during t
 17. **Backward compatibility of remediation.** Remediation must consider backward compatibility. If a change would alter existing behavior for current users (e.g., changing default logger, changing default timeout), flag this and provide a migration path.
 18. **Populate the Preliminary Type Inventory.** For every remediation that introduces a new type (exception, configuration class, interface), add it to the Preliminary Type Inventory section. This feeds the downstream gap-close-spec Type Registry and prevents naming conflicts.
 19. **Identify shared artifacts.** When a remediation references an artifact (CI config, CHANGELOG, CONTRIBUTING.md, version constant) that could be touched by multiple categories, add it to the Shared Artifacts section with suggested ownership.
-20. **Status rollup formula.** Apply the formula from Section E exactly. MISSING if ANY criterion is MISSING. PARTIAL if no MISSING but ANY is PARTIAL. COMPLIANT only if ALL are COMPLIANT/NOT_ASSESSED. Never use judgment for rollup — use the formula. Category-level status uses the worst REQ status.
+20. **Status rollup formula.** Apply the formula from Section E exactly. MISSING if ANY criterion is MISSING. PARTIAL if no MISSING but ANY is PARTIAL. COMPLIANT only if ALL are COMPLIANT/NOT_ASSESSED. Never use judgment for rollup — use the formula. Category-level status uses the worst REQ status. EDGE CASE: When language limitations make a criterion infeasible, use NOT_APPLICABLE (excluded from rollup) instead of MISSING. This prevents false P0 escalation for language-inherent gaps.
 21. **NOT_ASSESSED priority handling.** NOT_ASSESSED items do NOT count toward P0/P1 thresholds. Assign provisional priority P1 until assessed. List separately. Prefix effort with "~".
-22. **Summary table verification.** After writing all detailed sections, re-derive EVERY value in the Executive Summary, Effort Summary, and any "By Priority"/"By Tier" tables by counting from the detailed sections. Cross-check: (a) REQ counts per category match actual REQs written, (b) priority counts match actual priorities assigned, (c) effort totals are arithmetic sums of individual estimates, (d) calendar week estimates are consistent with effort totals. If any mismatch, fix the summary tables before finalizing.
-23. **Effort includes tests.** Every effort estimate MUST include test writing time. As a rule of thumb, add 30-50% to pure implementation time for test coverage. A 2-day implementation with tests is M (3 days), not M (2 days). State the test portion explicitly in the estimate.
+22. **Summary table verification.** After writing all detailed sections, re-derive EVERY value in the Executive Summary, Effort Summary, and any "By Priority"/"By Tier" tables by counting from the detailed sections. Cross-check: (a) REQ counts per category match actual REQs written, (b) priority counts match actual priorities assigned, (c) effort totals are arithmetic sums of individual estimates, (d) calendar week estimates are consistent with effort totals. If any mismatch, fix the summary tables before finalizing. Specifically: (e) Executive Summary effort column must arithmetically match Effort Summary section for each category, (f) Priority counts in Critical Path must match priorities assigned in detailed sections, (g) calendar week estimates must be derivable from effort totals.
+23. **Effort includes tests.** Every effort estimate MUST include test writing time. As a rule of thumb, add 30-50% to pure implementation time for test coverage. A 2-day implementation with tests is M (3 days), not M (2 days). State the test portion explicitly in the estimate. Multiplier guidance by type: Features with multiple error codes: +50%. State machines with transition tests: +40%. Integration tests requiring infrastructure: +50%. Simple utilities: +30%.
 24. **Breaking change effort.** If remediation involves a breaking change, add 0.5-1 day for the deprecation layer, migration documentation, and backward compatibility shim. Mark this overhead explicitly: "M (2d impl + 1d breaking change mitigation)".
 25. **Deduplication check.** Before finalizing, scan all remediation items for overlapping deliverables. If two REQ-* items produce the same artifact (e.g., CHANGELOG referenced by both REQ-PKG-4 and REQ-DOC-6), assign the effort to ONE REQ and mark the other as "effort counted under REQ-{X}, 0d additional". Never double-count effort for the same deliverable.
 26. **Use known GS inconsistencies.** If `clients/golden-standard/KNOWN-INCONSISTENCIES.md` exists, use its listed resolutions for known conflicts instead of re-discovering them. If you find a NEW inconsistency not in the file, flag it prominently in the report and note it is newly discovered.
-27. **Language constraint validation.** If a language constraints file exists, verify every remediation suggestion against it. Flag any remediation that uses invalid syntax, wrong API, or anti-patterns for the target language (e.g., Java import aliases, Python `sys.getsizeof()` for payload sizing, Go implicit constructors).
+27. **Language constraint validation.** If a language constraints file exists, verify every remediation suggestion against it. Flag any remediation that uses invalid syntax, wrong API, or anti-patterns for the target language (e.g., Java import aliases, Python `sys.getsizeof()` for payload sizing, Go implicit constructors). Even without a constraints file, note modern language idioms relevant to remediation (e.g., current async patterns, error handling patterns, logging standards). The remediation should use the latest stable patterns for the minimum supported language version.
+28. **GS completeness mapping.** Before finalizing, create a cross-reference: for each GS REQ-*, list each acceptance criterion and verify it is evaluated in the report. Mark each "accounted for." If any criterion is missing from the report, add it before finalizing.
+29. **Category rollup table.** Every category section (ERR, CONN, AUTH, etc.) must end with a rollup table showing: REQ-* | Status | Priority | Effort. Verify rollup table statuses match individual REQ sections.
+30. **Phase-level effort accounting.** When requirements from multiple tiers are sequenced into a single phase, calculate and display the phase total separately, including cross-tier prerequisites explicitly.
+31. **Language qualifier handling.** When GS says "where language supports it" or similar, evaluate per-language capability. If the criterion is not feasible in the target language, mark NOT_APPLICABLE (not MISSING). Document the language limitation.
+32. **Criterion granularity for compound items.** Acceptance criteria with multiple distinct sub-requirements must be broken into separate rows in the evaluation table. Never collapse 3+ sub-requirements into a single status row.
 </prompt-template>
 
 ---
@@ -742,7 +747,7 @@ Write to `clients/gap-research/{SDK_NAME}-tier2-status.md` — compact file with
 4. **Dependency ordering.** Map all dependencies, including cross-tier (e.g., REQ-PERF-2 depends on REQ-CONN-6 from Tier 1).
 5. **Language-idiomatic.** Remediation respects {SDK_LABEL}'s conventions.
 6. **Don't invent current state.** No assessment evidence = MISSING or NOT_ASSESSED.
-7. **Honest priority.** Tier 2 items are P2/P3 unless they are prerequisites for Tier 1 work.
+7. **Honest priority.** Tier 2 items are P2/P3 unless they are prerequisites for Tier 1 work. VALIDATION: For each P0 category, verify at least one P0 REQ exists within it. A P2 REQ inside a P0 category is inconsistent — it should be at least P1 unless it has zero MISSING criteria.
 8. **Research only.** Do not modify source code.
 9. **Post-assessment requirements.** Mark as NOT_ASSESSED with note.
 10. **EXCESS items.** List features that contradict the Golden Standard.
@@ -755,14 +760,19 @@ Write to `clients/gap-research/{SDK_NAME}-tier2-status.md` — compact file with
 17. **Backward compatibility of remediation.** Remediation must consider backward compatibility. If a change would alter existing behavior for current users, flag this and provide a migration path.
 18. **Populate the Preliminary Type Inventory.** For every remediation that introduces a new type (exception, configuration class, interface), add it to the Preliminary Type Inventory section. This feeds the downstream gap-close-spec Type Registry.
 19. **Identify shared artifacts.** When a remediation references an artifact that could be touched by multiple categories, add it to the Shared Artifacts section with suggested ownership.
-20. **Status rollup formula.** MISSING if ANY criterion is MISSING. PARTIAL if no MISSING but ANY is PARTIAL. COMPLIANT only if ALL are COMPLIANT/NOT_ASSESSED. Category-level uses the worst REQ status. Apply this formula exactly — no judgment calls.
+20. **Status rollup formula.** MISSING if ANY criterion is MISSING. PARTIAL if no MISSING but ANY is PARTIAL. COMPLIANT only if ALL are COMPLIANT/NOT_ASSESSED. Category-level uses the worst REQ status. Apply this formula exactly — no judgment calls. EDGE CASE: When language limitations make a criterion infeasible, use NOT_APPLICABLE (excluded from rollup) instead of MISSING. This prevents false P0 escalation for language-inherent gaps.
 21. **NOT_ASSESSED priority handling.** NOT_ASSESSED items do NOT count toward priority thresholds. Assign provisional priority based on confirmed statuses only. Prefix effort with "~".
-22. **Summary table verification.** After writing all detailed sections, re-derive EVERY value in summary tables by counting from detailed sections. Cross-check REQ counts, priority counts, effort totals, and calendar estimates. Fix any mismatches.
-23. **Effort includes tests.** Add 30-50% to pure implementation time for test coverage. State the test portion explicitly.
+22. **Summary table verification.** After writing all detailed sections, re-derive EVERY value in summary tables by counting from detailed sections. Cross-check REQ counts, priority counts, effort totals, and calendar estimates. Fix any mismatches. Specifically: (a) Executive Summary effort column must arithmetically match Effort Summary section for each category, (b) Priority counts in Critical Path must match priorities assigned in detailed sections, (c) calendar week estimates must be derivable from effort totals.
+23. **Effort includes tests.** Add 30-50% to pure implementation time for test coverage. State the test portion explicitly. Multiplier guidance by type: Features with multiple error codes: +50%. State machines with transition tests: +40%. Integration tests requiring infrastructure: +50%. Simple utilities: +30%.
 24. **Breaking change effort.** Add 0.5-1 day for deprecation layer, migration docs, and compat shim. Mark explicitly.
 25. **Deduplication check.** Scan for overlapping deliverables across REQs. Assign effort to ONE and mark others as "effort counted under REQ-{X}, 0d additional".
 26. **Use known GS inconsistencies.** Use pre-documented resolutions from `KNOWN-INCONSISTENCIES.md` if it exists. Flag newly discovered inconsistencies prominently.
-27. **Language constraint validation.** Verify remediation suggestions against the language constraints file if it exists. Flag invalid syntax, wrong APIs, or anti-patterns.
+27. **Language constraint validation.** Verify remediation suggestions against the language constraints file if it exists. Flag invalid syntax, wrong APIs, or anti-patterns. Even without a constraints file, note modern language idioms relevant to remediation (e.g., current async patterns, error handling patterns, logging standards). The remediation should use the latest stable patterns for the minimum supported language version.
+28. **GS completeness mapping.** Before finalizing, create a cross-reference: for each GS REQ-*, list each acceptance criterion and verify it is evaluated in the report. Mark each "accounted for." If any criterion is missing from the report, add it before finalizing.
+29. **Category rollup table.** Every category section (ERR, CONN, AUTH, etc.) must end with a rollup table showing: REQ-* | Status | Priority | Effort. Verify rollup table statuses match individual REQ sections.
+30. **Phase-level effort accounting.** When requirements from multiple tiers are sequenced into a single phase, calculate and display the phase total separately, including cross-tier prerequisites explicitly.
+31. **Language qualifier handling.** When GS says "where language supports it" or similar, evaluate per-language capability. If the criterion is not feasible in the target language, mark NOT_APPLICABLE (not MISSING). Document the language limitation.
+32. **Criterion granularity for compound items.** Acceptance criteria with multiple distinct sub-requirements must be broken into separate rows in the evaluation table. Never collapse 3+ sub-requirements into a single status row.
 </prompt-template>
 
 ---
@@ -850,6 +860,8 @@ For each category section in the gap research report, evaluate:
 - Do Executive Summary table values (counts, priorities, efforts) exactly match the detailed sections?
 - Are effort totals arithmetic sums of individual estimates?
 - Are "By Priority" / "By Tier" tables consistent with detailed data?
+- Are compound acceptance criteria broken into separate rows?
+- Are category rollup tables present and consistent with individual REQ statuses?
 
 ## Output
 
@@ -1005,6 +1017,8 @@ After all fixes:
 2. Verify effort totals are recalculated
 3. Verify P0/P1 counts in Critical Path section match
 4. Update the compact status file (`clients/gap-research/{SDK_NAME}-tier1-status.md` and/or `clients/gap-research/{SDK_NAME}-tier2-status.md`) to reflect changes
+5. Verify category rollup tables match individual REQ statuses after fixes
+6. If phase-level effort was affected, recalculate phase totals including cross-tier prerequisites
 
 ## Output
 

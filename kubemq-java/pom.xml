@@ -8,7 +8,7 @@
     <packaging>jar</packaging>
 
     <name>kubemq-sdk-Java</name>
-    <description>KubeMQ SDK for Java enables Java developers to easily work with KubeMQ server</description>
+    <description>KubeMQ SDK for Java — a type-safe gRPC client for KubeMQ messaging patterns including pub/sub events, persistent event store, request/reply commands and queries, and transactional queues, with built-in TLS, authentication, reconnection, and Kubernetes-native deployment support</description>
     <url>https://github.com/kubemq-io/kubemq-java-v2</url>
 
     <licenses>
@@ -33,11 +33,16 @@
         <url>https://github.com/kubemq-io/kubemq-java-v2</url>
     </scm>
 
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/kubemq-io/kubemq-java-v2/issues</url>
+    </issueManagement>
+
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <protobuf.version>4.28.2</protobuf.version>
-        <grpc.version>1.75.0</grpc.version>
+        <protobuf.version>4.34.0</protobuf.version>
+        <grpc.version>1.79.0</grpc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <skipUnitTests>false</skipUnitTests>
         <skipITs>false</skipITs>
@@ -56,7 +61,7 @@
             <dependency>
                 <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-bom</artifactId>
-                <version>1.40.0</version>
+                <version>1.60.1</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -90,7 +95,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.36</version>
+            <version>1.18.44</version>
             <scope>provided</scope>
         </dependency>
 
@@ -98,14 +103,14 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>2.0.13</version>
+            <version>2.0.17</version>
         </dependency>
 
         <!-- SLF4J logging backend (test scope only — users provide their own) -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.12</version>
+            <version>1.5.32</version>
             <scope>test</scope>
         </dependency>
 
@@ -135,45 +140,45 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.17.0</version>
+            <version>2.21.1</version>
         </dependency>
 
         <!-- Testing dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.10.3</version>
+            <version>5.12.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.10.3</version>
+            <version>5.12.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
-            <version>5.10.3</version>
+            <version>5.12.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.14.2</version>
+            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.14.2</version>
+            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
         <!-- mockito-inline is now included in mockito-core 5.x -->
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.2.0</version>
+            <version>4.3.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -237,10 +242,42 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.36</version>
+                            <version>1.18.44</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+
+            <!-- Google Java Format via Spotify fmt-maven-plugin -->
+            <plugin>
+                <groupId>com.spotify.fmt</groupId>
+                <artifactId>fmt-maven-plugin</artifactId>
+                <version>2.25</version>
+                <configuration>
+                    <sourceDirectory>src/main/java</sourceDirectory>
+                    <testSourceDirectory>src/test/java</testSourceDirectory>
+                </configuration>
+            </plugin>
+
+            <!-- Checkstyle Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <configLocation>checkstyle.xml</configLocation>
+                    <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
+                    <consoleOutput>true</consoleOutput>
+                    <failsOnError>true</failsOnError>
+                    <includeTestSourceRoots>false</includeTestSourceRoots>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>13.3.0</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
@@ -404,14 +441,7 @@
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <!--
-                                                Phased coverage thresholds:
-                                                  Phase 1: 0.40  Phase 2: 0.60  Phase 3: 0.80
-                                                Current 75.1% exceeds Phase 2; start at 0.60
-                                                to prevent regression while allowing headroom
-                                                for new production code from other specs.
-                                            -->
-                                            <minimum>0.60</minimum>
+                                            <minimum>0.90</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -446,7 +476,7 @@
                     <execution>
                         <phase>package</phase>
                         <goals>
-                            <goal>makeAggregate</goal>
+                            <goal>makeAggregateBom</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -531,7 +561,7 @@
                                 <path>
                                     <groupId>org.projectlombok</groupId>
                                     <artifactId>lombok</artifactId>
-                                    <version>1.18.36</version>
+                                    <version>1.18.44</version>
                                 </path>
                                 <path>
                                     <groupId>org.openjdk.jmh</groupId>
