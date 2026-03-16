@@ -1,11 +1,17 @@
 package io.kubemq.sdk.unit.queues;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.queues.QueueDownstreamHandler;
 import io.kubemq.sdk.queues.QueuesPollRequest;
 import io.kubemq.sdk.queues.QueuesPollResponse;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,381 +23,383 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-/**
- * Unit tests for QueueDownstreamHandler - StreamObserver callbacks and message handling.
- */
+/** Unit tests for QueueDownstreamHandler - StreamObserver callbacks and message handling. */
 @ExtendWith(MockitoExtension.class)
 class QueueDownstreamHandlerTest {
 
-    @Mock
-    private KubeMQClient mockClient;
+  @Mock private KubeMQClient mockClient;
 
-    @Mock
-    private kubemqGrpc.kubemqStub mockAsyncStub;
+  @Mock private kubemqGrpc.kubemqStub mockAsyncStub;
 
-    @Mock
-    private StreamObserver<Kubemq.QueuesDownstreamRequest> mockRequestObserver;
+  @Mock private StreamObserver<Kubemq.QueuesDownstreamRequest> mockRequestObserver;
 
-    private QueueDownstreamHandler handler;
+  private QueueDownstreamHandler handler;
 
-    @BeforeEach
-    void setup() {
-        handler = new QueueDownstreamHandler(mockClient);
+  @BeforeEach
+  void setup() {
+    handler = new QueueDownstreamHandler(mockClient);
+  }
+
+  @Nested
+  @DisplayName("Connect Tests")
+  class ConnectTests {
+
+    @Test
+    @DisplayName("Q-01: connect creates stream observer")
+    void connect_createsStreamObserver() {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockAsyncStub.queuesDownstream(any())).thenReturn(mockRequestObserver);
+
+      handler.connect();
+
+      verify(mockAsyncStub).queuesDownstream(any());
     }
 
-    @Nested
-    @DisplayName("Connect Tests")
-    class ConnectTests {
+    @Test
+    @DisplayName("Q-02: connect is idempotent - only connects once")
+    void connect_isIdempotent() {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockAsyncStub.queuesDownstream(any())).thenReturn(mockRequestObserver);
 
-        @Test
-        @DisplayName("Q-01: connect creates stream observer")
-        void connect_createsStreamObserver() {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockAsyncStub.queuesDownstream(any())).thenReturn(mockRequestObserver);
+      handler.connect();
+      handler.connect();
+      handler.connect();
 
-            handler.connect();
-
-            verify(mockAsyncStub).queuesDownstream(any());
-        }
-
-        @Test
-        @DisplayName("Q-02: connect is idempotent - only connects once")
-        void connect_isIdempotent() {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockAsyncStub.queuesDownstream(any())).thenReturn(mockRequestObserver);
-
-            handler.connect();
-            handler.connect();
-            handler.connect();
-
-            verify(mockAsyncStub, times(1)).queuesDownstream(any());
-        }
-
-        @Test
-        @DisplayName("Q-03: connect handles exception gracefully")
-        void connect_handlesExceptionGracefully() {
-            when(mockClient.getAsyncClient()).thenThrow(new RuntimeException("Connection failed"));
-
-            // Should not throw, but log error
-            assertDoesNotThrow(() -> handler.connect());
-        }
+      verify(mockAsyncStub, times(1)).queuesDownstream(any());
     }
 
-    @Nested
-    @DisplayName("ReceiveQueuesMessages Tests")
-    class ReceiveQueuesMessagesTests {
+    @Test
+    @DisplayName("Q-03: connect handles exception gracefully")
+    void connect_handlesExceptionGracefully() {
+      when(mockClient.getAsyncClient()).thenThrow(new RuntimeException("Connection failed"));
 
-        @Test
-        @DisplayName("Q-04: receiveQueuesMessages sends request and receives response")
-        void receiveQueuesMessages_sendsRequestAndReceivesResponse() throws Exception {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockClient.getClientId()).thenReturn("test-client");
+      // Should not throw, but log error
+      assertDoesNotThrow(() -> handler.connect());
+    }
+  }
 
-            // Capture the response observer to simulate response
-            ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
-                    ArgumentCaptor.forClass(StreamObserver.class);
-            when(mockAsyncStub.queuesDownstream(observerCaptor.capture())).thenReturn(mockRequestObserver);
+  @Nested
+  @DisplayName("ReceiveQueuesMessages Tests")
+  class ReceiveQueuesMessagesTests {
 
-            QueuesPollRequest pollRequest = QueuesPollRequest.builder()
-                    .channel("test-queue")
-                    .pollMaxMessages(10)
-                    .pollWaitTimeoutInSeconds(5)
-                    .build();
+    @Test
+    @DisplayName("Q-04: receiveQueuesMessages sends request and receives response")
+    void receiveQueuesMessages_sendsRequestAndReceivesResponse() throws Exception {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockClient.getClientId()).thenReturn("test-client");
 
-            // Run receive in a separate thread since it blocks
-            CompletableFuture<QueuesPollResponse> resultFuture = CompletableFuture.supplyAsync(() ->
-                    handler.receiveQueuesMessages(pollRequest)
-            );
+      // Capture the response observer to simulate response
+      ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
+          ArgumentCaptor.forClass(StreamObserver.class);
+      when(mockAsyncStub.queuesDownstream(observerCaptor.capture()))
+          .thenReturn(mockRequestObserver);
 
-            // Wait for connection
-            Thread.sleep(200);
+      QueuesPollRequest pollRequest =
+          QueuesPollRequest.builder()
+              .channel("test-queue")
+              .pollMaxMessages(10)
+              .pollWaitTimeoutInSeconds(5)
+              .build();
 
-            // Capture the request that was sent
-            ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
-                    ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
-            verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
+      // Run receive in a separate thread since it blocks
+      CompletableFuture<QueuesPollResponse> resultFuture =
+          CompletableFuture.supplyAsync(() -> handler.receiveQueuesMessages(pollRequest));
 
-            // Simulate response
-            StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
-            String refRequestId = requestCaptor.getValue().getRequestID();
+      // Wait for connection
+      Thread.sleep(200);
 
-            Kubemq.QueuesDownstreamResponse response = Kubemq.QueuesDownstreamResponse.newBuilder()
-                    .setRefRequestId(refRequestId)
-                    .setTransactionId("txn-123")
-                    .setTransactionComplete(true)
-                    .setIsError(false)
-                    .addMessages(Kubemq.QueueMessage.newBuilder()
-                            .setMessageID("msg-1")
-                            .setChannel("test-queue")
-                            .setBody(ByteString.copyFromUtf8("test-body"))
-                            .build())
-                    .build();
+      // Capture the request that was sent
+      ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
+          ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
+      verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
 
-            capturedObserver.onNext(response);
+      // Simulate response
+      StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
+      String refRequestId = requestCaptor.getValue().getRequestID();
 
-            QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
+      Kubemq.QueuesDownstreamResponse response =
+          Kubemq.QueuesDownstreamResponse.newBuilder()
+              .setRefRequestId(refRequestId)
+              .setTransactionId("txn-123")
+              .setTransactionComplete(true)
+              .setIsError(false)
+              .addMessages(
+                  Kubemq.QueueMessage.newBuilder()
+                      .setMessageID("msg-1")
+                      .setChannel("test-queue")
+                      .setBody(ByteString.copyFromUtf8("test-body"))
+                      .build())
+              .build();
 
-            assertNotNull(pollResponse);
-            assertFalse(pollResponse.isError());
-            assertEquals("txn-123", pollResponse.getTransactionId());
-            assertEquals(1, pollResponse.getMessages().size());
-        }
+      capturedObserver.onNext(response);
 
-        @Test
-        @DisplayName("Q-05: receiveQueuesMessages handles error response")
-        void receiveQueuesMessages_handlesErrorResponse() throws Exception {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockClient.getClientId()).thenReturn("test-client");
+      QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
 
-            ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
-                    ArgumentCaptor.forClass(StreamObserver.class);
-            when(mockAsyncStub.queuesDownstream(observerCaptor.capture())).thenReturn(mockRequestObserver);
-
-            QueuesPollRequest pollRequest = QueuesPollRequest.builder()
-                    .channel("test-queue")
-                    .pollMaxMessages(10)
-                    .pollWaitTimeoutInSeconds(5)
-                    .build();
-
-            CompletableFuture<QueuesPollResponse> resultFuture = CompletableFuture.supplyAsync(() ->
-                    handler.receiveQueuesMessages(pollRequest)
-            );
-
-            Thread.sleep(200);
-
-            ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
-                    ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
-            verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
-
-            StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
-            String refRequestId = requestCaptor.getValue().getRequestID();
-
-            Kubemq.QueuesDownstreamResponse response = Kubemq.QueuesDownstreamResponse.newBuilder()
-                    .setRefRequestId(refRequestId)
-                    .setIsError(true)
-                    .setError("Queue not found")
-                    .build();
-
-            capturedObserver.onNext(response);
-
-            QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
-
-            assertNotNull(pollResponse);
-            assertTrue(pollResponse.isError());
-            assertEquals("Queue not found", pollResponse.getError());
-        }
+      assertNotNull(pollResponse);
+      assertFalse(pollResponse.isError());
+      assertEquals("txn-123", pollResponse.getTransactionId());
+      assertEquals(1, pollResponse.getMessages().size());
     }
 
-    @Nested
-    @DisplayName("StreamObserver Callback Tests")
-    class StreamObserverCallbackTests {
+    @Test
+    @DisplayName("Q-05: receiveQueuesMessages handles error response")
+    void receiveQueuesMessages_handlesErrorResponse() throws Exception {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockClient.getClientId()).thenReturn("test-client");
 
-        @Test
-        @DisplayName("Q-06: onError closes stream and completes pending futures with error")
-        void onError_closesStreamAndCompletesPendingFuturesWithError() throws Exception {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockClient.getClientId()).thenReturn("test-client");
+      ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
+          ArgumentCaptor.forClass(StreamObserver.class);
+      when(mockAsyncStub.queuesDownstream(observerCaptor.capture()))
+          .thenReturn(mockRequestObserver);
 
-            ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
-                    ArgumentCaptor.forClass(StreamObserver.class);
-            when(mockAsyncStub.queuesDownstream(observerCaptor.capture())).thenReturn(mockRequestObserver);
+      QueuesPollRequest pollRequest =
+          QueuesPollRequest.builder()
+              .channel("test-queue")
+              .pollMaxMessages(10)
+              .pollWaitTimeoutInSeconds(5)
+              .build();
 
-            QueuesPollRequest pollRequest = QueuesPollRequest.builder()
-                    .channel("test-queue")
-                    .pollMaxMessages(10)
-                    .pollWaitTimeoutInSeconds(5)
-                    .build();
+      CompletableFuture<QueuesPollResponse> resultFuture =
+          CompletableFuture.supplyAsync(() -> handler.receiveQueuesMessages(pollRequest));
 
-            CompletableFuture<QueuesPollResponse> resultFuture = CompletableFuture.supplyAsync(() ->
-                    handler.receiveQueuesMessages(pollRequest)
-            );
+      Thread.sleep(200);
 
-            Thread.sleep(200);
-            verify(mockRequestObserver, timeout(2000)).onNext(any());
+      ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
+          ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
+      verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
 
-            // Simulate error
-            StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
-            capturedObserver.onError(new RuntimeException("Connection lost"));
+      StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
+      String refRequestId = requestCaptor.getValue().getRequestID();
 
-            QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
+      Kubemq.QueuesDownstreamResponse response =
+          Kubemq.QueuesDownstreamResponse.newBuilder()
+              .setRefRequestId(refRequestId)
+              .setIsError(true)
+              .setError("Queue not found")
+              .build();
 
-            assertNotNull(pollResponse);
-            assertTrue(pollResponse.isError());
-            assertTrue(pollResponse.getError().contains("Connection lost"));
-        }
+      capturedObserver.onNext(response);
 
-        @Test
-        @DisplayName("Q-07: onCompleted closes stream and completes pending futures")
-        void onCompleted_closesStreamAndCompletesPendingFutures() throws Exception {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockClient.getClientId()).thenReturn("test-client");
+      QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
 
-            ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
-                    ArgumentCaptor.forClass(StreamObserver.class);
-            when(mockAsyncStub.queuesDownstream(observerCaptor.capture())).thenReturn(mockRequestObserver);
+      assertNotNull(pollResponse);
+      assertTrue(pollResponse.isError());
+      assertEquals("Queue not found", pollResponse.getError());
+    }
+  }
 
-            QueuesPollRequest pollRequest = QueuesPollRequest.builder()
-                    .channel("test-queue")
-                    .pollMaxMessages(10)
-                    .pollWaitTimeoutInSeconds(5)
-                    .build();
+  @Nested
+  @DisplayName("StreamObserver Callback Tests")
+  class StreamObserverCallbackTests {
 
-            CompletableFuture<QueuesPollResponse> resultFuture = CompletableFuture.supplyAsync(() ->
-                    handler.receiveQueuesMessages(pollRequest)
-            );
+    @Test
+    @DisplayName("Q-06: onError closes stream and completes pending futures with error")
+    void onError_closesStreamAndCompletesPendingFuturesWithError() throws Exception {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockClient.getClientId()).thenReturn("test-client");
 
-            Thread.sleep(200);
-            verify(mockRequestObserver, timeout(2000)).onNext(any());
+      ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
+          ArgumentCaptor.forClass(StreamObserver.class);
+      when(mockAsyncStub.queuesDownstream(observerCaptor.capture()))
+          .thenReturn(mockRequestObserver);
 
-            // Simulate completion
-            StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
-            capturedObserver.onCompleted();
+      QueuesPollRequest pollRequest =
+          QueuesPollRequest.builder()
+              .channel("test-queue")
+              .pollMaxMessages(10)
+              .pollWaitTimeoutInSeconds(5)
+              .build();
 
-            QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
+      CompletableFuture<QueuesPollResponse> resultFuture =
+          CompletableFuture.supplyAsync(() -> handler.receiveQueuesMessages(pollRequest));
 
-            assertNotNull(pollResponse);
-            assertTrue(pollResponse.isError());
-            assertTrue(pollResponse.getError().contains("Stream completed"));
-        }
+      Thread.sleep(200);
+      verify(mockRequestObserver, timeout(2000)).onNext(any());
 
-        @Test
-        @DisplayName("Q-08: onNext with unknown request ID does not throw")
-        void onNext_unknownRequestId_doesNotThrow() throws Exception {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      // Simulate error
+      StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
+      capturedObserver.onError(new RuntimeException("Connection lost"));
 
-            ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
-                    ArgumentCaptor.forClass(StreamObserver.class);
-            when(mockAsyncStub.queuesDownstream(observerCaptor.capture())).thenReturn(mockRequestObserver);
+      QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
 
-            handler.connect();
-
-            // Simulate response with unknown request ID
-            StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
-            Kubemq.QueuesDownstreamResponse response = Kubemq.QueuesDownstreamResponse.newBuilder()
-                    .setRefRequestId("unknown-id")
-                    .setTransactionComplete(true)
-                    .build();
-
-            // Should not throw
-            assertDoesNotThrow(() -> capturedObserver.onNext(response));
-        }
+      assertNotNull(pollResponse);
+      assertTrue(pollResponse.isError());
+      assertTrue(pollResponse.getError().contains("Connection lost"));
     }
 
-    @Nested
-    @DisplayName("Send Request Tests")
-    class SendRequestTests {
+    @Test
+    @DisplayName("Q-07: onCompleted closes stream and completes pending futures")
+    void onCompleted_closesStreamAndCompletesPendingFutures() throws Exception {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockClient.getClientId()).thenReturn("test-client");
 
-        @Test
-        @DisplayName("Q-09: sendRequest auto-connects if not connected")
-        void sendRequest_autoConnectsIfNotConnected() throws Exception {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockClient.getClientId()).thenReturn("test-client");
+      ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
+          ArgumentCaptor.forClass(StreamObserver.class);
+      when(mockAsyncStub.queuesDownstream(observerCaptor.capture()))
+          .thenReturn(mockRequestObserver);
 
-            ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
-                    ArgumentCaptor.forClass(StreamObserver.class);
-            when(mockAsyncStub.queuesDownstream(observerCaptor.capture())).thenReturn(mockRequestObserver);
+      QueuesPollRequest pollRequest =
+          QueuesPollRequest.builder()
+              .channel("test-queue")
+              .pollMaxMessages(10)
+              .pollWaitTimeoutInSeconds(5)
+              .build();
 
-            QueuesPollRequest pollRequest = QueuesPollRequest.builder()
-                    .channel("test-queue")
-                    .pollMaxMessages(10)
-                    .pollWaitTimeoutInSeconds(5)
-                    .build();
+      CompletableFuture<QueuesPollResponse> resultFuture =
+          CompletableFuture.supplyAsync(() -> handler.receiveQueuesMessages(pollRequest));
 
-            // Start receive which triggers connect
-            CompletableFuture<QueuesPollResponse> resultFuture = CompletableFuture.supplyAsync(() ->
-                    handler.receiveQueuesMessages(pollRequest)
-            );
+      Thread.sleep(200);
+      verify(mockRequestObserver, timeout(2000)).onNext(any());
 
-            Thread.sleep(200);
+      // Simulate completion
+      StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
+      capturedObserver.onCompleted();
 
-            // Verify connection was made
-            verify(mockAsyncStub).queuesDownstream(any());
+      QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
 
-            // Complete the test by responding
-            ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
-                    ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
-            verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
-
-            StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
-            String refRequestId = requestCaptor.getValue().getRequestID();
-
-            Kubemq.QueuesDownstreamResponse response = Kubemq.QueuesDownstreamResponse.newBuilder()
-                    .setRefRequestId(refRequestId)
-                    .setTransactionComplete(true)
-                    .build();
-
-            capturedObserver.onNext(response);
-            resultFuture.get(5, TimeUnit.SECONDS);
-        }
+      assertNotNull(pollResponse);
+      assertTrue(pollResponse.isError());
+      assertTrue(pollResponse.getError().contains("Stream completed"));
     }
 
-    @Nested
-    @DisplayName("Message Decoding Tests")
-    class MessageDecodingTests {
+    @Test
+    @DisplayName("Q-08: onNext with unknown request ID does not throw")
+    void onNext_unknownRequestId_doesNotThrow() throws Exception {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
 
-        @Test
-        @DisplayName("Q-10: response with multiple messages decodes all")
-        void response_withMultipleMessages_decodesAll() throws Exception {
-            when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
-            when(mockClient.getClientId()).thenReturn("test-client");
+      ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
+          ArgumentCaptor.forClass(StreamObserver.class);
+      when(mockAsyncStub.queuesDownstream(observerCaptor.capture()))
+          .thenReturn(mockRequestObserver);
 
-            ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
-                    ArgumentCaptor.forClass(StreamObserver.class);
-            when(mockAsyncStub.queuesDownstream(observerCaptor.capture())).thenReturn(mockRequestObserver);
+      handler.connect();
 
-            QueuesPollRequest pollRequest = QueuesPollRequest.builder()
-                    .channel("test-queue")
-                    .pollMaxMessages(10)
-                    .pollWaitTimeoutInSeconds(5)
-                    .build();
+      // Simulate response with unknown request ID
+      StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
+      Kubemq.QueuesDownstreamResponse response =
+          Kubemq.QueuesDownstreamResponse.newBuilder()
+              .setRefRequestId("unknown-id")
+              .setTransactionComplete(true)
+              .build();
 
-            CompletableFuture<QueuesPollResponse> resultFuture = CompletableFuture.supplyAsync(() ->
-                    handler.receiveQueuesMessages(pollRequest)
-            );
-
-            Thread.sleep(200);
-
-            ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
-                    ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
-            verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
-
-            StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
-            String refRequestId = requestCaptor.getValue().getRequestID();
-
-            // Response with multiple messages
-            Kubemq.QueuesDownstreamResponse response = Kubemq.QueuesDownstreamResponse.newBuilder()
-                    .setRefRequestId(refRequestId)
-                    .setTransactionId("txn-123")
-                    .setTransactionComplete(true)
-                    .addMessages(Kubemq.QueueMessage.newBuilder()
-                            .setMessageID("msg-1")
-                            .setBody(ByteString.copyFromUtf8("body-1"))
-                            .build())
-                    .addMessages(Kubemq.QueueMessage.newBuilder()
-                            .setMessageID("msg-2")
-                            .setBody(ByteString.copyFromUtf8("body-2"))
-                            .build())
-                    .addMessages(Kubemq.QueueMessage.newBuilder()
-                            .setMessageID("msg-3")
-                            .setBody(ByteString.copyFromUtf8("body-3"))
-                            .build())
-                    .build();
-
-            capturedObserver.onNext(response);
-
-            QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
-
-            assertNotNull(pollResponse);
-            assertEquals(3, pollResponse.getMessages().size());
-        }
+      // Should not throw
+      assertDoesNotThrow(() -> capturedObserver.onNext(response));
     }
+  }
+
+  @Nested
+  @DisplayName("Send Request Tests")
+  class SendRequestTests {
+
+    @Test
+    @DisplayName("Q-09: sendRequest auto-connects if not connected")
+    void sendRequest_autoConnectsIfNotConnected() throws Exception {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockClient.getClientId()).thenReturn("test-client");
+
+      ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
+          ArgumentCaptor.forClass(StreamObserver.class);
+      when(mockAsyncStub.queuesDownstream(observerCaptor.capture()))
+          .thenReturn(mockRequestObserver);
+
+      QueuesPollRequest pollRequest =
+          QueuesPollRequest.builder()
+              .channel("test-queue")
+              .pollMaxMessages(10)
+              .pollWaitTimeoutInSeconds(5)
+              .build();
+
+      // Start receive which triggers connect
+      CompletableFuture<QueuesPollResponse> resultFuture =
+          CompletableFuture.supplyAsync(() -> handler.receiveQueuesMessages(pollRequest));
+
+      Thread.sleep(200);
+
+      // Verify connection was made
+      verify(mockAsyncStub).queuesDownstream(any());
+
+      // Complete the test by responding
+      ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
+          ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
+      verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
+
+      StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
+      String refRequestId = requestCaptor.getValue().getRequestID();
+
+      Kubemq.QueuesDownstreamResponse response =
+          Kubemq.QueuesDownstreamResponse.newBuilder()
+              .setRefRequestId(refRequestId)
+              .setTransactionComplete(true)
+              .build();
+
+      capturedObserver.onNext(response);
+      resultFuture.get(5, TimeUnit.SECONDS);
+    }
+  }
+
+  @Nested
+  @DisplayName("Message Decoding Tests")
+  class MessageDecodingTests {
+
+    @Test
+    @DisplayName("Q-10: response with multiple messages decodes all")
+    void response_withMultipleMessages_decodesAll() throws Exception {
+      when(mockClient.getAsyncClient()).thenReturn(mockAsyncStub);
+      when(mockClient.getClientId()).thenReturn("test-client");
+
+      ArgumentCaptor<StreamObserver<Kubemq.QueuesDownstreamResponse>> observerCaptor =
+          ArgumentCaptor.forClass(StreamObserver.class);
+      when(mockAsyncStub.queuesDownstream(observerCaptor.capture()))
+          .thenReturn(mockRequestObserver);
+
+      QueuesPollRequest pollRequest =
+          QueuesPollRequest.builder()
+              .channel("test-queue")
+              .pollMaxMessages(10)
+              .pollWaitTimeoutInSeconds(5)
+              .build();
+
+      CompletableFuture<QueuesPollResponse> resultFuture =
+          CompletableFuture.supplyAsync(() -> handler.receiveQueuesMessages(pollRequest));
+
+      Thread.sleep(200);
+
+      ArgumentCaptor<Kubemq.QueuesDownstreamRequest> requestCaptor =
+          ArgumentCaptor.forClass(Kubemq.QueuesDownstreamRequest.class);
+      verify(mockRequestObserver, timeout(2000)).onNext(requestCaptor.capture());
+
+      StreamObserver<Kubemq.QueuesDownstreamResponse> capturedObserver = observerCaptor.getValue();
+      String refRequestId = requestCaptor.getValue().getRequestID();
+
+      // Response with multiple messages
+      Kubemq.QueuesDownstreamResponse response =
+          Kubemq.QueuesDownstreamResponse.newBuilder()
+              .setRefRequestId(refRequestId)
+              .setTransactionId("txn-123")
+              .setTransactionComplete(true)
+              .addMessages(
+                  Kubemq.QueueMessage.newBuilder()
+                      .setMessageID("msg-1")
+                      .setBody(ByteString.copyFromUtf8("body-1"))
+                      .build())
+              .addMessages(
+                  Kubemq.QueueMessage.newBuilder()
+                      .setMessageID("msg-2")
+                      .setBody(ByteString.copyFromUtf8("body-2"))
+                      .build())
+              .addMessages(
+                  Kubemq.QueueMessage.newBuilder()
+                      .setMessageID("msg-3")
+                      .setBody(ByteString.copyFromUtf8("body-3"))
+                      .build())
+              .build();
+
+      capturedObserver.onNext(response);
+
+      QueuesPollResponse pollResponse = resultFuture.get(5, TimeUnit.SECONDS);
+
+      assertNotNull(pollResponse);
+      assertEquals(3, pollResponse.getMessages().size());
+    }
+  }
 }

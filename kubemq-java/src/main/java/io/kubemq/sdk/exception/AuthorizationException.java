@@ -1,30 +1,40 @@
 package io.kubemq.sdk.exception;
 
-/**
- * Thrown when the client lacks required permissions for a KubeMQ operation.
- */
+/** Thrown when the client lacks required permissions for a KubeMQ operation. */
 public class AuthorizationException extends KubeMQException {
 
-    private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-    protected AuthorizationException(Builder builder) {
-        super(builder);
+  protected AuthorizationException(Builder builder) {
+    super(builder);
+  }
+
+  /** Builder for {@link AuthorizationException} with authorization-specific defaults. */
+  public static class Builder extends KubeMQException.Builder<Builder> {
+    /** Constructs a new Builder with AUTHORIZATION_DENIED code, AUTHORIZATION category, and non-retryable. */
+    public Builder() {
+      code(ErrorCode.AUTHORIZATION_DENIED);
+      category(ErrorCategory.AUTHORIZATION);
+      retryable(false);
     }
 
-    public static class Builder extends KubeMQException.Builder<Builder> {
-        public Builder() {
-            code(ErrorCode.AUTHORIZATION_DENIED);
-            category(ErrorCategory.AUTHORIZATION);
-            retryable(false);
-        }
-
-        @Override
-        public AuthorizationException build() {
-            return new AuthorizationException(this);
-        }
+    /**
+     * Builds the {@link AuthorizationException} from this builder's state.
+     *
+     * @return a new AuthorizationException instance
+     */
+    @Override
+    public AuthorizationException build() {
+      return new AuthorizationException(this);
     }
+  }
 
-    public static Builder builder() {
-        return new Builder();
-    }
+  /**
+   * Creates a new builder.
+   *
+   * @return a new Builder instance
+   */
+  public static Builder builder() {
+    return new Builder();
+  }
 }
