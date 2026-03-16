@@ -16,17 +16,14 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Represents the response from polling a queue for messages.
+ * Represents the response from polling a KubeMQ queue for messages.
  *
  * <p>Contains the list of received messages and metadata about the poll operation. Check {@link
  * #isError()} before processing messages.
- */
-/**
- * Represents the response from polling a KubeMQ queue for messages.
  *
- * <p>Contains the list of received messages, transaction metadata, and methods for bulk operations
- * ({@link #ackAll()}, {@link #rejectAll()}, {@link #reQueueAll(String)}). Individual messages can
- * be acknowledged or rejected via {@link QueueMessageReceived}.
+ * <p>Provides transaction metadata and methods for bulk operations ({@link #ackAll()}, {@link
+ * #rejectAll()}, {@link #reQueueAll(String)}). Individual messages can be acknowledged or rejected
+ * via {@link QueueMessageReceived}.
  */
 @Getter
 @Setter
@@ -35,16 +32,35 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 @Slf4j
 public class QueuesPollResponse {
+
+  /** Reference request ID for the poll operation. */
   private String refRequestId;
+
+  /** Transaction ID for this poll batch. */
   private String transactionId;
+
+  /** List of messages received from the queue. */
   @Builder.Default private List<QueueMessageReceived> messages = new ArrayList<>();
+
+  /** Error message if the poll failed; null or empty if successful. */
   private String error;
+
+  /** Whether the poll operation resulted in an error. */
   private boolean isError;
+
+  /** Whether the transaction has been completed (acked, rejected, or re-queued). */
   @Getter private boolean isTransactionCompleted;
+
+  /** Active offsets for messages in this transaction. */
   @Builder.Default private List<Long> activeOffsets = new ArrayList<>();
 
+  /** Client ID of the receiver. */
   private String receiverClientId;
+
+  /** Visibility timeout in seconds for received messages. */
   private int visibilitySeconds;
+
+  /** Whether messages are automatically acknowledged upon receipt. */
   @Getter private boolean isAutoAcked;
 
   //    @Getter(AccessLevel.NONE)
@@ -52,10 +68,12 @@ public class QueuesPollResponse {
   //    @Builder.Default
   //    private Queue<String> msgQueue = new LinkedList<>();
 
+  /** Internal sender for transaction operations; set during response completion. */
   @Getter(AccessLevel.NONE)
   @Setter(AccessLevel.NONE)
   private RequestSender requestSender;
 
+  /** Map of received message IDs for tracking transaction completion. */
   private final Map<String, String> receivedMessages = new ConcurrentHashMap<>();
 
   /**

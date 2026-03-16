@@ -10,6 +10,8 @@ import lombok.Setter;
 /**
  * QueuesStats represents the statistics of a queue in KubeMQ. It contains details about the number
  * of messages, volume, waiting messages, expired messages, and delayed messages.
+ *
+ * @see QueuesClient#listQueuesChannels
  */
 @Getter
 @Setter
@@ -34,6 +36,7 @@ public class QueuesStats {
   /** The number of delayed messages in the queue. */
   private int delayed;
 
+  /** The number of response messages. */
   private int responses;
 
   /**

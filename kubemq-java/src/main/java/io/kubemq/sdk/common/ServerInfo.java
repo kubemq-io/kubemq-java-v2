@@ -5,7 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The ServerInfo class represents information about a server.
+ * Reports the host, version, uptime, and capabilities of a connected KubeMQ server, returned by
+ * ping operations.
  *
  * <p>Attributes:
  *
@@ -15,6 +16,9 @@ import lombok.Setter;
  *   <li>serverStartTime: The start time of the server (in seconds).
  *   <li>serverUpTimeSeconds: The uptime of the server (in seconds).
  * </ul>
+ *
+ * @see io.kubemq.sdk.client.KubeMQClient#ping()
+ * @see ConnectionState
  */
 @Getter
 @Setter
