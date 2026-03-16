@@ -1,30 +1,40 @@
 package io.kubemq.sdk.exception;
 
-/**
- * Thrown when authentication with KubeMQ server fails.
- */
+/** Thrown when authentication with KubeMQ server fails. */
 public class AuthenticationException extends KubeMQException {
 
-    private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-    protected AuthenticationException(Builder builder) {
-        super(builder);
+  protected AuthenticationException(Builder builder) {
+    super(builder);
+  }
+
+  /** Builder for {@link AuthenticationException} with authentication-specific defaults. */
+  public static class Builder extends KubeMQException.Builder<Builder> {
+    /** Constructs a new Builder with AUTHENTICATION_FAILED code, AUTHENTICATION category, and non-retryable. */
+    public Builder() {
+      code(ErrorCode.AUTHENTICATION_FAILED);
+      category(ErrorCategory.AUTHENTICATION);
+      retryable(false);
     }
 
-    public static class Builder extends KubeMQException.Builder<Builder> {
-        public Builder() {
-            code(ErrorCode.AUTHENTICATION_FAILED);
-            category(ErrorCategory.AUTHENTICATION);
-            retryable(false);
-        }
-
-        @Override
-        public AuthenticationException build() {
-            return new AuthenticationException(this);
-        }
+    /**
+     * Builds the {@link AuthenticationException} from this builder's state.
+     *
+     * @return a new AuthenticationException instance
+     */
+    @Override
+    public AuthenticationException build() {
+      return new AuthenticationException(this);
     }
+  }
 
-    public static Builder builder() {
-        return new Builder();
-    }
+  /**
+   * Creates a new builder.
+   *
+   * @return a new Builder instance
+   */
+  public static Builder builder() {
+    return new Builder();
+  }
 }

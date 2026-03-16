@@ -652,6 +652,23 @@ Omit this section ONLY for items that are sync-only or async-only with no counte
 - [ ] {criterion}
 - [ ] {criterion}
 
+#### Integration Verification Criteria
+
+{MANDATORY for any spec item that creates a new class, manager, executor, or infrastructure component.
+For each new component, list the production file that MUST import and call it. A REQ is NOT
+complete until every row in this table is verified by the implementer.}
+
+| New Component | Must Be Imported By | Must Be Called In | Call Context |
+|---------------|---------------------|-------------------|-------------|
+| {ClassName} | {production/file path} | {method name} | {when/why it's called} |
+
+{If the integration target belongs to a different spec, add a cross-reference:
+"Wiring owned by spec XX, WU-N. This spec creates the component; spec XX wires it.
+Both WUs must complete for this REQ to be DONE."}
+
+{Omit this section ONLY for spec items that modify existing code without creating new
+standalone components (e.g., adding a field, changing a default, documentation-only changes).}
+
 #### Breaking Change Audit
 
 {Mandatory per Rule 31. Mark each category "none" or list the specific changes.}
@@ -765,6 +782,7 @@ A concrete sequence of commits that allows incremental implementation with tests
 31. **Breaking change completeness checklist.** Every spec MUST include a "Breaking Change Audit" section with these mandatory categories: default value changes, method signature changes, serialization/wire format changes, type annotation narrowing, import path changes, behavioral changes (same API, different result). Mark each "none" or list the changes. Omitting a category is a review-flaggable gap.
 32. **Test assertions must test the SUT.** Test code snippets MUST call the actual method being tested and assert on its output or side-effects. `assert len(body) > max_size` is NOT a test — it's an assertion about a constant. Tests MUST call the method that performs the validation and assert the expected error/result. All test imports MUST be complete — every name used in the test MUST have a visible import.
 33. **Late-batch integration code.** Specs in Batch 2 and 3 that reference types or infrastructure from earlier batches MUST show the actual integration/wiring code: import statements, constructor calls, configuration setup. Text references like "uses ReconnectionManager from spec 02" are insufficient for later batches. The later the spec in the dependency order, the more explicit its cross-spec integration code must be.
+34. **Integration wiring is not deferrable.** Every new infrastructure component (class, manager, executor, handler) MUST have its integration call site shown in the spec — either in this spec's own implementation code, or as an explicit cross-reference to the spec that owns the wiring. If a ReconnectionManager is created, the spec MUST show the code in AsyncTransport (or equivalent) that calls `start_reconnection()`. If the wiring belongs to another spec, the "Integration Verification Criteria" table MUST list the owning spec and the exact WU. A component without a documented integration path will be flagged as incomplete during review.
 
 ## Language-Specific Constraints
 
@@ -828,19 +846,25 @@ Review the implementation specs for Batch {BATCH_NUM} categories. Validate techn
 - Is artifact ownership respected (only one spec defines CI config, CHANGELOG, etc.)?
 - Are cross-spec references using the correct type names and packages?
 
-### 5. Dependency Accuracy
+### 5. Integration Wiring Completeness
+- Does every spec item that creates a new standalone component (class, manager, executor) include an "Integration Verification Criteria" table?
+- For each entry in the table: is the target file realistic (does it exist in the SDK source)?
+- If wiring is cross-spec: is the owning spec and WU explicitly named?
+- Are there any components with no documented call site? Flag as CRITICAL — a component without a caller is dead code.
+
+### 6. Dependency Accuracy
 - Are all cross-spec dependencies correctly identified?
 - Is the implementation order feasible given dependencies?
 - Are there circular dependencies?
 - Are external library dependencies appropriate and up-to-date?
 
-### 6. Code Snippet Validity
+### 7. Code Snippet Validity
 - Do all code snippets compile (mentally trace imports, generics, exceptions)?
 - Are there import aliases or other invalid syntax for the target language?
 - Do type names avoid collisions with standard library classes?
 - Are `provided`-scope dependencies loaded lazily (no direct imports in eagerly-loaded classes)?
 
-### 7. Testability
+### 8. Testability
 - Are test scenarios sufficient to verify the spec?
 - Are edge cases covered?
 - Are integration test requirements realistic (infrastructure needed)?
@@ -848,7 +872,7 @@ Review the implementation specs for Batch {BATCH_NUM} categories. Validate techn
 - Do test scenarios include Setup/Action/Assert columns (not just expected behavior)?
 - Do tests call the actual method being tested (not just verify preconditions)?
 
-### 8. Execution Path Tracing
+### 9. Execution Path Tracing
 - For each spec, trace ONE complete call path from public API entry point to transport/infrastructure call.
 - Verify every method called along the path is defined (in this spec or cross-referenced to another spec).
 - Flag methods that are defined but never called along any traced path (dead code).

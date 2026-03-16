@@ -15,6 +15,8 @@ Common issues and solutions for the KubeMQ Java SDK.
 9. [TLS handshake failed](#problem-tls-handshake-failed)
 10. [Subscriber is not receiving messages](#problem-subscriber-is-not-receiving-messages)
 11. [Queue messages keep redelivering](#problem-queue-messages-keep-redelivering)
+12. [gRPC Status Code Mapping](#grpc-status-code-mapping)
+13. [How to Enable Debug Logging](#how-to-enable-debug-logging)
 
 ---
 
@@ -299,3 +301,146 @@ timeout, causing them to return to the queue for redelivery.
 6. Consider using `autoAckMessages(true)` if explicit ack is not needed
 
 **See also:** [WaitingPullExample](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example/src/main/java/io/kubemq/example/queues/WaitingPullExample.java), [ReceiveMessageDLQ](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example/src/main/java/io/kubemq/example/queues/ReceiveMessageDLQ.java)
+
+---
+
+## gRPC Status Code Mapping
+
+The SDK automatically maps gRPC `StatusRuntimeException` codes to typed SDK exceptions via `GrpcErrorMapper`. This table shows every gRPC status code and its corresponding SDK exception:
+
+| gRPC Code | Value | SDK Exception | Category | Retryable | Typical Cause |
+|-----------|-------|---------------|----------|-----------|---------------|
+| `OK` | 0 | *(should never occur)* | — | — | — |
+| `CANCELLED` | 1 | `OperationCancelledException` | Cancellation | No | Client cancelled the request |
+| `CANCELLED` | 1 | `ConnectionException` | Transient | Yes | Server cancelled the request |
+| `UNKNOWN` | 2 | `ConnectionException` | Transient | Yes | Unknown server-side error |
+| `INVALID_ARGUMENT` | 3 | `ValidationException` | Validation | No | Invalid channel name, missing required field |
+| `DEADLINE_EXCEEDED` | 4 | `KubeMQTimeoutException` | Timeout | Yes | Server too slow, network latency |
+| `NOT_FOUND` | 5 | `KubeMQException` | Not Found | No | Channel does not exist |
+| `ALREADY_EXISTS` | 6 | `ValidationException` | Validation | No | Resource already created |
+| `PERMISSION_DENIED` | 7 | `AuthorizationException` | Authorization | No | Insufficient ACL permissions |
+| `RESOURCE_EXHAUSTED` | 8 | `ThrottlingException` | Throttling | Yes | Rate limit exceeded, message too large |
+| `FAILED_PRECONDITION` | 9 | `ValidationException` | Validation | No | Operation precondition not met |
+| `ABORTED` | 10 | `ConnectionException` | Transient | Yes | Transaction conflict, retry needed |
+| `OUT_OF_RANGE` | 11 | `ValidationException` | Validation | No | Sequence number out of range |
+| `UNIMPLEMENTED` | 12 | `ServerException` | Fatal | No | Server does not support this operation |
+| `INTERNAL` | 13 | `ServerException` | Fatal | No | Internal server error |
+| `UNAVAILABLE` | 14 | `ConnectionException` | Transient | Yes | Server not running, network failure |
+| `DATA_LOSS` | 15 | `ServerException` | Fatal | No | Unrecoverable data loss |
+| `UNAUTHENTICATED` | 16 | `AuthenticationException` | Authentication | No | Invalid or expired auth token |
+
+**Usage example** — handle errors by type rather than raw gRPC codes:
+```java
+try {
+    client.sendEventsMessage(message);
+} catch (ConnectionException e) {
+    // Retryable: UNAVAILABLE, UNKNOWN, CANCELLED (server), ABORTED
+    log.warn("Transient error, will retry: {}", e.getMessage());
+} catch (KubeMQTimeoutException e) {
+    // DEADLINE_EXCEEDED — increase timeout or check server load
+    log.warn("Timeout: {}", e.getMessage());
+} catch (ThrottlingException e) {
+    // RESOURCE_EXHAUSTED — back off and retry
+    log.warn("Rate limited: {}", e.getMessage());
+} catch (AuthenticationException e) {
+    // UNAUTHENTICATED — fix credentials
+    log.error("Auth failed: {}", e.getMessage());
+} catch (AuthorizationException e) {
+    // PERMISSION_DENIED — check ACL
+    log.error("Not authorized: {}", e.getMessage());
+} catch (ValidationException e) {
+    // INVALID_ARGUMENT, ALREADY_EXISTS, FAILED_PRECONDITION, OUT_OF_RANGE
+    log.error("Invalid request: {}", e.getMessage());
+} catch (ServerException e) {
+    // UNIMPLEMENTED, INTERNAL, DATA_LOSS
+    log.error("Server error: {}", e.getMessage());
+} catch (KubeMQException e) {
+    // Catch-all for any other SDK error
+    log.error("SDK error (retryable={}): {}", e.isRetryable(), e.getMessage());
+}
+```
+
+---
+
+## How to Enable Debug Logging
+
+The KubeMQ Java SDK uses [SLF4J](https://www.slf4j.org/) as its logging facade. All SDK loggers
+use names under the `io.kubemq.sdk` package. To see debug output, configure your SLF4J backend.
+
+### Option 1: Logback (recommended)
+
+Add `logback.xml` (or `logback-test.xml` for tests) to `src/main/resources/`:
+
+```xml
+<configuration>
+    <!-- Console appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Set KubeMQ SDK to DEBUG level -->
+    <logger name="io.kubemq.sdk" level="DEBUG" />
+
+    <!-- Root logger at INFO to avoid noise from other libraries -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
+```
+
+Add the Logback dependency if not already present:
+```xml
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.5.32</version>
+</dependency>
+```
+
+### Option 2: java.util.logging (JUL) via SLF4J
+
+If you use `java.util.logging`, add the SLF4J-JUL bridge and configure a `logging.properties`:
+
+```properties
+# logging.properties
+io.kubemq.sdk.level=FINE
+handlers=java.util.logging.ConsoleHandler
+java.util.logging.ConsoleHandler.level=FINE
+java.util.logging.ConsoleHandler.formatter=java.util.logging.SimpleFormatter
+```
+
+Load it with `-Djava.util.logging.config.file=logging.properties`.
+
+### Option 3: Programmatic (custom KubeMQLogger)
+
+You can provide your own `KubeMQLogger` implementation to the client builder:
+```java
+PubSubClient client = PubSubClient.builder()
+    .address("localhost:50000")
+    .clientId("debug-client")
+    .logger(new Slf4jLoggerAdapter("io.kubemq.sdk"))  // or your custom impl
+    .build();
+```
+
+### What to Expect at DEBUG Level
+
+With DEBUG logging enabled, the SDK outputs:
+- **Connection lifecycle:** channel construction, TLS certificate loading, reconnection attempts
+- **Ping/keepalive:** periodic ping requests and results
+- **Publish operations:** each event/queue message sent (channel, message ID)
+- **Subscription events:** subscription creation, received messages (channel, event ID)
+- **State transitions:** connection state machine changes (CONNECTING → READY, etc.)
+- **Auth token updates:** token presence changes (not the token value itself)
+
+At **TRACE** level (very verbose), you'll additionally see per-message payload details.
+
+**Example DEBUG output:**
+```
+14:23:01.123 [main] DEBUG io.kubemq.sdk - Constructing channel to KubeMQ [address=dns:///localhost:50000]
+14:23:01.456 [main] DEBUG io.kubemq.sdk - Client initialized for KubeMQ [address=localhost:50000, token_present=false]
+14:23:01.789 [main] DEBUG io.kubemq.sdk - Pinging KubeMQ server [address=localhost:50000]
+14:23:01.812 [main] DEBUG io.kubemq.sdk - Ping successful
+14:23:02.100 [main] DEBUG io.kubemq.sdk - Event Message sent
+```

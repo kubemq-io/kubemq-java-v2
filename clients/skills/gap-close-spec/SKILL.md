@@ -318,6 +318,16 @@ Launch **one consistency checker agent** after each batch completes:
 
 ---
 
+## Step 5.7: Global Cross-Spec Consistency Check
+
+After ALL three batches have completed (and their per-batch consistency checks in Step 5.5), run **one final global consistency check** across all 13 specs. This catches cross-batch conflicts that batch-level checks miss.
+
+**Agent prompt:** "Read ALL spec files in `clients/gap-close-specs/{SDK_NAME}/` and the TYPE-REGISTRY.md. Focus specifically on: (1) shared files modified by specs in different batches (e.g., `pyproject.toml`, `__init__.py`, `ClientConfig`), (2) config fields added by specs across batches that may conflict in `__post_init__` validation order, (3) type references crossing batch boundaries (Batch 2/3 referencing Batch 1 types). Write a report to `clients/gap-close-specs/{SDK_NAME}/consistency-check.md`. Fix conflicts directly — registry is authoritative."
+
+**Gate:** All cross-batch conflicts resolved before Step 6.
+
+---
+
 ## Step 6: Update Coverage Checklist
 
 After all spec agents complete, update the coverage checklist:
@@ -354,9 +364,17 @@ Use FIXER-AGENT-PROMPT (see below) with `{ROUND}` = `1`.
 
 ---
 
+## Step 8.5: Update Type Registry After R1 Fixes
+
+After all Round 1 fixes are applied, launch a lightweight agent to re-read all spec files and update TYPE-REGISTRY.md to reflect any type changes made during R1 fixes. This prevents the stale-registry problem (discovered in Python R2-B1 where `CredentialProvider` was split into sync/async variants but the registry was not updated).
+
+**Agent prompt:** "Read all spec files in `clients/gap-close-specs/{SDK_NAME}/` and extract all public type definitions (classes, interfaces, exceptions, protocols) with their full signatures. Compare against `clients/gap-close-specs/{SDK_NAME}/TYPE-REGISTRY.md`. Update the registry to match the current spec content. Flag any discrepancies found."
+
+---
+
 ## Step 9: Expert Review — Round 2 (Implementability Review)
 
-**CHECKPOINT:** Before launching Round 2 reviewers, verify ALL fixer agents from Step 8 have completed. Check that each spec file has been modified (where fixes were needed) and each review file contains a "Fixes Applied (Round 1)" section with a change log.
+**CHECKPOINT:** Before launching Round 2 reviewers, verify ALL fixer agents from Step 8 have completed AND the TYPE-REGISTRY.md has been updated (Step 8.5). Check that each spec file has been modified (where fixes were needed) and each review file contains a "Fixes Applied (Round 1)" section with a change log.
 
 After all Round 1 fixes are verified applied, launch **one reviewer agent per batch** (3 agents, in parallel). Each reviewer is a senior developer who validates that the specs are implementable.
 
@@ -372,6 +390,12 @@ After all Round 2 reviewers complete, launch fixer agents one final time with `{
 
 ---
 
+## Step 10.5: Update Type Registry After R2 Fixes
+
+Same process as Step 8.5. After all Round 2 fixes are applied, update TYPE-REGISTRY.md one final time to ensure it reflects the definitive state of all types across all specs.
+
+---
+
 ## Step 11: Final Coverage Verification
 
 After all review-fix iterations:
@@ -379,6 +403,23 @@ After all review-fix iterations:
 2. Verify ALL items are still `[x]` (fixes may have moved or removed items)
 3. Update any changed mappings
 4. Write final coverage statistics
+
+---
+
+## Step 11.5: Resolve Open Questions
+
+After final coverage verification, collect ALL open questions from the 6 review files (R1 and R2, 3 batches each). Present them to the user with proposed decisions for each. After user confirmation, embed the decisions into the relevant spec files.
+
+### Process
+
+1. Read all 6 review files and extract every item in "Open Questions" sections.
+2. Read SPEC-SUMMARY.md for any additional risks or unresolved items.
+3. For each open question, propose a concrete decision with rationale.
+4. Present all proposed decisions to the user for confirmation.
+5. After confirmation, update the relevant spec files to embed each decision (modify code snippets, add notes, update configuration tables, etc.).
+6. Update SPEC-SUMMARY.md to replace the "Unresolved Open Questions" section with a "Resolved Decisions" table.
+
+**Gate:** All open questions resolved and embedded in specs before generating the final summary.
 
 ---
 
@@ -549,6 +590,13 @@ Before implementing this spec:
 2. **Step 2:** {concrete action}
    - {details}
 
+#### Sync Equivalent
+
+{If this spec item has an async implementation above, show the sync counterpart here.
+Options: (a) full sync code, (b) "same pattern, replace `await` with direct call",
+(c) show the sync wrapper code, (d) "sync deferred to spec XX — reason."
+Omit this section ONLY for items that are sync-only or async-only with no counterpart.}
+
 #### Migration Notes
 
 {If this is a breaking change or modifies existing behavior:}
@@ -590,17 +638,47 @@ Before implementing this spec:
 
 #### Test Scenarios
 
-| # | Scenario | Type | Expected Behavior |
-|---|----------|------|-------------------|
-| 1 | {scenario name} | Unit | {expected result} |
-| 2 | {scenario name} | Integration | {expected result} |
-| 3 | {scenario name} | Edge case | {expected result} |
+| # | Scenario | Type | Setup | Action | Assert |
+|---|----------|------|-------|--------|--------|
+| 1 | {scenario name} | Unit | {setup: mocks, fixtures, state} | {actual method call being tested} | {expected result or error} |
+| 2 | {scenario name} | Integration | {setup: server, client config} | {actual method call} | {expected result} |
+| 3 | {scenario name} | Edge case | {setup: boundary condition} | {actual method call} | {expected error or behavior} |
+
+{Tests MUST call the actual method being tested (see Rule 32). The Action column must show a real method invocation, not a precondition assertion.}
 
 #### Acceptance Criteria Checklist
 
 - [ ] {criterion from GS, verbatim}
 - [ ] {criterion}
 - [ ] {criterion}
+
+#### Integration Verification Criteria
+
+{MANDATORY for any spec item that creates a new class, manager, executor, or infrastructure component.
+For each new component, list the production file that MUST import and call it. A REQ is NOT
+complete until every row in this table is verified by the implementer.}
+
+| New Component | Must Be Imported By | Must Be Called In | Call Context |
+|---------------|---------------------|-------------------|-------------|
+| {ClassName} | {production/file path} | {method name} | {when/why it's called} |
+
+{If the integration target belongs to a different spec, add a cross-reference:
+"Wiring owned by spec XX, WU-N. This spec creates the component; spec XX wires it.
+Both WUs must complete for this REQ to be DONE."}
+
+{Omit this section ONLY for spec items that modify existing code without creating new
+standalone components (e.g., adding a field, changing a default, documentation-only changes).}
+
+#### Breaking Change Audit
+
+{Mandatory per Rule 31. Mark each category "none" or list the specific changes.}
+
+- [ ] Default value changes: {list or "none"}
+- [ ] Method signature changes: {list or "none"}
+- [ ] Serialization/wire format changes: {list or "none"}
+- [ ] Type annotation narrowing: {list or "none"}
+- [ ] Import path changes: {list or "none"}
+- [ ] Behavioral changes (same API, different result): {list or "none"}
 
 ---
 
@@ -644,6 +722,18 @@ Within this category, implement in this order:
 |----------------|----------------|-----|
 | SPEC-{XX}-1 | SPEC-{YY}-N from {other spec} | {description of integration} |
 
+### Integration Wiring Code
+
+{Per Rule 33: Show the actual import statements, constructor calls, and initialization code
+that connects this spec's types to types from other specs. Text references are insufficient —
+show the code. This section is especially critical for Batch 2 and 3 specs.}
+
+```{language}
+// Example: how this spec's types are wired to types from other specs
+// import {type} from {spec XX's package}
+// constructor call showing integration
+```
+
 ## Implementation Commit Sequence
 
 A concrete sequence of commits that allows incremental implementation with tests at each step. Each intermediate state MUST compile and pass existing tests.
@@ -684,6 +774,15 @@ A concrete sequence of commits that allows incremental implementation with tests
 24. **Thread safety in examples.** All code examples involving shared mutable state must specify the exact synchronization mechanism used (what lock, atomic, volatile, or concurrent collection). CAS loops must have bounded retry with backoff. Semaphores/locks must be released in `finally` blocks. Never state "thread-safe" without specifying how.
 25. **`provided` scope isolation.** For `provided`-scope or optional dependencies (OTel, SLF4J, logging facades), all importing classes must be loaded lazily via factory/proxy pattern. Direct imports in eagerly-loaded classes are forbidden — they cause `NoClassDefFoundError` at runtime.
 26. **Cross-spec type registry compliance.** Before defining a new public type, check `TYPE-REGISTRY.md` for existing definitions. Use the EXACT name, package, and constructor signature from the registry. If the type is not in the registry, flag it with `// NEW TYPE — not in registry` for post-batch consistency check.
+
+27. **Type annotation/signature verification.** Every code snippet's type annotations MUST mentally resolve to concrete types — not modules, not undefined generics, not forward references without imports. For each Protocol/interface, document how BOTH sync and async callers use it. If a Protocol method is async, provide the sync equivalent or state it's async-only.
+28. **Dead code elimination pass.** Every method, import, or parameter defined in a code snippet MUST have at least one call site shown in the spec. If a method is not called anywhere in the spec, either (a) show the call site, (b) remove it, or (c) document it as "called by spec XX §Y" with a specific cross-reference. Unreferenced code is a review magnet.
+29. **Sync/async parity.** For every async implementation shown, the spec MUST address the sync equivalent. Options: (a) show the full sync code, (b) state "same pattern, replace `await` with direct call," (c) show the sync wrapper code, or (d) explicitly state "sync variant deferred to spec XX." Omitting the sync path without explanation is a review-flaggable gap.
+30. **stdlib/library API citation.** Any code using stdlib or third-party APIs MUST cite the specific API it relies on (e.g., "per `asyncio.Semaphore` docs" or "per gRPC `channel_ready_future()`"). Assumed API semantics are the #3 source of review issues. Verify: (a) the API exists, (b) it accepts the arguments used, (c) it's available in the minimum supported language version.
+31. **Breaking change completeness checklist.** Every spec MUST include a "Breaking Change Audit" section with these mandatory categories: default value changes, method signature changes, serialization/wire format changes, type annotation narrowing, import path changes, behavioral changes (same API, different result). Mark each "none" or list the changes. Omitting a category is a review-flaggable gap.
+32. **Test assertions must test the SUT.** Test code snippets MUST call the actual method being tested and assert on its output or side-effects. `assert len(body) > max_size` is NOT a test — it's an assertion about a constant. Tests MUST call the method that performs the validation and assert the expected error/result. All test imports MUST be complete — every name used in the test MUST have a visible import.
+33. **Late-batch integration code.** Specs in Batch 2 and 3 that reference types or infrastructure from earlier batches MUST show the actual integration/wiring code: import statements, constructor calls, configuration setup. Text references like "uses ReconnectionManager from spec 02" are insufficient for later batches. The later the spec in the dependency order, the more explicit its cross-spec integration code must be.
+34. **Integration wiring is not deferrable.** Every new infrastructure component (class, manager, executor, handler) MUST have its integration call site shown in the spec — either in this spec's own implementation code, or as an explicit cross-reference to the spec that owns the wiring. If a ReconnectionManager is created, the spec MUST show the code in AsyncTransport (or equivalent) that calls `start_reconnection()`. If the wiring belongs to another spec, the "Integration Verification Criteria" table MUST list the owning spec and the exact WU. A component without a documented integration path will be flagged as incomplete during review.
 
 ## Language-Specific Constraints
 
@@ -747,23 +846,38 @@ Review the implementation specs for Batch {BATCH_NUM} categories. Validate techn
 - Is artifact ownership respected (only one spec defines CI config, CHANGELOG, etc.)?
 - Are cross-spec references using the correct type names and packages?
 
-### 5. Dependency Accuracy
+### 5. Integration Wiring Completeness
+- Does every spec item that creates a new standalone component (class, manager, executor) include an "Integration Verification Criteria" table?
+- For each entry in the table: is the target file realistic (does it exist in the SDK source)?
+- If wiring is cross-spec: is the owning spec and WU explicitly named?
+- Are there any components with no documented call site? Flag as CRITICAL — a component without a caller is dead code.
+
+### 6. Dependency Accuracy
 - Are all cross-spec dependencies correctly identified?
 - Is the implementation order feasible given dependencies?
 - Are there circular dependencies?
 - Are external library dependencies appropriate and up-to-date?
 
-### 6. Code Snippet Validity
+### 7. Code Snippet Validity
 - Do all code snippets compile (mentally trace imports, generics, exceptions)?
 - Are there import aliases or other invalid syntax for the target language?
 - Do type names avoid collisions with standard library classes?
 - Are `provided`-scope dependencies loaded lazily (no direct imports in eagerly-loaded classes)?
 
-### 7. Testability
+### 8. Testability
 - Are test scenarios sufficient to verify the spec?
 - Are edge cases covered?
 - Are integration test requirements realistic (infrastructure needed)?
 - Can the spec be implemented incrementally with tests at each step?
+- Do test scenarios include Setup/Action/Assert columns (not just expected behavior)?
+- Do tests call the actual method being tested (not just verify preconditions)?
+
+### 9. Execution Path Tracing
+- For each spec, trace ONE complete call path from public API entry point to transport/infrastructure call.
+- Verify every method called along the path is defined (in this spec or cross-referenced to another spec).
+- Flag methods that are defined but never called along any traced path (dead code).
+- Flag methods that are called but never defined in any spec (missing implementation detail).
+- This dimension specifically targets the dead-code and missing-detail issue patterns.
 
 ## Output
 
@@ -965,6 +1079,18 @@ For each spec, validate the "Implementation Commit Sequence" section that should
 ### {next spec file}
 {...}
 
+## Global Implementation Order
+
+{A master cross-spec implementation sequence covering ALL specs reviewed in this batch.
+Order items by dependency (leaf items first), then by priority. This becomes a key input
+to the SPEC-SUMMARY.md and eliminates post-hoc ordering work.}
+
+| Step | Spec | Item | Depends On | Effort |
+|------|------|------|------------|--------|
+| 1 | {spec} | {spec item} | (none) | {effort} |
+| 2 | {spec} | {spec item} | Step 1 | {effort} |
+| ... | | | | |
+
 ## Open Questions
 
 {Genuine ambiguities that cannot be resolved from input files alone.}
@@ -983,6 +1109,7 @@ For each spec, validate the "Implementation Commit Sequence" section that should
 6. **Be practical.** Flag theoretical concerns only if they have real implementation impact.
 7. **Severity discipline.** Critical = spec cannot be implemented as written (compile errors, missing steps, wrong file paths). Major = implementable but will cause rework (missing edge case, wrong test setup). Minor = polish.
 8. **Open Questions.** Document genuine ambiguities rather than making silent assumptions.
+9. **Review ALL specs in the batch.** Even specs with zero R1 issues must be reviewed from the implementability perspective. The architecture review may not catch practical implementation gaps. Do not skip "clean" specs.
 </prompt-template>
 
 ---

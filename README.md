@@ -15,6 +15,27 @@ built-in TLS, authentication, and reconnection support.
 
 > **Migrating from v1?** See [MIGRATION.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/MIGRATION.md) for the upgrade guide.
 
+## Table of Contents
+
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [Maven](#maven)
+  - [Gradle](#gradle)
+- [Quick Start](#quick-start)
+- [Messaging Patterns](#messaging-patterns)
+  - [Quick Start: Events (Pub/Sub)](#quick-start-events-pubsub)
+  - [Quick Start: Queues](#quick-start-queues)
+  - [Quick Start: RPC (Commands & Queries)](#quick-start-rpc-commands--queries)
+- [Configuration](#configuration)
+- [Error Handling](#error-handling)
+- [Troubleshooting](#troubleshooting)
+- [Performance](#performance)
+- [Compatibility](#compatibility)
+- [Security](#security)
+- [Additional Resources](#additional-resources)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Installation
 
 ### Prerequisites
@@ -285,6 +306,21 @@ See [BENCHMARKS.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/kubemq
 
 See [COMPATIBILITY.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/COMPATIBILITY.md) for the full SDK-to-server version matrix.
 
+## Security
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting. The SDK supports TLS and mTLS connections — for configuration details, see [How to Connect with TLS](docs/how-to/connect-with-tls.md).
+
+## Additional Resources
+
+- [KubeMQ Documentation](https://docs.kubemq.io/) — Official KubeMQ documentation and guides
+- [Full Documentation Index](docs/INDEX.md) — Complete SDK documentation index
+- [KubeMQ Concepts](docs/CONCEPTS.md) — Core KubeMQ messaging concepts
+- [SDK Feature Parity Matrix](../sdk-feature-parity-matrix.md) — Cross-SDK feature comparison
+- [CHANGELOG.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/kubemq-java/CHANGELOG.md) — Release history
+- [MIGRATION.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/MIGRATION.md) — v1 to v2 migration guide
+- [TROUBLESHOOTING.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/TROUBLESHOOTING.md) — Common issues and solutions
+- [Examples](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example) — Runnable code examples for all patterns
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/kubemq-java/CONTRIBUTING.md) for guidelines on:
@@ -296,11 +332,3 @@ We welcome contributions! Please see [CONTRIBUTING.md](https://github.com/kubemq
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](https://opensource.org/licenses/MIT) file for details.
-
-## Additional Resources
-
-- [CHANGELOG.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/kubemq-java/CHANGELOG.md) — Release history
-- [MIGRATION.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/MIGRATION.md) — v1 to v2 migration guide
-- [TROUBLESHOOTING.md](https://github.com/kubemq-io/kubemq-java-v2/blob/main/TROUBLESHOOTING.md) — Common issues and solutions
-- [Examples](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example) — Runnable code examples for all patterns
-- [KubeMQ Documentation](https://docs.kubemq.io/) — Server documentation and guides
