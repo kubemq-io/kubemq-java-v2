@@ -19,11 +19,13 @@ public class StartNewOnlyExample {
     private static final String CHANNEL = "java-eventsstore.start-new-only";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID).build();
         client.ping();
+        // Create the events store channel
         client.createEventsStoreChannel(CHANNEL);
 
-        // Send historical messages before subscribing
+        // Send historical messages before subscribing (will be ignored)
         for (int i = 1; i <= 3; i++) {
             client.sendEventsStoreMessage(EventStoreMessage.builder()
                     .id("hist-" + i).channel(CHANNEL)
@@ -45,6 +47,7 @@ public class StartNewOnlyExample {
                 .onErrorCallback(err -> System.err.println("Error: " + err))
                 .build();
 
+        // Subscribe with StartNewOnly (ignore all historical messages)
         client.subscribeToEventsStore(sub);
         System.out.println("Subscribed with StartNewOnly.");
         Thread.sleep(500);
@@ -59,6 +62,7 @@ public class StartNewOnlyExample {
         latch.await(5, TimeUnit.SECONDS);
         System.out.println("\nReceived " + received.get() + " new messages (historical ignored).");
 
+        // Clean up resources
         sub.cancel();
         client.deleteEventsStoreChannel(CHANNEL);
         client.close();

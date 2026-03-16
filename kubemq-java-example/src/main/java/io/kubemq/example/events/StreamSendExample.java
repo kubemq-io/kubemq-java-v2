@@ -20,14 +20,17 @@ public class StreamSendExample {
     private static final String CHANNEL = "java-events.stream-send";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
                 .build();
 
+        // Verify connection to the server
         ServerInfo info = client.ping();
         System.out.println("Connected to: " + info.getHost());
 
+        // Create the events channel
         client.createEventsChannel(CHANNEL);
 
         int messageCount = 10;
@@ -42,9 +45,12 @@ public class StreamSendExample {
                 .onErrorCallback(err -> System.err.println("Error: " + err.getMessage()))
                 .build();
 
+        // Subscribe to handle incoming events on this channel
         client.subscribeToEvents(subscription);
+        // Wait for the subscriber to be ready
         Thread.sleep(500);
 
+        // Send multiple events via the internal gRPC stream
         System.out.println("Sending " + messageCount + " events via stream...\n");
         long start = System.currentTimeMillis();
 
@@ -64,8 +70,10 @@ public class StreamSendExample {
         System.out.println("Sent " + messageCount + " events in " + elapsed + "ms");
         System.out.println("Throughput: " + (messageCount * 1000 / Math.max(elapsed, 1)) + " msg/sec\n");
 
+        // Wait for the subscriber to receive all messages
         latch.await(5, TimeUnit.SECONDS);
 
+        // Clean up resources
         subscription.cancel();
         client.deleteEventsChannel(CHANNEL);
         client.close();

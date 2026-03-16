@@ -11,6 +11,7 @@ public class DeleteChannelExample {
     public static void main(String[] args) {
         System.out.println("=== Delete Channels ===\n");
 
+        // Create then delete an events channel
         try (PubSubClient pubsub = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID).build()) {
             pubsub.createEventsChannel("java-management.delete-events-test");
             System.out.println("Created events channel.");
@@ -18,6 +19,7 @@ public class DeleteChannelExample {
             System.out.println("Deleted events channel.");
         }
 
+        // Create then delete a queues channel
         try (QueuesClient queues = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID).build()) {
             queues.createQueuesChannel("java-management.delete-queues-test");
             System.out.println("Created queues channel.");

@@ -15,6 +15,7 @@ public class ListChannelsExample {
     public static void main(String[] args) {
         System.out.println("=== List Channels ===\n");
 
+        // List PubSub channels (events and events-store)
         try (PubSubClient pubsub = PubSubClient.builder().address(ADDRESS).clientId(CLIENT_ID + "-pubsub").build()) {
             List<PubSubChannel> events = pubsub.listEventsChannels("java-");
             System.out.println("Events channels (" + events.size() + "):");
@@ -25,12 +26,14 @@ public class ListChannelsExample {
             stores.forEach(ch -> System.out.println("  " + ch.getName()));
         }
 
+        // List Queues channels
         try (QueuesClient queues = QueuesClient.builder().address(ADDRESS).clientId(CLIENT_ID + "-queues").build()) {
             List<QueuesChannel> qChs = queues.listQueuesChannels("java-");
             System.out.println("Queues channels (" + qChs.size() + "):");
             qChs.forEach(ch -> System.out.println("  " + ch.getName()));
         }
 
+        // List Commands and Queries channels
         try (CQClient cq = CQClient.builder().address(ADDRESS).clientId(CLIENT_ID + "-cq").build()) {
             List<CQChannel> cmds = cq.listCommandsChannels("java-");
             System.out.println("Commands channels (" + cmds.size() + "):");

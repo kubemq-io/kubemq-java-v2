@@ -20,13 +20,16 @@ public class MultipleSubscribersExample {
     private static final String CHANNEL = "java-events.multiple-subscribers";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
                 .build();
 
+        // Verify connection to the server
         ServerInfo info = client.ping();
         System.out.println("Connected to: " + info.getHost());
+        // Create the events channel
         client.createEventsChannel(CHANNEL);
 
         int numMessages = 3;
@@ -54,12 +57,15 @@ public class MultipleSubscribersExample {
                 .onErrorCallback(err -> {})
                 .build();
 
+        // Subscribe two independent subscribers (no group = broadcast to all)
         client.subscribeToEvents(subscription1);
         client.subscribeToEvents(subscription2);
         System.out.println("Two independent subscribers created (broadcast mode).\n");
 
+        // Wait for subscribers to be ready
         Thread.sleep(500);
 
+        // Send event messages (each subscriber receives all)
         for (int i = 1; i <= numMessages; i++) {
             client.sendEventsMessage(EventMessage.builder()
                     .id("msg-" + i)
@@ -69,13 +75,16 @@ public class MultipleSubscribersExample {
             Thread.sleep(100);
         }
 
+        // Wait for both subscribers to receive all messages
         latch.await(5, TimeUnit.SECONDS);
 
+        // Handle response: print counts per subscriber
         System.out.println("\nResults:");
         System.out.println("  Subscriber A received: " + sub1Count.get());
         System.out.println("  Subscriber B received: " + sub2Count.get());
         System.out.println("  Both received all " + numMessages + " messages (broadcast).");
 
+        // Clean up resources
         subscription1.cancel();
         subscription2.cancel();
         client.deleteEventsChannel(CHANNEL);

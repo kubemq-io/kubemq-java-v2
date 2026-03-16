@@ -20,6 +20,7 @@ public class CustomTimeoutsExample {
     public void connectionTimeoutExample() {
         System.out.println("=== Connection Timeout Configuration ===\n");
 
+        // Create a client with custom connection timeout
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID + "-conn-timeout")
@@ -38,6 +39,7 @@ public class CustomTimeoutsExample {
     public void keepAliveTimeoutsExample() {
         System.out.println("=== Keep-Alive Timeout Configuration ===\n");
 
+        // Create a client with custom keep-alive intervals
         try (PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID + "-keepalive")
@@ -60,6 +62,7 @@ public class CustomTimeoutsExample {
     public void reconnectionTimeoutExample() {
         System.out.println("=== Reconnection Interval Configuration ===\n");
 
+        // Create a client with custom reconnection interval
         try (CQClient client = CQClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID + "-reconnect")
@@ -79,6 +82,7 @@ public class CustomTimeoutsExample {
     public void shutdownTimeoutExample() {
         System.out.println("=== Shutdown Timeout Configuration ===\n");
 
+        // Create a client with custom shutdown timeout
         try (QueuesClient client = QueuesClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID + "-shutdown")

@@ -17,16 +17,20 @@ public class StreamSendExample {
     private static final String CHANNEL = "java-eventsstore.stream-send";
 
     public static void main(String[] args) throws InterruptedException {
+        // Create a client connected to the KubeMQ server
         PubSubClient client = PubSubClient.builder()
                 .address(ADDRESS)
                 .clientId(CLIENT_ID)
                 .build();
 
+        // Verify connection to the server
         ServerInfo info = client.ping();
         System.out.println("Connected to: " + info.getHost());
+        // Create the events store channel
         client.createEventsStoreChannel(CHANNEL);
 
         int messageCount = 10;
+        // Send multiple events store messages (high-throughput)
         System.out.println("Sending " + messageCount + " events store messages via stream...\n");
 
         long start = System.currentTimeMillis();
@@ -50,6 +54,7 @@ public class StreamSendExample {
         System.out.println("Sent " + successCount + "/" + messageCount + " events in " + elapsed + "ms");
         System.out.println("Throughput: " + (messageCount * 1000 / Math.max(elapsed, 1)) + " msg/sec");
 
+        // Clean up resources
         client.deleteEventsStoreChannel(CHANNEL);
         client.close();
         System.out.println("\nStream send example completed.");
