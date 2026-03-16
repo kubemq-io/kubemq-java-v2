@@ -10,26 +10,37 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Represents a query message received from a KubeMQ subscription. Contains the query payload and
- * reply channel for sending responses.
- */
-/**
- * Represents a query message received from KubeMQ.
+ * Represents a query message received from a KubeMQ subscription.
  *
- * <p>Contains the query payload and metadata. Query handlers use this to inspect the incoming
- * request and construct a {@link QueryResponseMessage}.
+ * <p>Contains the query payload, metadata, and reply channel for sending responses. Query handlers
+ * use this to inspect the incoming request and construct a {@link QueryResponseMessage}.
  */
 @Data
 @NoArgsConstructor
 public class QueryMessageReceived {
 
+  /** Unique identifier for this query request. */
   private String id;
+
+  /** Client ID of the sender. */
   private String fromClientId;
+
+  /** Timestamp when the message was received. */
   private LocalDateTime timestamp;
+
+  /** Channel on which the query was received. */
   private String channel;
+
+  /** Optional metadata associated with the query. */
   private String metadata;
+
+  /** Query payload. */
   private byte[] body;
+
+  /** Channel to send the response to. */
   private String replyChannel;
+
+  /** Key-value tags for routing or filtering. */
   private Map<String, String> tags = new HashMap<>();
 
   /**

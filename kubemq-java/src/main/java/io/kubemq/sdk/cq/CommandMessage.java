@@ -20,6 +20,9 @@ import lombok.Data;
  *
  * <p>Message objects should be treated as immutable after construction. Use the builder pattern
  * exclusively. Setter methods are provided for backward compatibility and will be removed in v3.0.
+ *
+ * @see CQClient#sendCommandRequest
+ * @see CommandResponseMessage
  */
 @NotThreadSafe
 @Data
