@@ -28,6 +28,10 @@ jobs:
         working-directory: kubemq-java
         run: mvn compile -B -q
 
+      - name: Compile examples
+        working-directory: kubemq-java-example
+        run: mvn compile -B -q
+
   unit-tests:
     name: Unit Tests (Java ${{ matrix.java }})
     runs-on: ubuntu-latest

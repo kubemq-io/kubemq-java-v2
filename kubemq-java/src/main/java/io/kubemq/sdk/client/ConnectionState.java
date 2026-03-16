@@ -14,14 +14,14 @@ package io.kubemq.sdk.client;
  * </pre>
  */
 public enum ConnectionState {
-    /** Created but not yet connected. */
-    IDLE,
-    /** Initial connection in progress. */
-    CONNECTING,
-    /** Connected and operational. */
-    READY,
-    /** Connection lost, attempting to reconnect. */
-    RECONNECTING,
-    /** Permanently closed (terminal state). */
-    CLOSED
+  /** Created but not yet connected. */
+  IDLE,
+  /** Initial connection in progress. */
+  CONNECTING,
+  /** Connected and operational. */
+  READY,
+  /** Connection lost, attempting to reconnect. */
+  RECONNECTING,
+  /** Permanently closed (terminal state). */
+  CLOSED
 }
