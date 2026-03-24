@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.kubemq.sdk.cq.CommandMessageReceived;
 import io.kubemq.sdk.cq.CommandResponseMessage;
+import io.kubemq.sdk.exception.ValidationException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -44,8 +45,8 @@ class CommandResponseMessageTest {
     void validate_withoutCommandReceived_throws() {
       CommandResponseMessage response = CommandResponseMessage.builder().isExecuted(true).build();
 
-      IllegalArgumentException ex =
-          assertThrows(IllegalArgumentException.class, response::validate);
+      ValidationException ex =
+          assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("command request"));
     }
 
@@ -57,8 +58,8 @@ class CommandResponseMessageTest {
               .isExecuted(true)
               .build();
 
-      IllegalArgumentException ex =
-          assertThrows(IllegalArgumentException.class, response::validate);
+      ValidationException ex =
+          assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("reply channel"));
     }
 
@@ -70,8 +71,8 @@ class CommandResponseMessageTest {
               .isExecuted(true)
               .build();
 
-      IllegalArgumentException ex =
-          assertThrows(IllegalArgumentException.class, response::validate);
+      ValidationException ex =
+          assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("reply channel"));
     }
 

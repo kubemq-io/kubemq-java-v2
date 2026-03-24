@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.cq;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import com.google.protobuf.ByteString;
@@ -31,6 +32,7 @@ class CQClientTest {
 
   @BeforeEach
   void setup() {
+    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
     client = CQClient.builder().address("localhost:50000").clientId("test-cq-client").build();
     client.setBlockingStub(mockBlockingStub);
     client.setAsyncStub(mockAsyncStub);
@@ -247,14 +249,14 @@ class CQClientTest {
     }
 
     @Test
-    @DisplayName("StatusRuntimeException propagates from sendResponseMessage (command)")
+    @DisplayName("StatusRuntimeException is mapped via GrpcErrorMapper for sendResponseMessage (command)")
     void sendResponseMessage_command_statusRuntimeException_mapped() {
       when(mockBlockingStub.sendResponse(any(Kubemq.Response.class)))
           .thenThrow(new StatusRuntimeException(Status.UNAVAILABLE));
 
-      // Production code does not wrap exceptions
+      // Production code maps StatusRuntimeException via GrpcErrorMapper
       assertThrows(
-          StatusRuntimeException.class,
+          KubeMQException.class,
           () -> client.sendResponseMessage(buildValidCommandResponse()));
     }
 
@@ -316,14 +318,14 @@ class CQClientTest {
     }
 
     @Test
-    @DisplayName("StatusRuntimeException propagates from sendResponseMessage (query)")
+    @DisplayName("StatusRuntimeException is mapped via GrpcErrorMapper for sendResponseMessage (query)")
     void sendResponseMessage_query_statusRuntimeException_mapped() {
       when(mockBlockingStub.sendResponse(any(Kubemq.Response.class)))
           .thenThrow(new StatusRuntimeException(Status.INTERNAL));
 
-      // Production code does not wrap exceptions
+      // Production code maps StatusRuntimeException via GrpcErrorMapper
       assertThrows(
-          StatusRuntimeException.class,
+          KubeMQException.class,
           () -> client.sendResponseMessage(buildValidQueryResponse()));
     }
 

@@ -31,7 +31,7 @@ class PubSubChannelTest {
       assertEquals("events-channel", channel.getName());
       assertEquals("events", channel.getType());
       assertTrue(channel.getLastActivity() > 0);
-      assertTrue(channel.getIsActive());
+      assertTrue(channel.isActive());
       assertNotNull(channel.getIncoming());
       assertNotNull(channel.getOutgoing());
     }
@@ -43,7 +43,7 @@ class PubSubChannelTest {
       assertEquals("minimal-channel", channel.getName());
       assertNull(channel.getType());
       assertEquals(0, channel.getLastActivity());
-      assertFalse(channel.getIsActive());
+      assertFalse(channel.isActive());
       assertNull(channel.getIncoming());
       assertNull(channel.getOutgoing());
     }
@@ -95,7 +95,7 @@ class PubSubChannelTest {
     void setActive_updatesActive() {
       PubSubChannel channel = new PubSubChannel();
       channel.setActive(true);
-      assertTrue(channel.getIsActive());
+      assertTrue(channel.isActive());
     }
 
     @Test
@@ -162,7 +162,7 @@ class PubSubChannelTest {
       assertNull(channel.getName());
       assertNull(channel.getType());
       assertEquals(0, channel.getLastActivity());
-      assertFalse(channel.getIsActive());
+      assertFalse(channel.isActive());
       assertNull(channel.getIncoming());
       assertNull(channel.getOutgoing());
     }

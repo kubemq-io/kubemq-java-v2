@@ -31,7 +31,7 @@ class QueuesChannelTest {
       assertEquals("orders-queue", channel.getName());
       assertEquals("queues", channel.getType());
       assertTrue(channel.getLastActivity() > 0);
-      assertTrue(channel.getIsActive());
+      assertTrue(channel.isActive());
       assertNotNull(channel.getIncoming());
       assertNotNull(channel.getOutgoing());
     }
@@ -43,7 +43,7 @@ class QueuesChannelTest {
       assertEquals("minimal-queue", channel.getName());
       assertNull(channel.getType());
       assertEquals(0, channel.getLastActivity());
-      assertFalse(channel.getIsActive());
+      assertFalse(channel.isActive());
       assertNull(channel.getIncoming());
       assertNull(channel.getOutgoing());
     }
@@ -88,7 +88,7 @@ class QueuesChannelTest {
     void setActive_updatesActive() {
       QueuesChannel channel = new QueuesChannel();
       channel.setActive(true);
-      assertTrue(channel.getIsActive());
+      assertTrue(channel.isActive());
     }
 
     @Test
@@ -155,7 +155,7 @@ class QueuesChannelTest {
       assertNull(channel.getName());
       assertNull(channel.getType());
       assertEquals(0, channel.getLastActivity());
-      assertFalse(channel.getIsActive());
+      assertFalse(channel.isActive());
       assertNull(channel.getIncoming());
       assertNull(channel.getOutgoing());
     }

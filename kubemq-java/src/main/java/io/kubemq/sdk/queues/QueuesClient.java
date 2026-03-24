@@ -146,6 +146,68 @@ public class QueuesClient extends KubeMQClient {
   }
 
   /**
+   * Creates a channel of the specified type.
+   *
+   * @param name the name of the channel to create (must not be null or empty)
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @return {@code true} if the channel was created successfully
+   * @throws ValidationException if the type is invalid or the name is null/empty
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if creating the channel fails
+   */
+  public boolean createChannel(String name, String type) {
+    KubeMQUtils.validateChannelType(type);
+    ensureNotClosed();
+    return KubeMQUtils.createChannelRequest(this, this.getClientId(), name, type);
+  }
+
+  /**
+   * Deletes a channel of the specified type.
+   *
+   * @param name the name of the channel to delete (must not be null or empty)
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @return {@code true} if the channel was deleted successfully
+   * @throws ValidationException if the type is invalid or the name is null/empty
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if deleting the channel fails
+   */
+  public boolean deleteChannel(String name, String type) {
+    KubeMQUtils.validateChannelType(type);
+    ensureNotClosed();
+    return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), name, type);
+  }
+
+  /**
+   * Lists channels of the specified type matching the search criteria.
+   *
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @param search a channel name filter; use an empty string or {@code null} to list all channels
+   * @return a list of channel objects matching the search criteria
+   * @throws ValidationException if the type is invalid
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if listing channels fails
+   */
+  public List<?> listChannels(String type, String search) {
+    KubeMQUtils.validateChannelType(type);
+    ensureNotClosed();
+    switch (type) {
+      case "events":
+      case "events_store":
+        return KubeMQUtils.listPubSubChannels(this, this.getClientId(), type, search);
+      case "commands":
+      case "queries":
+        return KubeMQUtils.listCQChannels(this, this.getClientId(), type, search);
+      case "queues":
+        return KubeMQUtils.listQueuesChannels(this, this.getClientId(), search);
+      default:
+        throw ValidationException.builder()
+            .message("Invalid channel type: " + type)
+            .operation("listChannels")
+            .build();
+    }
+  }
+
+  /**
    * Sends a message to the specified queue channel. Convenience method equivalent to building a
    * {@link QueueMessage} and calling {@link #sendQueueMessage(QueueMessage)}.
    *
