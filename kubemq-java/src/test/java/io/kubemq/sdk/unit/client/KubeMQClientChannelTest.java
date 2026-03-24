@@ -2,12 +2,14 @@ package io.kubemq.sdk.unit.client;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import io.grpc.ManagedChannel;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.kubemq.sdk.cq.CQClient;
+import java.util.concurrent.TimeUnit;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +35,7 @@ class KubeMQClientChannelTest {
 
   @BeforeEach
   void setup() {
+    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
     // Create a real client first
     client = CQClient.builder().address("localhost:50000").clientId("test-client").build();
   }

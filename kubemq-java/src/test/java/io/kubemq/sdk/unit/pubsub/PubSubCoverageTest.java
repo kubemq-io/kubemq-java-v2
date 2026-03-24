@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.pubsub;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import com.google.protobuf.ByteString;
@@ -42,6 +43,7 @@ class PubSubCoverageTest {
 
   @BeforeEach
   void setup() {
+    when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
     client =
         PubSubClient.builder().address("localhost:50000").clientId("test-coverage-client").build();
     client.setBlockingStub(mockBlockingStub);
@@ -1184,8 +1186,8 @@ class PubSubCoverageTest {
       EventSendResult result = future.get(5, TimeUnit.SECONDS);
       assertNotNull(result);
       assertEquals("stream died", result.getError());
-      // Stream handler is NOT cleared by onError in current production code
-      assertNotNull(helper.getQueuesUpStreamHandler());
+      // Stream handler IS cleared by onError in current production code
+      assertNull(helper.getQueuesUpStreamHandler());
     }
 
     @Test

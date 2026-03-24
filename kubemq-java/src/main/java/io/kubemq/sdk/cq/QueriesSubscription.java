@@ -47,7 +47,7 @@ public class QueriesSubscription {
             return t;
           });
 
-  @Builder.Default private transient SubscriptionReconnectHandler reconnectHandler = null;
+  @Builder.Default private volatile transient SubscriptionReconnectHandler reconnectHandler = null;
 
   public static ScheduledExecutorService getReconnectExecutor() {
     return RECONNECT_EXECUTOR;
@@ -60,7 +60,7 @@ public class QueriesSubscription {
 
   @Builder.Default private int maxConcurrentCallbacks = 1;
 
-  private transient Semaphore callbackSemaphore;
+  private volatile transient Semaphore callbackSemaphore;
 
   private Consumer<QueryMessageReceived> onReceiveQueryCallback;
 
@@ -136,7 +136,13 @@ public class QueriesSubscription {
    * @return the result
    */
   public Subscribe encode(String clientId, CQClient cQClient) {
-    this.callbackSemaphore = new Semaphore(Math.max(1, maxConcurrentCallbacks));
+    if (this.callbackSemaphore == null) {
+      synchronized (this) {
+        if (this.callbackSemaphore == null) {
+          this.callbackSemaphore = new Semaphore(Math.max(1, maxConcurrentCallbacks));
+        }
+      }
+    }
     Executor resolvedExecutor = callbackExecutor;
     if (resolvedExecutor == null) {
       resolvedExecutor = cQClient.getCallbackExecutor();
@@ -238,6 +244,11 @@ public class QueriesSubscription {
               cQClient.getReconnectIntervalInMillis(),
               channel,
               "subscribeToQueries");
+      // JV-8: Wait for channel-level READY before attempting resubscription
+      reconnectHandler.setConnectionReadyCheck(
+          () ->
+              cQClient.getConnectionState()
+                  == io.kubemq.sdk.client.ConnectionState.READY);
     }
     reconnectHandler.scheduleReconnect(
         () -> {

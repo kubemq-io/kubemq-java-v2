@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.pubsub;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import io.grpc.Status;
@@ -30,6 +31,7 @@ class PubSubClientTest {
 
   @BeforeEach
   void setup() {
+    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(java.util.concurrent.TimeUnit.class))).thenReturn(mockBlockingStub);
     client =
         PubSubClient.builder().address("localhost:50000").clientId("test-pubsub-client").build();
     client.setBlockingStub(mockBlockingStub);

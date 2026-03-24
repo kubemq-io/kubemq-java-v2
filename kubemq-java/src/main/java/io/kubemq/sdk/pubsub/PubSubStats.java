@@ -21,10 +21,10 @@ import lombok.Setter;
 public class PubSubStats {
 
   /** The number of messages for the Pub/Sub channel. */
-  private int messages;
+  private long messages;
 
   /** The volume of data (in bytes) for the Pub/Sub channel. */
-  private int volume;
+  private long volume;
 
   /** The number of messages currently waiting to be processed by the Pub/Sub channel. */
   private int waiting;

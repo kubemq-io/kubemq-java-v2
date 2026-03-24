@@ -3,6 +3,7 @@ package io.kubemq.sdk.cq;
 import io.kubemq.sdk.auth.CredentialProvider;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.client.Subscription;
+import io.kubemq.sdk.common.ChannelDecoder;
 import io.kubemq.sdk.common.KubeMQUtils;
 import io.kubemq.sdk.exception.AuthenticationException;
 import io.kubemq.sdk.exception.ClientClosedException;
@@ -28,6 +29,14 @@ import lombok.Builder;
  */
 @ThreadSafe
 public class CQClient extends KubeMQClient {
+
+  // JV-1b + JV-1c: Grace period (ms) after reconnection before accepting new command/query RPCs.
+  // This allows subscription responders to re-establish before senders resume,
+  // preventing server-side timeouts when the broker has no responders yet.
+  // Set to 3000ms to cover: subscription ready-poll (~200ms) + gRPC subscribe round-trip
+  // + broker-side registration + safety margin. Previously 2000ms which was insufficient
+  // for queries when the subscription reconnect poll fired late in its cycle.
+  private static final long POST_RECONNECT_STABILIZATION_MS = 3000;
 
   @Builder
   public CQClient(
@@ -203,9 +212,17 @@ public class CQClient extends KubeMQClient {
   @Deprecated(since = "2.2.0", forRemoval = true)
   public CommandResponseMessage sendCommandRequest(CommandMessage message) {
     ensureNotClosed();
+    // JV-1 + JV-1b: Fast-fail during reconnection and stabilization window
+    if (!isConnectionReadyAndStabilized(POST_RECONNECT_STABILIZATION_MS)) {
+      throw io.kubemq.sdk.exception.ConnectionNotReadyException.create(
+          getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
+              ? "STABILIZING" : getConnectionState().name());
+    }
     message.validate();
     Kubemq.Request request = message.encode(this.getClientId());
-    Kubemq.Response response = this.getClient().sendRequest(request);
+    Kubemq.Response response = this.getClient()
+        .withDeadlineAfter(message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+        .sendRequest(request);
     getLogger().debug("sendCommandRequest response received");
     return CommandResponseMessage.builder().build().decode(response);
   }
@@ -269,9 +286,17 @@ public class CQClient extends KubeMQClient {
   @Deprecated(since = "2.2.0", forRemoval = true)
   public QueryResponseMessage sendQueryRequest(QueryMessage message) {
     ensureNotClosed();
+    // JV-1 + JV-1b: Fast-fail during reconnection and stabilization window
+    if (!isConnectionReadyAndStabilized(POST_RECONNECT_STABILIZATION_MS)) {
+      throw io.kubemq.sdk.exception.ConnectionNotReadyException.create(
+          getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
+              ? "STABILIZING" : getConnectionState().name());
+    }
     message.validate();
     Kubemq.Request request = message.encode(this.getClientId());
-    Kubemq.Response response = this.getClient().sendRequest(request);
+    Kubemq.Response response = this.getClient()
+        .withDeadlineAfter(message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+        .sendRequest(request);
     getLogger().debug("sendQueryRequest response received");
     return QueryResponseMessage.builder().build().decode(response);
   }
@@ -292,7 +317,13 @@ public class CQClient extends KubeMQClient {
   public void sendResponseMessage(CommandResponseMessage message) {
     ensureNotClosed();
     message.validate();
-    this.getClient().sendResponse(message.encode(this.getClientId()));
+    try {
+      this.getClient()
+          .withDeadlineAfter(getRequestTimeoutSeconds(), java.util.concurrent.TimeUnit.SECONDS)
+          .sendResponse(message.encode(this.getClientId()));
+    } catch (io.grpc.StatusRuntimeException e) {
+      throw io.kubemq.sdk.exception.GrpcErrorMapper.map(e, "sendCommandResponse", null, null, false);
+    }
   }
 
   /**
@@ -311,7 +342,13 @@ public class CQClient extends KubeMQClient {
   public void sendResponseMessage(QueryResponseMessage message) {
     ensureNotClosed();
     message.validate();
-    this.getClient().sendResponse(message.encode(this.getClientId()));
+    try {
+      this.getClient()
+          .withDeadlineAfter(getRequestTimeoutSeconds(), java.util.concurrent.TimeUnit.SECONDS)
+          .sendResponse(message.encode(this.getClientId()));
+    } catch (io.grpc.StatusRuntimeException e) {
+      throw io.kubemq.sdk.exception.GrpcErrorMapper.map(e, "sendQueryResponse", null, null, false);
+    }
   }
 
   /**
@@ -418,6 +455,68 @@ public class CQClient extends KubeMQClient {
     return KubeMQUtils.listCQChannels(this, this.getClientId(), "queries", channelSearch);
   }
 
+  /**
+   * Creates a channel of the specified type.
+   *
+   * @param name the name of the channel to create (must not be null or empty)
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @return {@code true} if the channel was created successfully
+   * @throws ValidationException if the type is invalid or the name is null/empty
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if creating the channel fails
+   */
+  public boolean createChannel(String name, String type) {
+    KubeMQUtils.validateChannelType(type);
+    ensureNotClosed();
+    return KubeMQUtils.createChannelRequest(this, this.getClientId(), name, type);
+  }
+
+  /**
+   * Deletes a channel of the specified type.
+   *
+   * @param name the name of the channel to delete (must not be null or empty)
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @return {@code true} if the channel was deleted successfully
+   * @throws ValidationException if the type is invalid or the name is null/empty
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if deleting the channel fails
+   */
+  public boolean deleteChannel(String name, String type) {
+    KubeMQUtils.validateChannelType(type);
+    ensureNotClosed();
+    return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), name, type);
+  }
+
+  /**
+   * Lists channels of the specified type matching the search criteria.
+   *
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @param search a channel name filter; use an empty string or {@code null} to list all channels
+   * @return a list of channel objects matching the search criteria
+   * @throws ValidationException if the type is invalid
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if listing channels fails
+   */
+  public List<?> listChannels(String type, String search) {
+    KubeMQUtils.validateChannelType(type);
+    ensureNotClosed();
+    switch (type) {
+      case "events":
+      case "events_store":
+        return KubeMQUtils.listPubSubChannels(this, this.getClientId(), type, search);
+      case "commands":
+      case "queries":
+        return KubeMQUtils.listCQChannels(this, this.getClientId(), type, search);
+      case "queues":
+        return KubeMQUtils.listQueuesChannels(this, this.getClientId(), search);
+      default:
+        throw ValidationException.builder()
+            .message("Invalid channel type: " + type)
+            .operation("listChannels")
+            .build();
+    }
+  }
+
   // ---- Async API Methods (REQ-CONC-2 / REQ-CONC-4) ----
 
   /**
@@ -435,13 +534,50 @@ public class CQClient extends KubeMQClient {
    */
   public CompletableFuture<CommandResponseMessage> sendCommandRequestAsync(CommandMessage message) {
     ensureNotClosed();
+    // JV-1 + JV-1b: Fast-fail during reconnection AND during the post-reconnect
+    // stabilization window. This prevents sending commands to a broker that has no
+    // subscribed responders yet (which would cause a 5-second server-side timeout).
+    if (!isConnectionReadyAndStabilized(POST_RECONNECT_STABILIZATION_MS)) {
+      CompletableFuture<CommandResponseMessage> rejected = new CompletableFuture<>();
+      rejected.completeExceptionally(
+          io.kubemq.sdk.exception.ConnectionNotReadyException.create(
+              getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
+                  ? "STABILIZING" : getConnectionState().name()));
+      return rejected;
+    }
     message.validate();
-    return executeWithCancellation(
-        () -> {
-          Kubemq.Request request = message.encode(this.getClientId());
-          Kubemq.Response response = this.getClient().sendRequest(request);
-          return CommandResponseMessage.builder().build().decode(response);
-        });
+    CompletableFuture<CommandResponseMessage> future = new CompletableFuture<>();
+    getInFlightOperations().incrementAndGet();
+    // Ensure inFlightOperations is decremented exactly once, regardless of completion path
+    // (onCompleted, onError, or external cancellation/timeout)
+    future.whenComplete((r, ex) -> getInFlightOperations().decrementAndGet());
+    Kubemq.Request request = message.encode(this.getClientId());
+    // True async: use the gRPC async stub with StreamObserver callback.
+    // No thread is blocked waiting for the response.
+    this.getAsyncClient()
+        .withDeadlineAfter(
+            message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+        .sendRequest(
+            request,
+            new io.grpc.stub.StreamObserver<Kubemq.Response>() {
+              @Override
+              public void onNext(Kubemq.Response response) {
+                future.complete(CommandResponseMessage.builder().build().decode(response));
+              }
+
+              @Override
+              public void onError(Throwable t) {
+                future.completeExceptionally(t);
+              }
+
+              @Override
+              public void onCompleted() {
+                if (!future.isDone()) {
+                  future.complete(CommandResponseMessage.builder().build());
+                }
+              }
+            });
+    return future;
   }
 
   /**
@@ -475,13 +611,48 @@ public class CQClient extends KubeMQClient {
    */
   public CompletableFuture<QueryResponseMessage> sendQueryRequestAsync(QueryMessage message) {
     ensureNotClosed();
+    // JV-1 + JV-1b: Fast-fail during reconnection AND during the post-reconnect
+    // stabilization window. This prevents sending queries to a broker that has no
+    // subscribed responders yet (which would cause a 5-second server-side timeout).
+    if (!isConnectionReadyAndStabilized(POST_RECONNECT_STABILIZATION_MS)) {
+      CompletableFuture<QueryResponseMessage> rejected = new CompletableFuture<>();
+      rejected.completeExceptionally(
+          io.kubemq.sdk.exception.ConnectionNotReadyException.create(
+              getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
+                  ? "STABILIZING" : getConnectionState().name()));
+      return rejected;
+    }
     message.validate();
-    return executeWithCancellation(
-        () -> {
-          Kubemq.Request request = message.encode(this.getClientId());
-          Kubemq.Response response = this.getClient().sendRequest(request);
-          return QueryResponseMessage.builder().build().decode(response);
-        });
+    CompletableFuture<QueryResponseMessage> future = new CompletableFuture<>();
+    getInFlightOperations().incrementAndGet();
+    future.whenComplete((r, ex) -> getInFlightOperations().decrementAndGet());
+    Kubemq.Request request = message.encode(this.getClientId());
+    // True async: use the gRPC async stub with StreamObserver callback.
+    // No thread is blocked waiting for the response.
+    this.getAsyncClient()
+        .withDeadlineAfter(
+            message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+        .sendRequest(
+            request,
+            new io.grpc.stub.StreamObserver<Kubemq.Response>() {
+              @Override
+              public void onNext(Kubemq.Response response) {
+                future.complete(QueryResponseMessage.builder().build().decode(response));
+              }
+
+              @Override
+              public void onError(Throwable t) {
+                future.completeExceptionally(t);
+              }
+
+              @Override
+              public void onCompleted() {
+                if (!future.isDone()) {
+                  future.complete(QueryResponseMessage.builder().build());
+                }
+              }
+            });
+    return future;
   }
 
   /**

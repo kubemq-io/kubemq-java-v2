@@ -14,6 +14,7 @@ import io.kubemq.sdk.pubsub.PubSubChannel;
 import io.kubemq.sdk.queues.QueuesChannel;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import kubemq.Kubemq;
@@ -34,6 +35,10 @@ public class KubeMQUtils {
 
   private static final String REQUESTS_CHANNEL = "kubemq.cluster.internal.requests";
 
+  private static final Set<String> VALID_CHANNEL_TYPES =
+      Set.of("events", "events_store", "commands", "queries", "queues");
+
+  private static final int CHANNEL_MGMT_DEADLINE_SECONDS = 10;
   private static final int MAX_CHANNEL_LENGTH = 256;
   private static final Pattern CHANNEL_NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9._\\-/:]+$");
 
@@ -77,6 +82,25 @@ public class KubeMQUtils {
                   + "'")
           .operation(operation)
           .channel(channel)
+          .build();
+    }
+  }
+
+  /**
+   * Validates that the given channel type is one of the supported types.
+   *
+   * @param type the channel type to validate
+   * @throws ValidationException if the type is null or not one of the supported types
+   */
+  public static void validateChannelType(String type) {
+    if (type == null || !VALID_CHANNEL_TYPES.contains(type)) {
+      throw ValidationException.builder()
+          .code(ErrorCode.INVALID_ARGUMENT)
+          .message(
+              "Invalid channel type: "
+                  + type
+                  + ". Must be one of: events, events_store, commands, queries, queues")
+          .operation("validateChannelType")
           .build();
     }
   }
@@ -150,7 +174,9 @@ public class KubeMQUtils {
               .putTags("client_id", clientId)
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+      kubemq.Kubemq.Response response = kubeMQClient.getClient()
+          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+          .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return true;
       } else if (response != null) {
@@ -189,7 +215,9 @@ public class KubeMQUtils {
               .setTimeout(10 * 1000)
               .build();
 
-      Response response = kubeMQClient.getClient().sendRequest(request);
+      Response response = kubeMQClient.getClient()
+          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+          .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return ChannelDecoder.decodeQueuesChannelList(response.getBody().toByteArray());
       } else if (response != null) {
@@ -239,7 +267,9 @@ public class KubeMQUtils {
               .putTags("channel_search", channelSearch != null ? channelSearch : "")
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = kubeMQClient.getClient().sendRequest(request);
+      kubemq.Kubemq.Response response = kubeMQClient.getClient()
+          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+          .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());
       } else if (response != null) {
@@ -290,7 +320,9 @@ public class KubeMQUtils {
               .setTimeout(10 * 1000)
               .build();
 
-      Response response = kubeMQClient.getClient().sendRequest(request);
+      Response response = kubeMQClient.getClient()
+          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+          .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return ChannelDecoder.decodeCqChannelList(response.getBody().toByteArray());
       } else if (response != null) {

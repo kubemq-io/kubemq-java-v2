@@ -62,7 +62,7 @@ class SubscriptionReconnectHandlerTest {
     AtomicReference<KubeMQException> errorRef = new AtomicReference<>();
     CountDownLatch errorLatch = new CountDownLatch(1);
 
-    for (int i = 0; i < 11; i++) {
+    for (int i = 0; i < 51; i++) {
       handler.scheduleReconnect(
           () -> {
             throw new RuntimeException("simulated failure");

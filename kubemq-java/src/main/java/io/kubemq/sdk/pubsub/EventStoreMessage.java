@@ -115,10 +115,8 @@ public class EventStoreMessage {
    * @return The encoded pbEvent object.
    */
   public Kubemq.Event encode(String clientId) {
-    if (tags == null) {
-      tags = new HashMap<>();
-    }
-    tags.put("x-kubemq-client-id", clientId);
+    Map<String, String> encodedTags = new HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
+    encodedTags.put("x-kubemq-client-id", clientId);
     return Kubemq.Event.newBuilder()
         .setEventID(id != null ? id : UUID.randomUUID().toString())
         .setClientID(clientId)
@@ -126,7 +124,7 @@ public class EventStoreMessage {
         .setMetadata(Optional.ofNullable(metadata).orElse(""))
         .setBody(ByteString.copyFrom(body))
         .setStore(true)
-        .putAllTags(Optional.ofNullable(tags).orElse(new HashMap<>()))
+        .putAllTags(encodedTags)
         .build();
   }
 

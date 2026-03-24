@@ -55,11 +55,12 @@ public class CommandMessageReceived {
     return CommandMessageReceived.builder()
         .id(commandReceive.getRequestID())
         .fromClientId(commandReceive.getClientID())
-        .timestamp(Instant.now()) // Placeholder for actual timestamp if available
+        .timestamp(Instant.now())
         .channel(commandReceive.getChannel())
         .metadata(commandReceive.getMetadata())
         .body(commandReceive.getBody().toByteArray())
         .replyChannel(commandReceive.getReplyChannel())
+        .tags(new java.util.HashMap<>(commandReceive.getTagsMap()))
         .build();
   }
 

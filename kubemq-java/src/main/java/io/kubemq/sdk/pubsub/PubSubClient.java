@@ -5,6 +5,7 @@ import io.kubemq.sdk.auth.CredentialProvider;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.client.Subscription;
 import io.kubemq.sdk.common.ChannelDecoder;
+import io.kubemq.sdk.common.KubeMQUtils;
 import io.kubemq.sdk.exception.AuthenticationException;
 import io.kubemq.sdk.exception.ClientClosedException;
 import io.kubemq.sdk.exception.ConnectionException;
@@ -149,6 +150,10 @@ public class PubSubClient extends KubeMQClient {
   @Deprecated(since = "2.2.0", forRemoval = true)
   public void sendEventsMessage(EventMessage message) {
     ensureNotClosed();
+    // JV-1: Fast-fail during reconnection instead of waiting for server timeout
+    if (getConnectionState() == io.kubemq.sdk.client.ConnectionState.RECONNECTING) {
+      throw io.kubemq.sdk.exception.ConnectionNotReadyException.create("RECONNECTING");
+    }
     try {
       getLogger().debug("Sending event message");
       message.validate();
@@ -231,6 +236,10 @@ public class PubSubClient extends KubeMQClient {
   @Deprecated(since = "2.2.0", forRemoval = true)
   public EventSendResult sendEventsStoreMessage(EventStoreMessage message) {
     ensureNotClosed();
+    // JV-1: Fast-fail during reconnection instead of waiting for server timeout
+    if (getConnectionState() == io.kubemq.sdk.client.ConnectionState.RECONNECTING) {
+      throw io.kubemq.sdk.exception.ConnectionNotReadyException.create("RECONNECTING");
+    }
     try {
       getLogger().debug("Sending event store message");
       message.validate();
@@ -511,6 +520,66 @@ public class PubSubClient extends KubeMQClient {
         "delete-channel", "events", channelName, "deleteEventsChannel");
   }
 
+  /**
+   * Creates a channel of the specified type.
+   *
+   * @param name the name of the channel to create (must not be null or empty)
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @return {@code true} if the channel was created successfully
+   * @throws ValidationException if the type is invalid or the name is null/empty
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if creating the channel fails
+   */
+  public boolean createChannel(String name, String type) {
+    KubeMQUtils.validateChannelType(type);
+    return sendChannelManagementRequest("create-channel", type, name, "createChannel");
+  }
+
+  /**
+   * Deletes a channel of the specified type.
+   *
+   * @param name the name of the channel to delete (must not be null or empty)
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @return {@code true} if the channel was deleted successfully
+   * @throws ValidationException if the type is invalid or the name is null/empty
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if deleting the channel fails
+   */
+  public boolean deleteChannel(String name, String type) {
+    KubeMQUtils.validateChannelType(type);
+    return sendChannelManagementRequest("delete-channel", type, name, "deleteChannel");
+  }
+
+  /**
+   * Lists channels of the specified type matching the search criteria.
+   *
+   * @param type the channel type: "events", "events_store", "commands", "queries", or "queues"
+   * @param search a channel name filter; use an empty string or {@code null} to list all channels
+   * @return a list of channel objects matching the search criteria
+   * @throws ValidationException if the type is invalid
+   * @throws ClientClosedException if this client has been closed
+   * @throws KubeMQException if listing channels fails
+   */
+  public List<?> listChannels(String type, String search) {
+    KubeMQUtils.validateChannelType(type);
+    switch (type) {
+      case "events":
+      case "events_store":
+        return queryChannelList(search, type, "listChannels");
+      case "commands":
+      case "queries":
+        return KubeMQUtils.listCQChannels(this, this.getClientId(), type, search);
+      case "queues":
+        return KubeMQUtils.listQueuesChannels(this, this.getClientId(), search);
+      default:
+        throw ValidationException.builder()
+            .code(ErrorCode.INVALID_ARGUMENT)
+            .message("Invalid channel type: " + type)
+            .operation("listChannels")
+            .build();
+    }
+  }
+
   // ---- Async API Methods (REQ-CONC-2 / REQ-CONC-4) ----
 
   /**
@@ -530,6 +599,13 @@ public class PubSubClient extends KubeMQClient {
    */
   public CompletableFuture<Void> sendEventsMessageAsync(EventMessage message) {
     ensureNotClosed();
+    // JV-1: Fast-fail during reconnection instead of waiting for server timeout
+    if (getConnectionState() == io.kubemq.sdk.client.ConnectionState.RECONNECTING) {
+      CompletableFuture<Void> rejected = new CompletableFuture<>();
+      rejected.completeExceptionally(
+          io.kubemq.sdk.exception.ConnectionNotReadyException.create("RECONNECTING"));
+      return rejected;
+    }
     message.validate();
     Kubemq.Event event = message.encode(this.getClientId());
     return CompletableFuture.runAsync(
@@ -554,6 +630,13 @@ public class PubSubClient extends KubeMQClient {
    */
   public CompletableFuture<EventSendResult> sendEventsStoreMessageAsync(EventStoreMessage message) {
     ensureNotClosed();
+    // JV-1: Fast-fail during reconnection instead of waiting for server timeout
+    if (getConnectionState() == io.kubemq.sdk.client.ConnectionState.RECONNECTING) {
+      CompletableFuture<EventSendResult> rejected = new CompletableFuture<>();
+      rejected.completeExceptionally(
+          io.kubemq.sdk.exception.ConnectionNotReadyException.create("RECONNECTING"));
+      return rejected;
+    }
     message.validate();
     Kubemq.Event event = message.encode(this.getClientId());
     return eventStreamHelper.sendEventStoreMessageAsync(this, event);
@@ -674,10 +757,26 @@ public class PubSubClient extends KubeMQClient {
    */
   public Subscription subscribeToEventsWithHandle(EventsSubscription subscription) {
     ensureNotClosed();
-    subscription.validate();
-    Kubemq.Subscribe subscribe = subscription.encode(this.getClientId(), this);
-    this.getAsyncClient().subscribeToEvents(subscribe, subscription.getObserver());
-    return new Subscription(subscription::cancel, getAsyncOperationExecutor());
+    try {
+      subscription.validate();
+      Kubemq.Subscribe subscribe = subscription.encode(this.getClientId(), this);
+      this.getAsyncClient().subscribeToEvents(subscribe, subscription.getObserver());
+      return new Subscription(subscription::cancel, getAsyncOperationExecutor());
+    } catch (KubeMQException e) {
+      throw e;
+    } catch (StatusRuntimeException e) {
+      throw GrpcErrorMapper.map(e, "subscribeToEventsWithHandle", subscription.getChannel(), null, false);
+    } catch (Exception e) {
+      throw KubeMQException.newBuilder()
+          .code(ErrorCode.UNKNOWN_ERROR)
+          .category(ErrorCategory.FATAL)
+          .retryable(false)
+          .message("subscribeToEventsWithHandle failed: " + e.getMessage())
+          .operation("subscribeToEventsWithHandle")
+          .channel(subscription.getChannel())
+          .cause(e)
+          .build();
+    }
   }
 
   /**
@@ -694,10 +793,26 @@ public class PubSubClient extends KubeMQClient {
    */
   public Subscription subscribeToEventsStoreWithHandle(EventsStoreSubscription subscription) {
     ensureNotClosed();
-    subscription.validate();
-    Kubemq.Subscribe subscribe = subscription.encode(this.getClientId(), this);
-    this.getAsyncClient().subscribeToEvents(subscribe, subscription.getObserver());
-    return new Subscription(subscription::cancel, getAsyncOperationExecutor());
+    try {
+      subscription.validate();
+      Kubemq.Subscribe subscribe = subscription.encode(this.getClientId(), this);
+      this.getAsyncClient().subscribeToEvents(subscribe, subscription.getObserver());
+      return new Subscription(subscription::cancel, getAsyncOperationExecutor());
+    } catch (KubeMQException e) {
+      throw e;
+    } catch (StatusRuntimeException e) {
+      throw GrpcErrorMapper.map(e, "subscribeToEventsStoreWithHandle", subscription.getChannel(), null, false);
+    } catch (Exception e) {
+      throw KubeMQException.newBuilder()
+          .code(ErrorCode.UNKNOWN_ERROR)
+          .category(ErrorCategory.FATAL)
+          .retryable(false)
+          .message("subscribeToEventsStoreWithHandle failed: " + e.getMessage())
+          .operation("subscribeToEventsStoreWithHandle")
+          .channel(subscription.getChannel())
+          .cause(e)
+          .build();
+    }
   }
 
   /**
@@ -717,6 +832,8 @@ public class PubSubClient extends KubeMQClient {
         "delete-channel", "events_store", channelName, "deleteEventsStoreChannel");
   }
 
+  private static final int CHANNEL_MGMT_DEADLINE_SECONDS = 10;
+
   private boolean sendChannelManagementRequest(
       String metadata, String channelType, String channelName, String operationName) {
     ensureNotClosed();
@@ -735,7 +852,9 @@ public class PubSubClient extends KubeMQClient {
               .putTags("client_id", this.getClientId())
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
+      kubemq.Kubemq.Response response = this.getClient()
+          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+          .sendRequest(request);
       return response.getExecuted();
     } catch (StatusRuntimeException e) {
       throw GrpcErrorMapper.map(e, operationName, channelName, null, false);
@@ -770,7 +889,9 @@ public class PubSubClient extends KubeMQClient {
               .putTags("channel_search", search != null ? search : "")
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = this.getClient().sendRequest(request);
+      kubemq.Kubemq.Response response = this.getClient()
+          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+          .sendRequest(request);
       getLogger().debug(operationName + " response received");
       if (response.getExecuted()) {
         return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());

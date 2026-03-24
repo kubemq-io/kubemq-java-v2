@@ -45,8 +45,17 @@ public final class GrpcErrorMapper {
 
     switch (code) {
       case OK:
-        throw new IllegalArgumentException(
-            "StatusRuntimeException with OK status should never occur");
+        return KubeMQException.newBuilder()
+            .code(ErrorCode.UNKNOWN_ERROR)
+            .message("Unexpected OK status in error callback: " + message)
+            .operation(operation)
+            .channel(channel)
+            .requestId(requestId)
+            .cause(grpcError)
+            .statusCode(grpcStatusCode)
+            .category(ErrorCategory.FATAL)
+            .retryable(false)
+            .build();
 
       case CANCELLED:
         if (localContextCancelled) {
@@ -209,6 +218,7 @@ public final class GrpcErrorMapper {
             .requestId(requestId)
             .cause(grpcError)
             .statusCode(grpcStatusCode)
+            .retryable(true)
             .build();
 
       case UNAVAILABLE:

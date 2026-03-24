@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.common;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
 import com.google.protobuf.ByteString;
@@ -17,6 +18,7 @@ import io.kubemq.sdk.exception.ListChannelsException;
 import io.kubemq.sdk.pubsub.PubSubChannel;
 import io.kubemq.sdk.queues.QueuesChannel;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +47,7 @@ class KubeMQUtilsTest {
   void setup() {
     when(mockClient.getClient()).thenReturn(mockBlockingStub);
     when(mockClient.getClientId()).thenReturn("test-client");
+    when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
   }
 
   @Nested

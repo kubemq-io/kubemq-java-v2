@@ -61,9 +61,19 @@ public class QueryResponseMessage {
    */
   public QueryResponseMessage validate() {
     if (queryReceived == null) {
-      throw new IllegalArgumentException("Query response must have a query request.");
-    } else if (queryReceived.getReplyChannel().isEmpty()) {
-      throw new IllegalArgumentException("Query response must have a reply channel.");
+      throw io.kubemq.sdk.exception.ValidationException.builder()
+          .code(io.kubemq.sdk.exception.ErrorCode.INVALID_ARGUMENT)
+          .message("Query response must have a query request.")
+          .operation("QueryResponseMessage.validate")
+          .build();
+    }
+    if (queryReceived.getReplyChannel() == null
+        || queryReceived.getReplyChannel().isEmpty()) {
+      throw io.kubemq.sdk.exception.ValidationException.builder()
+          .code(io.kubemq.sdk.exception.ErrorCode.INVALID_ARGUMENT)
+          .message("Query response must have a reply channel.")
+          .operation("QueryResponseMessage.validate")
+          .build();
     }
     return this;
   }
@@ -96,20 +106,20 @@ public class QueryResponseMessage {
    * @return the result
    */
   public Response encode(String clientId) {
-    Response.Builder pbResponseBuilder = Response.newBuilder();
-    pbResponseBuilder.setClientID(clientId);
-    pbResponseBuilder.setRequestID(this.queryReceived.getId());
-    pbResponseBuilder.setReplyChannel(this.queryReceived.getReplyChannel());
-    pbResponseBuilder.setExecuted(this.isExecuted);
-    pbResponseBuilder.setError(this.error != null ? this.error : "");
-    pbResponseBuilder.setTimestamp(
-        this.timestamp != null
-            ? (this.timestamp.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() * 1_000_000)
-            : Instant.now().toEpochMilli());
-    pbResponseBuilder.setMetadata(this.metadata != null ? this.metadata : "");
-    pbResponseBuilder.setBody(com.google.protobuf.ByteString.copyFrom(this.body));
-    pbResponseBuilder.putAllTags(this.tags);
-    return pbResponseBuilder.build();
+    return Response.newBuilder()
+        .setClientID(clientId)
+        .setRequestID(this.queryReceived.getId())
+        .setReplyChannel(this.queryReceived.getReplyChannel())
+        .setExecuted(this.isExecuted)
+        .setError(this.error != null ? this.error : "")
+        .setTimestamp(
+            this.timestamp != null
+                ? (this.timestamp.toEpochSecond(java.time.ZoneOffset.UTC) * 1_000_000_000L)
+                : (Instant.now().getEpochSecond() * 1_000_000_000L))
+        .setMetadata(this.metadata != null ? this.metadata : "")
+        .setBody(com.google.protobuf.ByteString.copyFrom(this.body))
+        .putAllTags(this.tags)
+        .build();
   }
 
   /**

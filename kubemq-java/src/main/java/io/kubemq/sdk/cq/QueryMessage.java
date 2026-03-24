@@ -131,18 +131,19 @@ public class QueryMessage {
    */
   public Request encode(String clientId) {
     Request.Builder pbQueryBuilder = Request.newBuilder();
-    tags.put("x-kubemq-client-id", clientId);
+    java.util.Map<String, String> encodedTags = new java.util.HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
+    encodedTags.put("x-kubemq-client-id", clientId);
     pbQueryBuilder
         .setRequestID(id != null ? id : UUID.randomUUID().toString())
         .setClientID(clientId)
         .setChannel(channel)
         .setMetadata(metadata != null ? metadata : "")
         .setBody(com.google.protobuf.ByteString.copyFrom(body))
-        .setTimeout(timeoutInSeconds * 1000)
+        .setTimeout((int) Math.min((long) timeoutInSeconds * 1000L, Integer.MAX_VALUE))
         .setRequestTypeData(Request.RequestType.Query)
-        .putAllTags(tags)
+        .putAllTags(encodedTags)
         .setCacheKey(cacheKey != null ? cacheKey : "")
-        .setCacheTTL(cacheTtlInSeconds * 1000);
+        .setCacheTTL((int) Math.min((long) cacheTtlInSeconds * 1000L, Integer.MAX_VALUE));
 
     return pbQueryBuilder.build();
   }

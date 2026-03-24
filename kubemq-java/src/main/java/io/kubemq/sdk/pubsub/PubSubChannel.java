@@ -24,6 +24,7 @@ public class PubSubChannel {
   private long lastActivity;
 
   /** Indicates whether the channel is active or not. */
+  @com.fasterxml.jackson.annotation.JsonProperty("isActive")
   private boolean isActive;
 
   /** The statistics related to incoming messages for this channel. */
@@ -55,7 +56,4 @@ public class PubSubChannel {
         + outgoing;
   }
 
-  public boolean getIsActive() {
-    return isActive;
-  }
 }

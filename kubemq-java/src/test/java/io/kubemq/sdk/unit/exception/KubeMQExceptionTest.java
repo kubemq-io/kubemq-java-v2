@@ -400,7 +400,7 @@ class KubeMQExceptionTest {
       RetryThrottledException ex = RetryThrottledException.builder().message("Throttled").build();
 
       assertEquals(ErrorCode.RETRY_THROTTLED, ex.getCode());
-      assertEquals(ErrorCategory.THROTTLING, ex.getCategory());
+      assertEquals(ErrorCategory.BACKPRESSURE, ex.getCategory());
       assertFalse(ex.isRetryable());
     }
   }

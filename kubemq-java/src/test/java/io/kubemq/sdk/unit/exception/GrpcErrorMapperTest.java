@@ -19,10 +19,10 @@ class GrpcErrorMapperTest {
   class StatusCodeMappingTests {
 
     @Test
-    void ok_throwsIllegalArgument() {
-      assertThrows(
-          IllegalArgumentException.class,
-          () -> GrpcErrorMapper.map(grpcError(Status.OK), "ping", null, null, false));
+    void ok_returnsKubeMQException() {
+      KubeMQException result = GrpcErrorMapper.map(grpcError(Status.OK), "ping", null, null, false);
+      assertNotNull(result);
+      assertEquals(ErrorCode.UNKNOWN_ERROR, result.getCode());
     }
 
     @Test

@@ -74,7 +74,7 @@ class ComplianceGapTest {
       CommandResponseMessage msg =
           CommandResponseMessage.builder().isExecuted(true).build();
 
-      assertThrows(IllegalArgumentException.class, msg::validate);
+      assertThrows(ValidationException.class, msg::validate);
     }
   }
 

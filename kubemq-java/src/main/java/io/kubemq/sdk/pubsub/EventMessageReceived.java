@@ -51,6 +51,7 @@ public class EventMessageReceived {
     message.setMetadata(event.getMetadata());
     message.setBody(event.getBody().toByteArray());
     message.setTags(event.getTagsMap());
+    message.setTimestamp(java.time.Instant.ofEpochSecond(0, event.getTimestamp()));
     return message;
   }
 

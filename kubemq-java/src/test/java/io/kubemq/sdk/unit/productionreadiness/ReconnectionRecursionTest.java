@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import io.kubemq.sdk.client.ConnectionState;
 import io.kubemq.sdk.common.SubscriptionReconnectHandler;
 import io.kubemq.sdk.cq.CommandsSubscription;
 import io.kubemq.sdk.cq.QueriesSubscription;
@@ -17,6 +18,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -40,17 +42,24 @@ class ReconnectionRecursionTest {
 
   @Mock private kubemqGrpc.kubemqStub mockAsyncStub;
 
+  @BeforeEach
+  void setUp() {
+    // JV-8: SubscriptionReconnectHandler now checks connection readiness before resubscribing.
+    // Mock getConnectionState() to return READY so tests can proceed with reconnection.
+    lenient().when(mockPubSubClient.getConnectionState()).thenReturn(ConnectionState.READY);
+  }
+
   @Test
   @DisplayName("CRITICAL-3 FIX: SubscriptionReconnectHandler has MAX_RECONNECT_ATTEMPTS constant")
   void eventsSubscription_hasMaxReconnectAttempts() throws Exception {
     Field maxAttemptsField =
-        SubscriptionReconnectHandler.class.getDeclaredField("MAX_RECONNECT_ATTEMPTS");
+        SubscriptionReconnectHandler.class.getDeclaredField("DEFAULT_MAX_RECONNECT_ATTEMPTS");
     maxAttemptsField.setAccessible(true);
 
     int maxAttempts = (int) maxAttemptsField.get(null);
 
-    assertTrue(maxAttempts > 0, "MAX_RECONNECT_ATTEMPTS should be positive");
-    assertEquals(10, maxAttempts, "MAX_RECONNECT_ATTEMPTS should be 10");
+    assertTrue(maxAttempts > 0, "DEFAULT_MAX_RECONNECT_ATTEMPTS should be positive");
+    assertEquals(50, maxAttempts, "DEFAULT_MAX_RECONNECT_ATTEMPTS should be 50");
   }
 
   @Test
@@ -115,8 +124,8 @@ class ReconnectionRecursionTest {
     Thread.sleep(5000);
 
     assertTrue(
-        reconnectAttempts.get() <= 11,
-        "Reconnection attempts should be limited to MAX_RECONNECT_ATTEMPTS (10), got "
+        reconnectAttempts.get() <= 51,
+        "Reconnection attempts should be limited to DEFAULT_MAX_RECONNECT_ATTEMPTS (50), got "
             + reconnectAttempts.get());
 
     assertTrue(
@@ -251,12 +260,12 @@ class ReconnectionRecursionTest {
     }
 
     Field maxAttemptsField =
-        SubscriptionReconnectHandler.class.getDeclaredField("MAX_RECONNECT_ATTEMPTS");
+        SubscriptionReconnectHandler.class.getDeclaredField("DEFAULT_MAX_RECONNECT_ATTEMPTS");
     maxAttemptsField.setAccessible(true);
     assertEquals(
-        10,
+        50,
         (int) maxAttemptsField.get(null),
-        "SubscriptionReconnectHandler.MAX_RECONNECT_ATTEMPTS should be 10");
+        "SubscriptionReconnectHandler.DEFAULT_MAX_RECONNECT_ATTEMPTS should be 50");
   }
 
   @Test
