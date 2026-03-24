@@ -48,7 +48,7 @@ public class EventStreamHelper {
             return t;
           });
 
-  private volatile boolean cleanupStarted = false;
+  private static volatile boolean cleanupStarted = false;
 
   /** Constructs a new instance. */
   public EventStreamHelper() {
@@ -70,49 +70,35 @@ public class EventStreamHelper {
           @Override
           public void onError(Throwable t) {
             LOG.error("Error in EventSendResult", t);
-            // Complete all pending futures with error
-            pendingResponses.forEach(
-                (id, future) -> {
-                  EventSendResult sendResult = new EventSendResult();
-                  sendResult.setError(t.getMessage());
-                  future.complete(sendResult);
-                });
-            pendingResponses.clear();
-            requestTimestamps.clear();
+            synchronized (EventStreamHelper.this) {
+              queuesUpStreamHandler = null;
+              pendingResponses.forEach(
+                  (id, future) -> {
+                    EventSendResult sendResult = new EventSendResult();
+                    sendResult.setError(t.getMessage());
+                    future.complete(sendResult);
+                  });
+              pendingResponses.clear();
+              requestTimestamps.clear();
+            }
           }
 
           @Override
           public void onCompleted() {
             LOG.debug("EventSendResult onCompleted.");
+            synchronized (EventStreamHelper.this) {
+              queuesUpStreamHandler = null;
+            }
           }
         };
   }
 
   private void startCleanupTask() {
     if (!cleanupStarted) {
-      synchronized (this) {
+      synchronized (EventStreamHelper.class) {
         if (!cleanupStarted) {
           CLEANUP_EXECUTOR.scheduleAtFixedRate(
-              () -> {
-                long now = System.currentTimeMillis();
-                pendingResponses
-                    .entrySet()
-                    .removeIf(
-                        entry -> {
-                          Long timestamp = requestTimestamps.get(entry.getKey());
-                          if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
-                            EventSendResult timeoutResult = new EventSendResult();
-                            timeoutResult.setError(
-                                "Request timed out after " + REQUEST_TIMEOUT_MS + "ms");
-                            timeoutResult.setSent(false);
-                            entry.getValue().complete(timeoutResult);
-                            requestTimestamps.remove(entry.getKey());
-                            LOG.warn("Cleaned up stale event request", "requestId", entry.getKey());
-                            return true;
-                          }
-                          return false;
-                        });
-              },
+              this::cleanupStaleRequests,
               30,
               30,
               TimeUnit.SECONDS);
@@ -120,6 +106,26 @@ public class EventStreamHelper {
         }
       }
     }
+  }
+
+  private void cleanupStaleRequests() {
+    long now = System.currentTimeMillis();
+    pendingResponses
+        .entrySet()
+        .removeIf(
+            entry -> {
+              Long timestamp = requestTimestamps.get(entry.getKey());
+              if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
+                EventSendResult timeoutResult = new EventSendResult();
+                timeoutResult.setError("Request timed out after " + REQUEST_TIMEOUT_MS + "ms");
+                timeoutResult.setSent(false);
+                entry.getValue().complete(timeoutResult);
+                requestTimestamps.remove(entry.getKey());
+                LOG.warn("Cleaned up stale event request", "requestId", entry.getKey());
+                return true;
+              }
+              return false;
+            });
   }
 
   // Expose executor for shutdown hook
@@ -151,21 +157,22 @@ public class EventStreamHelper {
    */
   public CompletableFuture<EventSendResult> sendEventStoreMessageAsync(
       KubeMQClient kubeMQClient, Kubemq.Event event) {
+    String requestId = UUID.randomUUID().toString();
+    CompletableFuture<EventSendResult> responseFuture = new CompletableFuture<>();
+    Kubemq.Event eventWithId = event.toBuilder().setEventID(requestId).build();
+
+    // Single lock covers register + send as atomic unit: the future must be
+    // in pendingResponses before onNext, otherwise a fast server response
+    // could find no registered future. Holding lock during onNext is safe
+    // because gRPC onNext is non-blocking for standard-sized messages.
     synchronized (this) {
       if (queuesUpStreamHandler == null) {
         queuesUpStreamHandler =
             kubeMQClient.getAsyncClient().sendEventsStream(resultStreamObserver);
         startCleanupTask();
       }
-    }
-
-    String requestId = UUID.randomUUID().toString();
-    CompletableFuture<EventSendResult> responseFuture = new CompletableFuture<>();
-    pendingResponses.put(requestId, responseFuture);
-    requestTimestamps.put(requestId, System.currentTimeMillis());
-
-    Kubemq.Event eventWithId = event.toBuilder().setEventID(requestId).build();
-    synchronized (this) {
+      pendingResponses.put(requestId, responseFuture);
+      requestTimestamps.put(requestId, System.currentTimeMillis());
       queuesUpStreamHandler.onNext(eventWithId);
     }
     LOG.debug("Event store message sent async", "requestId", requestId);

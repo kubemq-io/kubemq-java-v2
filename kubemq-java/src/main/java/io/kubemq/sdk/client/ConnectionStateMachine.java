@@ -23,6 +23,11 @@ public class ConnectionStateMachine {
 
   private volatile int currentReconnectAttempt = 0;
 
+  // JV-1b: Track when READY was entered and whether it was a reconnection,
+  // so callers can enforce a post-reconnect stabilization window.
+  private volatile long readySinceNanos = 0;
+  private volatile boolean readyAfterReconnect = false;
+
   /** Constructs a new instance. */
   public ConnectionStateMachine() {
     this.listenerExecutor =
@@ -88,6 +93,12 @@ public class ConnectionStateMachine {
       if (!state.compareAndSet(oldState, newState)) {
         Thread.onSpinWait();
         continue;
+      }
+
+      // JV-1b: Track READY entry time and whether it followed RECONNECTING
+      if (newState == ConnectionState.READY) {
+        readyAfterReconnect = (oldState == ConnectionState.RECONNECTING);
+        readySinceNanos = System.nanoTime();
       }
 
       LOG.info("Connection state: {} -> {}", oldState, newState);
@@ -159,6 +170,42 @@ public class ConnectionStateMachine {
    */
   public void setCurrentReconnectAttempt(int attempt) {
     this.currentReconnectAttempt = attempt;
+  }
+
+  /**
+   * Returns {@code true} if the connection is READY and has been stable for at least
+   * {@code stabilizationMs} after a reconnection. If the last READY transition was from
+   * CONNECTING (initial connect) rather than RECONNECTING, no stabilization window applies.
+   *
+   * <p>This prevents the race where senders resume immediately after reconnection but
+   * subscription responders have not yet re-established, causing server-side timeouts.
+   *
+   * @param stabilizationMs grace period in milliseconds after reconnection
+   * @return true if the connection is READY and stabilized
+   */
+  public boolean isReadyAndStabilized(long stabilizationMs) {
+    if (state.get() != ConnectionState.READY) {
+      return false;
+    }
+    if (!readyAfterReconnect) {
+      return true; // initial connect — no grace period needed
+    }
+    long elapsedMs = (System.nanoTime() - readySinceNanos) / 1_000_000;
+    return elapsedMs >= stabilizationMs;
+  }
+
+  /**
+   * @return true if the most recent READY transition was from RECONNECTING
+   */
+  public boolean isReadyAfterReconnect() {
+    return readyAfterReconnect;
+  }
+
+  /**
+   * @return the nanoTime when state last transitioned to READY, or 0 if never
+   */
+  public long getReadySinceNanos() {
+    return readySinceNanos;
   }
 
   /** Shutdown the listener executor. */

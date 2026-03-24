@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.kubemq.sdk.cq.QueryMessageReceived;
 import io.kubemq.sdk.cq.QueryResponseMessage;
+import io.kubemq.sdk.exception.ValidationException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
@@ -46,8 +47,8 @@ class QueryResponseMessageTest {
     void validate_withoutQueryReceived_throws() {
       QueryResponseMessage response = QueryResponseMessage.builder().isExecuted(true).build();
 
-      IllegalArgumentException ex =
-          assertThrows(IllegalArgumentException.class, response::validate);
+      ValidationException ex =
+          assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("query request"));
     }
 
@@ -59,8 +60,8 @@ class QueryResponseMessageTest {
               .isExecuted(true)
               .build();
 
-      IllegalArgumentException ex =
-          assertThrows(IllegalArgumentException.class, response::validate);
+      ValidationException ex =
+          assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("reply channel"));
     }
 

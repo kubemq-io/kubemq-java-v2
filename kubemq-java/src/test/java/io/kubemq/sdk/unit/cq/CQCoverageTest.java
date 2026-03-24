@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.cq;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import com.google.protobuf.ByteString;
@@ -40,6 +41,8 @@ class CQCoverageTest {
 
   @BeforeEach
   void setup() {
+    when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
+    when(mockAsyncStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockAsyncStub);
     client = CQClient.builder().address("localhost:50000").clientId("test-cq-client").build();
     client.setBlockingStub(mockBlockingStub);
     client.setAsyncStub(mockAsyncStub);
@@ -129,7 +132,13 @@ class CQCoverageTest {
     @Test
     @DisplayName("Happy path returns decoded response")
     void happyPath() throws Exception {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class))).thenReturn(successResponse());
+      // Mock async stub to invoke StreamObserver callback with success response
+      doAnswer(invocation -> {
+        StreamObserver<Kubemq.Response> observer = invocation.getArgument(1);
+        observer.onNext(successResponse());
+        observer.onCompleted();
+        return null;
+      }).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       CompletableFuture<CommandResponseMessage> future =
           client.sendCommandRequestAsync(validCommandMessage());
@@ -142,8 +151,11 @@ class CQCoverageTest {
     @Test
     @DisplayName("Propagates exception through future")
     void exceptionPropagated() {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
-          .thenThrow(new StatusRuntimeException(Status.UNAVAILABLE));
+      doAnswer(invocation -> {
+        StreamObserver<Kubemq.Response> observer = invocation.getArgument(1);
+        observer.onError(new StatusRuntimeException(Status.UNAVAILABLE));
+        return null;
+      }).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       CompletableFuture<CommandResponseMessage> future =
           client.sendCommandRequestAsync(validCommandMessage());
@@ -170,8 +182,12 @@ class CQCoverageTest {
     @Test
     @DisplayName("Happy path returns decoded response")
     void happyPath() throws Exception {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
-          .thenReturn(querySuccessResponse());
+      doAnswer(invocation -> {
+        StreamObserver<Kubemq.Response> observer = invocation.getArgument(1);
+        observer.onNext(querySuccessResponse());
+        observer.onCompleted();
+        return null;
+      }).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       CompletableFuture<QueryResponseMessage> future =
           client.sendQueryRequestAsync(validQueryMessage());
@@ -184,8 +200,11 @@ class CQCoverageTest {
     @Test
     @DisplayName("Propagates exception through future")
     void exceptionPropagated() {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
-          .thenThrow(new StatusRuntimeException(Status.DEADLINE_EXCEEDED));
+      doAnswer(invocation -> {
+        StreamObserver<Kubemq.Response> observer = invocation.getArgument(1);
+        observer.onError(new StatusRuntimeException(Status.DEADLINE_EXCEEDED));
+        return null;
+      }).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       CompletableFuture<QueryResponseMessage> future =
           client.sendQueryRequestAsync(validQueryMessage());
@@ -224,7 +243,7 @@ class CQCoverageTest {
     void validationFailure() {
       CommandResponseMessage invalid = CommandResponseMessage.builder().isExecuted(true).build();
 
-      assertThrows(IllegalArgumentException.class, () -> client.sendResponseMessageAsync(invalid));
+      assertThrows(ValidationException.class, () -> client.sendResponseMessageAsync(invalid));
     }
   }
 
@@ -247,7 +266,7 @@ class CQCoverageTest {
     void validationFailure() {
       QueryResponseMessage invalid = QueryResponseMessage.builder().isExecuted(true).build();
 
-      assertThrows(IllegalArgumentException.class, () -> client.sendResponseMessageAsync(invalid));
+      assertThrows(ValidationException.class, () -> client.sendResponseMessageAsync(invalid));
     }
   }
 
@@ -262,7 +281,12 @@ class CQCoverageTest {
     @Test
     @DisplayName("Returns response within timeout")
     void happyPath() {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class))).thenReturn(successResponse());
+      doAnswer(invocation -> {
+        StreamObserver<Kubemq.Response> observer = invocation.getArgument(1);
+        observer.onNext(successResponse());
+        observer.onCompleted();
+        return null;
+      }).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       CommandResponseMessage response =
           client.sendCommandRequest(validCommandMessage(), Duration.ofSeconds(5));
@@ -274,12 +298,8 @@ class CQCoverageTest {
     @Test
     @DisplayName("Throws on timeout")
     void timeoutThrows() {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
-          .thenAnswer(
-              inv -> {
-                Thread.sleep(10_000);
-                return successResponse();
-              });
+      // Async stub never invokes the observer, causing timeout
+      doAnswer(invocation -> null).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       assertThrows(
           KubeMQException.class,
@@ -294,8 +314,12 @@ class CQCoverageTest {
     @Test
     @DisplayName("Returns response within timeout")
     void happyPath() {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
-          .thenReturn(querySuccessResponse());
+      doAnswer(invocation -> {
+        StreamObserver<Kubemq.Response> observer = invocation.getArgument(1);
+        observer.onNext(querySuccessResponse());
+        observer.onCompleted();
+        return null;
+      }).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       QueryResponseMessage response =
           client.sendQueryRequest(validQueryMessage(), Duration.ofSeconds(5));
@@ -307,12 +331,8 @@ class CQCoverageTest {
     @Test
     @DisplayName("Throws on timeout")
     void timeoutThrows() {
-      when(mockBlockingStub.sendRequest(any(Kubemq.Request.class)))
-          .thenAnswer(
-              inv -> {
-                Thread.sleep(10_000);
-                return querySuccessResponse();
-              });
+      // Async stub never invokes the observer, causing timeout
+      doAnswer(invocation -> null).when(mockAsyncStub).sendRequest(any(Kubemq.Request.class), any());
 
       assertThrows(
           KubeMQException.class,

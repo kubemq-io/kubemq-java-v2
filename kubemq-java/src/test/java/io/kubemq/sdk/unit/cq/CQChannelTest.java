@@ -31,7 +31,7 @@ class CQChannelTest {
       assertEquals("commands-channel", channel.getName());
       assertEquals("commands", channel.getType());
       assertTrue(channel.getLastActivity() > 0);
-      assertTrue(channel.getIsActive());
+      assertTrue(channel.isActive());
       assertNotNull(channel.getIncoming());
       assertNotNull(channel.getOutgoing());
     }
@@ -43,7 +43,7 @@ class CQChannelTest {
       assertEquals("minimal-channel", channel.getName());
       assertNull(channel.getType());
       assertEquals(0, channel.getLastActivity());
-      assertFalse(channel.getIsActive());
+      assertFalse(channel.isActive());
       assertNull(channel.getIncoming());
       assertNull(channel.getOutgoing());
     }
@@ -53,7 +53,7 @@ class CQChannelTest {
       CQChannel channel =
           CQChannel.builder().name("inactive-channel").type("queries").isActive(false).build();
 
-      assertFalse(channel.getIsActive());
+      assertFalse(channel.isActive());
     }
   }
 
@@ -85,7 +85,7 @@ class CQChannelTest {
     void setActive_updatesActive() {
       CQChannel channel = new CQChannel();
       channel.setActive(true);
-      assertTrue(channel.getIsActive());
+      assertTrue(channel.isActive());
     }
 
     @Test

@@ -27,6 +27,7 @@ public class CQChannel {
   private long lastActivity;
 
   /** Indicates whether the channel is currently active. */
+  @com.fasterxml.jackson.annotation.JsonProperty("isActive")
   private boolean isActive;
 
   /** Statistics about incoming messages to the channel. */
@@ -57,7 +58,4 @@ public class CQChannel {
         + outgoing;
   }
 
-  public boolean getIsActive() {
-    return isActive;
-  }
 }

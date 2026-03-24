@@ -29,7 +29,8 @@ class ErrorClassificationParameterizedTest {
           Status.Code.DEADLINE_EXCEEDED,
           Status.Code.RESOURCE_EXHAUSTED,
           Status.Code.ABORTED,
-          Status.Code.UNKNOWN);
+          Status.Code.UNKNOWN,
+          Status.Code.INTERNAL);
 
   @ParameterizedTest(name = "gRPC {0} → non-null category, correct retryable flag")
   @EnumSource(

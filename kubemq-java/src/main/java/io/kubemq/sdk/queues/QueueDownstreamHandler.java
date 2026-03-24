@@ -53,7 +53,7 @@ public class QueueDownstreamHandler {
             return t;
           });
 
-  private volatile boolean cleanupStarted = false;
+  private static volatile boolean cleanupStarted = false;
 
   // Expose executor for shutdown hook
   public static ScheduledExecutorService getCleanupExecutor() {
@@ -166,34 +166,10 @@ public class QueueDownstreamHandler {
 
   private void startCleanupTask() {
     if (!cleanupStarted) {
-      synchronized (this) {
+      synchronized (QueueDownstreamHandler.class) {
         if (!cleanupStarted) {
           CLEANUP_EXECUTOR.scheduleAtFixedRate(
-              () -> {
-                long now = System.currentTimeMillis();
-                pendingResponses
-                    .entrySet()
-                    .removeIf(
-                        entry -> {
-                          Long timestamp = requestTimestamps.get(entry.getKey());
-                          if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
-                            entry
-                                .getValue()
-                                .complete(
-                                    QueuesPollResponse.builder()
-                                        .error(
-                                            "Request timed out after " + REQUEST_TIMEOUT_MS + "ms")
-                                        .isError(true)
-                                        .build());
-                            pendingRequests.remove(entry.getKey());
-                            requestTimestamps.remove(entry.getKey());
-                            LOG.warn(
-                                "Cleaned up stale pending request", "requestId", entry.getKey());
-                            return true;
-                          }
-                          return false;
-                        });
-              },
+              this::cleanupStaleRequests,
               30,
               30,
               TimeUnit.SECONDS);
@@ -201,6 +177,30 @@ public class QueueDownstreamHandler {
         }
       }
     }
+  }
+
+  private void cleanupStaleRequests() {
+    long now = System.currentTimeMillis();
+    pendingResponses
+        .entrySet()
+        .removeIf(
+            entry -> {
+              Long timestamp = requestTimestamps.get(entry.getKey());
+              if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
+                entry
+                    .getValue()
+                    .complete(
+                        QueuesPollResponse.builder()
+                            .error("Request timed out after " + REQUEST_TIMEOUT_MS + "ms")
+                            .isError(true)
+                            .build());
+                pendingRequests.remove(entry.getKey());
+                requestTimestamps.remove(entry.getKey());
+                LOG.warn("Cleaned up stale pending request", "requestId", entry.getKey());
+                return true;
+              }
+              return false;
+            });
   }
 
   /**
@@ -285,7 +285,14 @@ public class QueueDownstreamHandler {
     // Use this lock to serialize writes to the gRPC request stream
     synchronized (sendRequestLock) {
       if (requestsObserver != null) {
-        requestsObserver.onNext(request);
+        try {
+          requestsObserver.onNext(request);
+        } catch (Exception e) {
+          // Stream broke between connect check and onNext — mark disconnected
+          // so the next attempt reconnects. Caller handles future completion.
+          isConnected.set(false);
+          throw e;
+        }
       } else {
         LOG.warn("RequestsObserver is null; unable to send request.");
       }

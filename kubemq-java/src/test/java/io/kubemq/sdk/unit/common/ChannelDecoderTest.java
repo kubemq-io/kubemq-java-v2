@@ -30,7 +30,7 @@ class ChannelDecoderTest {
       assertEquals("channel1", channels.get(0).getName());
       assertEquals("type1", channels.get(0).getType());
       assertEquals(1622014799L, channels.get(0).getLastActivity());
-      assertTrue(channels.get(0).getIsActive());
+      assertTrue(channels.get(0).isActive());
       assertEquals(100, channels.get(0).getIncoming().getMessages());
       assertEquals(150, channels.get(0).getOutgoing().getMessages());
     }
@@ -56,7 +56,7 @@ class ChannelDecoderTest {
       assertEquals(2, channels.size());
       assertEquals("channel1", channels.get(0).getName());
       assertEquals("channel2", channels.get(1).getName());
-      assertFalse(channels.get(1).getIsActive());
+      assertFalse(channels.get(1).isActive());
     }
 
     @Test
@@ -102,7 +102,7 @@ class ChannelDecoderTest {
       assertEquals("channel1", channels.get(0).getName());
       assertEquals("type1", channels.get(0).getType());
       assertEquals(1622014799L, channels.get(0).getLastActivity());
-      assertTrue(channels.get(0).getIsActive());
+      assertTrue(channels.get(0).isActive());
       assertEquals(100, channels.get(0).getIncoming().getMessages());
       assertEquals(150, channels.get(0).getOutgoing().getMessages());
     }
@@ -159,7 +159,7 @@ class ChannelDecoderTest {
       assertEquals("channel1", channels.get(0).getName());
       assertEquals("type1", channels.get(0).getType());
       assertEquals(1622014799L, channels.get(0).getLastActivity());
-      assertTrue(channels.get(0).getIsActive());
+      assertTrue(channels.get(0).isActive());
       assertEquals(100, channels.get(0).getIncoming().getMessages());
       assertEquals(150, channels.get(0).getOutgoing().getMessages());
     }
@@ -259,7 +259,7 @@ class ChannelDecoderTest {
 
       assertEquals(1, channels.size());
       assertEquals(0, channels.get(0).getLastActivity());
-      assertFalse(channels.get(0).getIsActive());
+      assertFalse(channels.get(0).isActive());
       assertEquals(0, channels.get(0).getIncoming().getMessages());
     }
   }

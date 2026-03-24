@@ -28,6 +28,7 @@ public class QueuesChannel {
   private long lastActivity;
 
   /** Indicates whether the queue channel is currently active. */
+  @com.fasterxml.jackson.annotation.JsonProperty("isActive")
   private boolean isActive;
 
   /** The statistics for incoming messages in the queue channel. */
@@ -58,7 +59,4 @@ public class QueuesChannel {
         + outgoing;
   }
 
-  public boolean getIsActive() {
-    return isActive;
-  }
 }

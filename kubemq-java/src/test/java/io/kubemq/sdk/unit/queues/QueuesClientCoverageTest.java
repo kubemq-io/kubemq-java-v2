@@ -2,6 +2,7 @@ package io.kubemq.sdk.unit.queues;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import com.google.protobuf.ByteString;
@@ -37,6 +38,7 @@ class QueuesClientCoverageTest {
 
   @BeforeEach
   void setup() {
+    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
     client = QueuesClient.builder().address("localhost:50000").clientId("test-client").build();
   }
 
