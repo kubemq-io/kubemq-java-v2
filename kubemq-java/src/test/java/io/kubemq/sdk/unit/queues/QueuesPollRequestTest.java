@@ -33,7 +33,7 @@ class QueuesPollRequestTest {
 
       assertDoesNotThrow(request::validate);
       assertEquals(1, request.getPollMaxMessages());
-      assertEquals(60, request.getPollWaitTimeoutInSeconds());
+      assertEquals(1, request.getPollWaitTimeoutInSeconds());
       assertFalse(request.isAutoAckMessages());
       assertEquals(0, request.getVisibilitySeconds());
     }

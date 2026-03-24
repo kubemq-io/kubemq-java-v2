@@ -5,6 +5,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +26,15 @@ public class ReconnectionManager {
   private final ConnectionStateMachine stateMachine;
 
   private final AtomicInteger attemptCounter = new AtomicInteger(0);
+  // JV-3: Guard to prevent concurrent reconnection loops
+  private final AtomicBoolean reconnecting = new AtomicBoolean(false);
 
   private final ScheduledExecutorService scheduler;
 
   private volatile ScheduledFuture<?> pendingReconnect;
+
+  // JV-2: Optional ping check to verify channel is actually connected before marking READY
+  private volatile Runnable pingCheck;
 
   /**
    * Constructs a new instance.
@@ -54,11 +60,22 @@ public class ReconnectionManager {
    * @param reconnectAction the action to perform on each attempt (e.g., re-create channel)
    */
   public void startReconnection(Runnable reconnectAction) {
+    // JV-3: Prevent concurrent reconnection loops
+    if (!reconnecting.compareAndSet(false, true)) {
+      LOG.debug("Reconnection already in progress, skipping duplicate request");
+      return;
+    }
+
+    scheduleReconnectionAttempt(reconnectAction);
+  }
+
+  private void scheduleReconnectionAttempt(Runnable reconnectAction) {
     int attempt = attemptCounter.incrementAndGet();
     int maxAttempts = config.getMaxReconnectAttempts();
 
     if (maxAttempts != -1 && attempt > maxAttempts) {
       LOG.error("Max reconnection attempts ({}) exhausted", maxAttempts);
+      reconnecting.set(false);
       stateMachine.transitionTo(ConnectionState.CLOSED);
       return;
     }
@@ -78,16 +95,40 @@ public class ReconnectionManager {
             () -> {
               try {
                 reconnectAction.run();
+                // JV-2: Verify channel is actually connected before marking READY
+                if (pingCheck != null) {
+                  try {
+                    pingCheck.run();
+                  } catch (Exception pingEx) {
+                    LOG.warn(
+                        "Reconnection attempt {} succeeded but ping verification failed: {}",
+                        attempt,
+                        pingEx.getMessage());
+                    scheduleReconnectionAttempt(reconnectAction);
+                    return;
+                  }
+                }
                 attemptCounter.set(0);
+                reconnecting.set(false);
                 stateMachine.transitionTo(ConnectionState.READY);
                 LOG.info("Reconnection successful after {} attempts", attempt);
               } catch (Exception e) {
                 LOG.warn("Reconnection attempt {} failed: {}", attempt, e.getMessage());
-                startReconnection(reconnectAction);
+                scheduleReconnectionAttempt(reconnectAction);
               }
             },
             delay,
             TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Sets a ping check that will be executed after a successful reconnect action but before
+   * transitioning to READY state. This verifies the channel is actually connected.
+   *
+   * @param pingCheck a runnable that throws on failure (e.g., ping with short deadline)
+   */
+  public void setPingCheck(Runnable pingCheck) {
+    this.pingCheck = pingCheck;
   }
 
   /** Cancel any pending reconnection attempt. Called during graceful shutdown. */
@@ -96,6 +137,7 @@ public class ReconnectionManager {
       pendingReconnect.cancel(false);
     }
     attemptCounter.set(0);
+    reconnecting.set(false);
   }
 
   /** Shutdown the scheduler. Called during client close. */

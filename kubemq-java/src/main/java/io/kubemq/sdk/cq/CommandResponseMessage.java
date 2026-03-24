@@ -52,10 +52,19 @@ public class CommandResponseMessage {
    */
   public CommandResponseMessage validate() {
     if (commandReceived == null) {
-      throw new IllegalArgumentException("Command response must have a command request.");
-    } else if (commandReceived.getReplyChannel() == null
+      throw io.kubemq.sdk.exception.ValidationException.builder()
+          .code(io.kubemq.sdk.exception.ErrorCode.INVALID_ARGUMENT)
+          .message("Command response must have a command request.")
+          .operation("CommandResponseMessage.validate")
+          .build();
+    }
+    if (commandReceived.getReplyChannel() == null
         || commandReceived.getReplyChannel().isEmpty()) {
-      throw new IllegalArgumentException("Command response must have a reply channel.");
+      throw io.kubemq.sdk.exception.ValidationException.builder()
+          .code(io.kubemq.sdk.exception.ErrorCode.INVALID_ARGUMENT)
+          .message("Command response must have a reply channel.")
+          .operation("CommandResponseMessage.validate")
+          .build();
     }
     return this;
   }
@@ -93,7 +102,7 @@ public class CommandResponseMessage {
         .setTimestamp(
             this.timestamp != null
                 ? (this.timestamp.toEpochSecond(ZoneOffset.UTC) * 1_000_000_000L)
-                : Instant.now().toEpochMilli())
+                : (Instant.now().getEpochSecond() * 1_000_000_000L))
         .build();
   }
 

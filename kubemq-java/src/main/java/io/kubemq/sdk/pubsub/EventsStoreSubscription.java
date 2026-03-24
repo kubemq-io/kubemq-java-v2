@@ -11,7 +11,6 @@ import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.observability.KubeMQLogger;
 import io.kubemq.sdk.observability.KubeMQLoggerFactory;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -49,7 +48,7 @@ public class EventsStoreSubscription {
             return t;
           });
 
-  @Builder.Default private transient SubscriptionReconnectHandler reconnectHandler = null;
+  @Builder.Default private volatile transient SubscriptionReconnectHandler reconnectHandler = null;
 
   public static ScheduledExecutorService getReconnectExecutor() {
     return RECONNECT_EXECUTOR;
@@ -63,11 +62,11 @@ public class EventsStoreSubscription {
 
   @Builder.Default private int maxConcurrentCallbacks = 1;
 
-  private transient Semaphore callbackSemaphore;
+  private volatile transient Semaphore callbackSemaphore;
 
   private EventsStoreType eventsStoreType;
 
-  private int eventsStoreSequenceValue;
+  private long eventsStoreSequenceValue;
 
   private Instant eventsStoreStartTime;
 
@@ -83,10 +82,13 @@ public class EventsStoreSubscription {
 
   @Setter private transient Kubemq.Subscribe subscribe;
 
+  /** Last received sequence number for resume-from-last-seen on reconnect. */
+  private volatile long lastReceivedSequence = 0;
+
   /** Constructs a new instance with default values. */
   public EventsStoreSubscription() {
     this.eventsStoreType = EventsStoreType.Undefined;
-    this.eventsStoreSequenceValue = 0;
+    this.eventsStoreSequenceValue = 0L;
   }
 
   /**
@@ -181,7 +183,13 @@ public class EventsStoreSubscription {
    * @return the result
    */
   public Kubemq.Subscribe encode(String clientId, final PubSubClient pubSubClient) {
-    this.callbackSemaphore = new Semaphore(Math.max(1, maxConcurrentCallbacks));
+    if (this.callbackSemaphore == null) {
+      synchronized (this) {
+        if (this.callbackSemaphore == null) {
+          this.callbackSemaphore = new Semaphore(Math.max(1, maxConcurrentCallbacks));
+        }
+      }
+    }
     Executor resolvedExecutor = callbackExecutor;
     if (resolvedExecutor == null) {
       resolvedExecutor = pubSubClient.getCallbackExecutor();
@@ -198,13 +206,13 @@ public class EventsStoreSubscription {
                 Kubemq.Subscribe.SubscribeType.forNumber(SubscribeType.EventsStore.getValue()))
             .setClientID(clientId)
             .setChannel(channel)
-            .setGroup(Optional.ofNullable(group).orElse(""))
+            .setGroup(group != null ? group : "")
             .setEventsStoreTypeData(
                 Kubemq.Subscribe.EventsStoreType.forNumber(
                     eventsStoreType == null ? 0 : eventsStoreType.getValue()))
             .setEventsStoreTypeValue(
                 eventsStoreStartTime != null
-                    ? (int) eventsStoreStartTime.getEpochSecond()
+                    ? eventsStoreStartTime.getEpochSecond()
                     : eventsStoreSequenceValue)
             .build();
 
@@ -226,7 +234,10 @@ public class EventsStoreSubscription {
                   try {
                     callbackSemaphore.acquire();
                     try {
-                      raiseOnReceiveMessage(EventStoreMessageReceived.decode(messageReceive));
+                      EventStoreMessageReceived decoded = EventStoreMessageReceived.decode(messageReceive);
+                      long seq = decoded.getSequence();
+                      if (seq > 0) { lastReceivedSequence = seq; }
+                      raiseOnReceiveMessage(decoded);
                     } catch (Exception userException) {
                       HandlerException handlerError =
                           HandlerException.builder()
@@ -295,10 +306,24 @@ public class EventsStoreSubscription {
               pubSubClient.getReconnectIntervalInMillis(),
               channel,
               "subscribeToEventsStore");
+      // JV-8: Wait for channel-level READY before attempting resubscription
+      reconnectHandler.setConnectionReadyCheck(
+          () ->
+              pubSubClient.getConnectionState()
+                  == io.kubemq.sdk.client.ConnectionState.READY);
     }
     reconnectHandler.scheduleReconnect(
         () -> {
-          pubSubClient.getAsyncClient().subscribeToEvents(this.subscribe, this.getObserver());
+          // Re-encode to get a fresh StreamObserver (the old one is in terminal state after onError).
+          Kubemq.Subscribe freshSubscribe = this.encode(pubSubClient.getClientId(), pubSubClient);
+          // Override with resume-from-last-seen if we have a tracked sequence.
+          if (lastReceivedSequence > 0) {
+            freshSubscribe = freshSubscribe.toBuilder()
+                .setEventsStoreTypeData(Kubemq.Subscribe.EventsStoreType.StartAtSequence)
+                .setEventsStoreTypeValue(lastReceivedSequence + 1)
+                .build();
+          }
+          pubSubClient.getAsyncClient().subscribeToEvents(freshSubscribe, this.getObserver());
         },
         this::raiseOnError);
   }

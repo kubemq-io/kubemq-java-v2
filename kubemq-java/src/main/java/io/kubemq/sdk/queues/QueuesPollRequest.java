@@ -25,8 +25,8 @@ public class QueuesPollRequest {
   /** Maximum number of messages to return per poll. Default: 1. */
   @Builder.Default private int pollMaxMessages = 1;
 
-  /** Maximum time in seconds to wait for messages. Default: 60. */
-  @Builder.Default private int pollWaitTimeoutInSeconds = 60;
+  /** Maximum time in seconds to wait for messages. Default: 1. */
+  @Builder.Default private int pollWaitTimeoutInSeconds = 1;
 
   /**
    * When true, messages are automatically acknowledged upon receipt. Default: false. Cannot be

@@ -279,7 +279,7 @@ timeout, causing them to return to the queue for redelivery.
 **Solution:**
 1. Call `msg.ack()` after processing each message:
    ```java
-   QueuesPollResponse response = client.receiveQueuesMessages(
+   QueuesPollResponse response = client.receiveQueueMessages(
        QueuesPollRequest.builder()
            .channel("tasks")
            .pollMaxMessages(10)
@@ -297,7 +297,7 @@ timeout, causing them to return to the queue for redelivery.
 2. Increase visibility timeout if processing takes longer than expected
 3. Use `msg.reject()` to explicitly reject messages you cannot process
 4. Check the dead letter queue for repeatedly failed messages
-5. If processing is long, extend visibility with `msg.extendVisibility(seconds)`
+5. If processing is long, extend visibility with `msg.extendVisibilityTimer(additionalSeconds)`
 6. Consider using `autoAckMessages(true)` if explicit ack is not needed
 
 **See also:** [WaitingPullExample](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example/src/main/java/io/kubemq/example/queues/WaitingPullExample.java), [ReceiveMessageDLQ](https://github.com/kubemq-io/kubemq-java-v2/tree/main/kubemq-java-example/src/main/java/io/kubemq/example/queues/ReceiveMessageDLQ.java)

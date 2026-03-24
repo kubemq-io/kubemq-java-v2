@@ -59,7 +59,7 @@ public class QueueUpstreamHandler {
             return t;
           });
 
-  private volatile boolean cleanupStarted = false;
+  private static volatile boolean cleanupStarted = false;
 
   // Expose executor for shutdown hook
   public static ScheduledExecutorService getCleanupExecutor() {
@@ -189,59 +189,10 @@ public class QueueUpstreamHandler {
 
   private void startCleanupTask() {
     if (!cleanupStarted) {
-      synchronized (this) {
+      synchronized (QueueUpstreamHandler.class) {
         if (!cleanupStarted) {
           CLEANUP_EXECUTOR.scheduleAtFixedRate(
-              () -> {
-                long now = System.currentTimeMillis();
-                pendingResponses
-                    .entrySet()
-                    .removeIf(
-                        entry -> {
-                          Long timestamp = requestTimestamps.get(entry.getKey());
-                          if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
-                            entry
-                                .getValue()
-                                .complete(
-                                    QueueSendResult.builder()
-                                        .error(
-                                            "Request timed out after " + REQUEST_TIMEOUT_MS + "ms")
-                                        .isError(true)
-                                        .build());
-                            requestTimestamps.remove(entry.getKey());
-                            LOG.warn(
-                                "Cleaned up stale pending request", "requestId", entry.getKey());
-                            return true;
-                          }
-                          return false;
-                        });
-                pendingBatchResponses
-                    .entrySet()
-                    .removeIf(
-                        entry -> {
-                          Long timestamp = requestTimestamps.get(entry.getKey());
-                          if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
-                            entry
-                                .getValue()
-                                .complete(
-                                    Collections.singletonList(
-                                        QueueSendResult.builder()
-                                            .error(
-                                                "Batch request timed out after "
-                                                    + REQUEST_TIMEOUT_MS
-                                                    + "ms")
-                                            .isError(true)
-                                            .build()));
-                            requestTimestamps.remove(entry.getKey());
-                            LOG.warn(
-                                "Cleaned up stale pending batch request",
-                                "requestId",
-                                entry.getKey());
-                            return true;
-                          }
-                          return false;
-                        });
-              },
+              this::cleanupStaleRequests,
               30,
               30,
               TimeUnit.SECONDS);
@@ -249,6 +200,53 @@ public class QueueUpstreamHandler {
         }
       }
     }
+  }
+
+  private void cleanupStaleRequests() {
+    long now = System.currentTimeMillis();
+    pendingResponses
+        .entrySet()
+        .removeIf(
+            entry -> {
+              Long timestamp = requestTimestamps.get(entry.getKey());
+              if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
+                entry
+                    .getValue()
+                    .complete(
+                        QueueSendResult.builder()
+                            .error("Request timed out after " + REQUEST_TIMEOUT_MS + "ms")
+                            .isError(true)
+                            .build());
+                requestTimestamps.remove(entry.getKey());
+                LOG.warn("Cleaned up stale pending request", "requestId", entry.getKey());
+                return true;
+              }
+              return false;
+            });
+    pendingBatchResponses
+        .entrySet()
+        .removeIf(
+            entry -> {
+              Long timestamp = requestTimestamps.get(entry.getKey());
+              if (timestamp != null && (now - timestamp) > REQUEST_TIMEOUT_MS) {
+                entry
+                    .getValue()
+                    .complete(
+                        Collections.singletonList(
+                            QueueSendResult.builder()
+                                .error(
+                                    "Batch request timed out after "
+                                        + REQUEST_TIMEOUT_MS
+                                        + "ms")
+                                .isError(true)
+                                .build()));
+                requestTimestamps.remove(entry.getKey());
+                LOG.warn(
+                    "Cleaned up stale pending batch request", "requestId", entry.getKey());
+                return true;
+              }
+              return false;
+            });
   }
 
   /**
@@ -388,6 +386,8 @@ public class QueueUpstreamHandler {
   /**
    * Ensures the connection is established and then synchronously sends the request via the gRPC
    * stream (requestsObserver).
+   *
+   * @throws IllegalStateException if the stream observer is null after connection attempt
    */
   private void sendRequest(Kubemq.QueuesUpstreamRequest request) {
     if (!isConnected.get()) {
@@ -396,7 +396,14 @@ public class QueueUpstreamHandler {
     // Serialize writes to gRPC observer
     synchronized (sendRequestLock) {
       if (requestsObserver != null) {
-        requestsObserver.onNext(request);
+        try {
+          requestsObserver.onNext(request);
+        } catch (Exception e) {
+          // Stream broke between connect check and onNext — mark disconnected
+          // so the next attempt reconnects. Caller handles future completion.
+          isConnected.set(false);
+          throw e;
+        }
       } else {
         LOG.warn("RequestsObserver is null; unable to send request.");
       }

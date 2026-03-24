@@ -186,9 +186,9 @@ public abstract class KubeMQClient implements AutoCloseable {
     return requestTimeoutSeconds;
   }
 
-  @Setter private ManagedChannel managedChannel;
-  @Setter private kubemqGrpc.kubemqBlockingStub blockingStub;
-  @Setter private kubemqGrpc.kubemqStub asyncStub;
+  @Setter private volatile ManagedChannel managedChannel;
+  @Setter private volatile kubemqGrpc.kubemqBlockingStub blockingStub;
+  @Setter private volatile kubemqGrpc.kubemqStub asyncStub;
 
   // --- REQ-AUTH-6: Thread-safe reconnection ---
   private final Object reconnectLock = new Object();
@@ -363,6 +363,13 @@ public abstract class KubeMQClient implements AutoCloseable {
     }
     this.reconnectionManager =
         new ReconnectionManager(this.reconnectionConfig, this.connectionStateMachine);
+    // JV-2: Wire ping verification before ReconnectionManager marks READY
+    this.reconnectionManager.setPingCheck(
+        () -> {
+          blockingStub
+              .withDeadlineAfter(5, TimeUnit.SECONDS)
+              .ping(null);
+        });
     this.messageBuffer =
         new MessageBuffer(
             this.reconnectionConfig.getReconnectBufferSizeBytes(),
@@ -638,7 +645,8 @@ public abstract class KubeMQClient implements AutoCloseable {
         NettyChannelBuilder ncb =
             NettyChannelBuilder.forTarget(resolvedAddress)
                 .negotiationType(NegotiationType.TLS)
-                .maxInboundMessageSize(maxReceiveSize);
+                .maxInboundMessageSize(maxReceiveSize)
+                .flowControlWindow(16 * 1024 * 1024);
 
         if (serverNameOverride != null && !serverNameOverride.isEmpty()) {
           ncb = ncb.overrideAuthority(serverNameOverride);
@@ -653,10 +661,11 @@ public abstract class KubeMQClient implements AutoCloseable {
         throw classifyTlsException(e);
       }
     } else {
-      ManagedChannelBuilder mcb =
-          ManagedChannelBuilder.forTarget(resolvedAddress)
+      NettyChannelBuilder mcb =
+          NettyChannelBuilder.forTarget(resolvedAddress)
+              .negotiationType(NegotiationType.PLAINTEXT)
               .maxInboundMessageSize(maxReceiveSize)
-              .usePlaintext();
+              .flowControlWindow(16 * 1024 * 1024);
       configureKeepAlive(mcb);
       managedChannel = mcb.build();
     }
@@ -705,8 +714,15 @@ public abstract class KubeMQClient implements AutoCloseable {
               reconnectionManager.startReconnection(this::reconnectChannel);
               break;
             case SHUTDOWN:
-              logger.debug("gRPC channel SHUTDOWN detected");
-              connectionStateMachine.transitionTo(ConnectionState.CLOSED);
+              // JV-5: Only close on user-initiated shutdown; otherwise attempt reconnection
+              if (closed.get()) {
+                logger.debug("gRPC channel SHUTDOWN detected (user-initiated), closing");
+                connectionStateMachine.transitionTo(ConnectionState.CLOSED);
+              } else {
+                logger.debug(
+                    "gRPC channel SHUTDOWN detected (not user-initiated), attempting reconnection");
+                reconnectionManager.startReconnection(KubeMQClient.this::reconnectChannel);
+              }
               break;
             case READY:
               break;
@@ -721,11 +737,13 @@ public abstract class KubeMQClient implements AutoCloseable {
     if (isTls()) {
       reconnectWithCertReload();
     } else {
-      ManagedChannel oldChannel = managedChannel;
-      if (oldChannel != null) {
-        oldChannel.shutdown();
+      synchronized (reconnectLock) {
+        ManagedChannel oldChannel = managedChannel;
+        if (oldChannel != null) {
+          oldChannel.shutdown();
+        }
+        initChannel();
       }
-      initChannel();
     }
   }
 
@@ -819,8 +837,10 @@ public abstract class KubeMQClient implements AutoCloseable {
       synchronized (executorInitLock) {
         exec = defaultCallbackExecutor;
         if (exec == null) {
+          int callbackThreads = Math.max(4, Runtime.getRuntime().availableProcessors());
           exec =
-              Executors.newSingleThreadExecutor(
+              Executors.newFixedThreadPool(
+                  callbackThreads,
                   r -> {
                     Thread t = new Thread(r, "kubemq-callback-" + clientId);
                     t.setDaemon(true);
@@ -834,8 +854,10 @@ public abstract class KubeMQClient implements AutoCloseable {
   }
 
   /**
-   * Returns the executor for async operations. Bounded thread pool by default, sized to the number
-   * of available processors.
+   * Returns the executor for async operations. Uses a cached thread pool that creates threads
+   * on demand and reclaims idle threads after 60 seconds. This ensures admin async methods
+   * are truly non-blocking (always able to obtain a thread) while keeping overhead low
+   * since admin calls are infrequent.
    *
    * @return the result
    */
@@ -846,8 +868,7 @@ public abstract class KubeMQClient implements AutoCloseable {
         exec = defaultAsyncOperationExecutor;
         if (exec == null) {
           exec =
-              Executors.newFixedThreadPool(
-                  Math.max(2, Runtime.getRuntime().availableProcessors()),
+              Executors.newCachedThreadPool(
                   r -> {
                     Thread t = new Thread(r, "kubemq-async-" + clientId);
                     t.setDaemon(true);
@@ -1059,6 +1080,11 @@ public abstract class KubeMQClient implements AutoCloseable {
     }
   }
 
+  // TODO [JV-7]: Wire MessageBuffer to send paths during RECONNECTING state so that
+  // messages are buffered instead of rejected. This is a separate workstream — the buffer
+  // infrastructure (MessageBuffer) is fully implemented but currently only used during
+  // shutdown flush. The send paths in PubSubClient/CQClient should check for RECONNECTING
+  // and offer messages to the buffer instead of throwing ConnectionNotReadyException.
   private void sendBufferedMessage(BufferedMessage msg) {
     logger.warn(
         "Discarding buffered message during shutdown "
@@ -1126,6 +1152,21 @@ public abstract class KubeMQClient implements AutoCloseable {
    */
   public ConnectionState getConnectionState() {
     return connectionStateMachine.getState();
+  }
+
+  /**
+   * Returns {@code true} if the connection is READY and has been stable long enough
+   * for subscriptions to re-establish after a reconnection.
+   *
+   * <p>After an initial connect (not a reconnect), this always returns true if state is READY.
+   * After a reconnect, it enforces a stabilization window to prevent sending RPCs to a broker
+   * that has no subscribed responders yet.
+   *
+   * @param stabilizationMs grace period in milliseconds after reconnection
+   * @return true if ready and stabilized
+   */
+  public boolean isConnectionReadyAndStabilized(long stabilizationMs) {
+    return connectionStateMachine.isReadyAndStabilized(stabilizationMs);
   }
 
   /**

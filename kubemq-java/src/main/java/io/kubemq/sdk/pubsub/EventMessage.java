@@ -119,7 +119,8 @@ public class EventMessage {
    * @return the encoded KubeMQ event.
    */
   public Kubemq.Event encode(String clientId) {
-    tags.put("x-kubemq-client-id", clientId);
+    Map<String, String> encodedTags = new HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
+    encodedTags.put("x-kubemq-client-id", clientId);
     return Kubemq.Event.newBuilder()
         .setChannel(channel)
         .setMetadata(Optional.ofNullable(metadata).orElse(""))
@@ -127,7 +128,7 @@ public class EventMessage {
         .setEventID(id != null ? id : UUID.randomUUID().toString())
         .setClientID(clientId)
         .setStore(false)
-        .putAllTags(Optional.ofNullable(tags).orElse(new HashMap<>()))
+        .putAllTags(encodedTags)
         .build();
   }
 
