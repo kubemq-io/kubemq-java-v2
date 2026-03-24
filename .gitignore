@@ -63,6 +63,9 @@ secrets.yml
 .gradletasknamecache
 .sts4-cache
 
+# Maven settings (may contain credentials)
+**/settings.xml
+
 # Maven specific ignores
 target/
 pom.xml.tag
