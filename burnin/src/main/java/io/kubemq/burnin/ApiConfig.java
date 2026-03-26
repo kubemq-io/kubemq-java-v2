@@ -87,7 +87,12 @@ class ApiWarmupConfig {
     String warmupDuration;
 }
 
+class ApiBrokerOverride {
+    String address;
+}
+
 class ApiRunConfig {
+    ApiBrokerOverride broker;
     String mode;
     String duration;
     String runId;
@@ -291,7 +296,13 @@ public final class ApiConfig {
     public static BurninConfig translate(ApiRunConfig api, BurninConfig startup) {
         BurninConfig cfg = new BurninConfig();
 
-        cfg.setBroker(startup.getBroker());
+        // Broker: default from startup, allow API override
+        BrokerConfig broker = new BrokerConfig();
+        broker.setAddress(
+            api.broker != null && api.broker.address != null && !api.broker.address.isEmpty()
+                ? api.broker.address : startup.getBroker().getAddress());
+        broker.setClientIdPrefix(startup.getBroker().getClientIdPrefix());
+        cfg.setBroker(broker);
         cfg.setRecovery(startup.getRecovery());
         cfg.setOutput(startup.getOutput());
         cfg.setLogging(startup.getLogging());

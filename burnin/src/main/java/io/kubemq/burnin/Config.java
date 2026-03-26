@@ -476,6 +476,12 @@ public final class Config {
             }
         }
 
+        // Environment variable override for broker address
+        String envAddr = System.getenv("KUBEMQ_BROKER_ADDRESS");
+        if (envAddr != null && !envAddr.isEmpty()) {
+            cfg.getBroker().setAddress(envAddr);
+        }
+
         // Ensure all 6 patterns exist with defaults.
         cfg.ensureAllPatterns();
 
