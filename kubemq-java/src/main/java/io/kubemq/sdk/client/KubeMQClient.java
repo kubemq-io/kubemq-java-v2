@@ -399,9 +399,7 @@ public abstract class KubeMQClient implements AutoCloseable {
         throw ConnectionException.builder()
             .code(ErrorCode.CONNECTION_FAILED)
             .message(
-                "Failed to connect to KubeMQ server at '"
-                    + this.address
-                    + "' during build validation. "
+                "Failed to connect to KubeMQ server during build validation. "
                     + "Ensure the server is running and accessible. "
                     + "To skip this check, remove .validateOnBuild(true) from the builder.")
             .operation("ClientBuilder.build()")
@@ -1318,10 +1316,27 @@ public abstract class KubeMQClient implements AutoCloseable {
   }
 
   /**
+   * Returns whether an authentication token is currently set. Prefer this over {@link
+   * #getAuthToken()} to avoid accidental token exposure in logs or error messages.
+   *
+   * @return {@code true} if a non-empty auth token is set
+   */
+  public boolean hasAuthToken() {
+    String token = authTokenRef.get();
+    return token != null && !token.isEmpty();
+  }
+
+  /**
    * Returns the current authentication token.
    *
+   * <p><strong>Security note:</strong> Avoid logging or including the return value in error
+   * messages. Use {@link #hasAuthToken()} to check token presence without exposing the value.
+   *
    * @return the current auth token, or null if not set
+   * @deprecated Use {@link #hasAuthToken()} to check presence. Direct token access risks
+   *     accidental exposure in logs or error messages. This method will be removed in v3.0.
    */
+  @Deprecated(since = "2.3.0", forRemoval = true)
   public String getAuthToken() {
     return authTokenRef.get();
   }
