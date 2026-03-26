@@ -837,6 +837,7 @@ public class PubSubClient extends KubeMQClient {
   private boolean sendChannelManagementRequest(
       String metadata, String channelType, String channelName, String operationName) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channelName, operationName);
     try {
       getLogger().debug(operationName, "channel", channelName);
       Kubemq.Request request =

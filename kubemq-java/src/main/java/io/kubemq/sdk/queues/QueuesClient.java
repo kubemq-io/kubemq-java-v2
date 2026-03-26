@@ -108,6 +108,7 @@ public class QueuesClient extends KubeMQClient {
    */
   public boolean createQueuesChannel(String channel) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "createQueuesChannel");
     return KubeMQUtils.createChannelRequest(this, this.getClientId(), channel, "queues");
   }
 
@@ -124,6 +125,7 @@ public class QueuesClient extends KubeMQClient {
    */
   public boolean deleteQueuesChannel(String channel) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "deleteQueuesChannel");
     return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), channel, "queues");
   }
 
@@ -401,10 +403,8 @@ public class QueuesClient extends KubeMQClient {
    */
   public QueueMessagesWaiting waiting(String channel, int maxMessages, int waitTimeoutInSeconds) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "waiting");
     getLogger().debug("Get waiting messages from queue", "channel", channel);
-    if (channel == null) {
-      throw new IllegalArgumentException("channel cannot be null.");
-    }
     if (maxMessages < 1) {
       throw new IllegalArgumentException("maxMessages must be greater than 0.");
     }
@@ -456,10 +456,8 @@ public class QueuesClient extends KubeMQClient {
    */
   public QueueMessagesPulled pull(String channel, int maxMessages, int waitTimeoutInSeconds) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "pull");
     getLogger().debug("Pulling messages from queue", "channel", channel);
-    if (channel == null) {
-      throw new IllegalArgumentException("channel cannot be null.");
-    }
     if (maxMessages < 1) {
       throw new IllegalArgumentException("maxMessages must be greater than 0.");
     }

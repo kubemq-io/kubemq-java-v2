@@ -366,6 +366,7 @@ public class CQClient extends KubeMQClient {
    */
   public boolean createCommandsChannel(String channel) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "createCommandsChannel");
     return KubeMQUtils.createChannelRequest(this, this.getClientId(), channel, "commands");
   }
 
@@ -384,6 +385,7 @@ public class CQClient extends KubeMQClient {
    */
   public boolean createQueriesChannel(String channel) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "createQueriesChannel");
     return KubeMQUtils.createChannelRequest(this, this.getClientId(), channel, "queries");
   }
 
@@ -400,6 +402,7 @@ public class CQClient extends KubeMQClient {
    */
   public boolean deleteCommandsChannel(String channel) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "deleteCommandsChannel");
     return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), channel, "commands");
   }
 
@@ -416,6 +419,7 @@ public class CQClient extends KubeMQClient {
    */
   public boolean deleteQueriesChannel(String channel) {
     ensureNotClosed();
+    KubeMQUtils.validateChannelName(channel, "deleteQueriesChannel");
     return KubeMQUtils.deleteChannelRequest(this, this.getClientId(), channel, "queries");
   }
 
