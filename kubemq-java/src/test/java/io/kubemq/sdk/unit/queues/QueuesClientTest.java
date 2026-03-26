@@ -46,11 +46,11 @@ class QueuesClientTest {
   class WaitingValidationTests {
 
     @Test
-    @DisplayName("Q-21: waiting with null channel throws IllegalArgumentException")
+    @DisplayName("Q-21: waiting with null channel throws ValidationException")
     void waiting_nullChannel_throwsIllegalArgumentException() {
-      IllegalArgumentException exception =
-          assertThrows(IllegalArgumentException.class, () -> client.waiting(null, 10, 5));
-      assertTrue(exception.getMessage().contains("channel"));
+      ValidationException exception =
+          assertThrows(ValidationException.class, () -> client.waiting(null, 10, 5));
+      assertTrue(exception.getMessage().contains("Channel"));
     }
 
     @Test
@@ -176,11 +176,11 @@ class QueuesClientTest {
   class PullValidationTests {
 
     @Test
-    @DisplayName("Q-30: pull with null channel throws IllegalArgumentException")
+    @DisplayName("Q-30: pull with null channel throws ValidationException")
     void pull_nullChannel_throwsIllegalArgumentException() {
-      IllegalArgumentException exception =
-          assertThrows(IllegalArgumentException.class, () -> client.pull(null, 10, 5));
-      assertTrue(exception.getMessage().contains("channel"));
+      ValidationException exception =
+          assertThrows(ValidationException.class, () -> client.pull(null, 10, 5));
+      assertTrue(exception.getMessage().contains("Channel"));
     }
 
     @Test

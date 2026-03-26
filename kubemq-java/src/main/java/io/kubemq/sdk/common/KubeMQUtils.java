@@ -119,6 +119,7 @@ public class KubeMQUtils {
   public static Boolean createChannelRequest(
       KubeMQClient kubeMQClient, String clientId, String channelName, String channelType)
       throws CreateChannelException, GRPCException {
+    validateChannelName(channelName, "createChannelRequest");
     try {
       Kubemq.Request request =
           Kubemq.Request.newBuilder()
@@ -160,6 +161,7 @@ public class KubeMQUtils {
   public static Boolean deleteChannelRequest(
       KubeMQClient kubeMQClient, String clientId, String channelName, String channelType)
       throws DeleteChannelException, GRPCException {
+    validateChannelName(channelName, "deleteChannelRequest");
     try {
       Kubemq.Request request =
           Kubemq.Request.newBuilder()
