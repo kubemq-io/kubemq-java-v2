@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-04-04
+
 ### Added
 - Typed exception hierarchy rooted at `KubeMQException` with `ErrorCode`, `ErrorCategory`, and `ErrorClassifier`
 - `GrpcErrorMapper` for automatic gRPC status code to SDK exception mapping
@@ -101,7 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Builder pattern for all message types
 - gRPC-based transport with connection management
 
-[Unreleased]: https://github.com/kubemq-io/kubemq-java-v2/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/kubemq-io/kubemq-java-v2/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/kubemq-io/kubemq-java-v2/compare/v2.1.1...v3.0.0
 [2.1.1]: https://github.com/kubemq-io/kubemq-java-v2/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/kubemq-io/kubemq-java-v2/compare/v2.0.3...v2.1.0
 [2.0.3]: https://github.com/kubemq-io/kubemq-java-v2/compare/v2.0.0...v2.0.3
