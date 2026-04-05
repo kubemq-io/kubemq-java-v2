@@ -4,7 +4,7 @@
 
     <groupId>io.kubemq.sdk</groupId>
     <artifactId>kubemq-sdk-Java</artifactId>
-    <version>3.0.0</version>
+    <version>3.1.0</version>
     <packaging>jar</packaging>
 
     <name>kubemq-sdk-Java</name>
