@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-04-05
+
+### Features
+- Add `grpcChannel(ManagedChannel)` builder parameter for external gRPC channel injection (9b24e16)
+- Add `interceptors(List<ClientInterceptor>)` builder parameter for custom interceptor support (9b24e16)
+- Add `fireDisconnected()` and `fireConnected()` to ConnectionStateMachine for external channel state notifications (9b24e16)
+
+### Improvements
+- Format Javadoc for improved readability and consistency across exceptions and tests (38493aa)
+- Remove `VisibilityTimeoutExample` and update examples to use `long` for time values (df73a42)
+
 ## [3.0.0] - 2026-04-04
 
 ### Added
