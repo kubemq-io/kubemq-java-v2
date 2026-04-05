@@ -33,7 +33,7 @@ public class StartAtTimeDeltaExample {
         }
         System.out.println("Sent 5 messages.\n");
 
-        int deltaSeconds = 60;
+        long deltaSeconds = 60L;
         AtomicInteger received = new AtomicInteger(0);
         CountDownLatch latch = new CountDownLatch(5);
 
