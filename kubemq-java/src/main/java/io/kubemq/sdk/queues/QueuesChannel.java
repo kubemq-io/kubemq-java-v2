@@ -58,5 +58,4 @@ public class QueuesChannel {
         + ", outgoing="
         + outgoing;
   }
-
 }

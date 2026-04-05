@@ -145,7 +145,8 @@ public class CommandMessage {
    * @return The encoded protocol buffer message.
    */
   public Kubemq.Request encode(String clientId) {
-    java.util.Map<String, String> encodedTags = new java.util.HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
+    java.util.Map<String, String> encodedTags =
+        new java.util.HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
     encodedTags.put("x-kubemq-client-id", clientId);
     return Kubemq.Request.newBuilder()
         .setRequestID(id != null ? id : UUID.randomUUID().toString())

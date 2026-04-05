@@ -47,8 +47,7 @@ class QueryResponseMessageTest {
     void validate_withoutQueryReceived_throws() {
       QueryResponseMessage response = QueryResponseMessage.builder().isExecuted(true).build();
 
-      ValidationException ex =
-          assertThrows(ValidationException.class, response::validate);
+      ValidationException ex = assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("query request"));
     }
 
@@ -60,8 +59,7 @@ class QueryResponseMessageTest {
               .isExecuted(true)
               .build();
 
-      ValidationException ex =
-          assertThrows(ValidationException.class, response::validate);
+      ValidationException ex = assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("reply channel"));
     }
 

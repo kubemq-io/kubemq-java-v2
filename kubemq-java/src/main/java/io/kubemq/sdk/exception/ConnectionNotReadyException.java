@@ -28,7 +28,9 @@ public class ConnectionNotReadyException extends KubeMQException {
         .build();
   }
 
-  /** Builder for {@link ConnectionNotReadyException} with connection-not-ready-specific defaults. */
+  /**
+   * Builder for {@link ConnectionNotReadyException} with connection-not-ready-specific defaults.
+   */
   public static class Builder extends KubeMQException.Builder<Builder> {
     /** Constructs a new Builder with UNAVAILABLE code, TRANSIENT category, and non-retryable. */
     public Builder() {

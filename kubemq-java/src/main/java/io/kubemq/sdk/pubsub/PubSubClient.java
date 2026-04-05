@@ -1,5 +1,7 @@
 package io.kubemq.sdk.pubsub;
 
+import io.grpc.ClientInterceptor;
+import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.kubemq.sdk.auth.CredentialProvider;
 import io.kubemq.sdk.client.KubeMQClient;
@@ -67,7 +69,9 @@ public class PubSubClient extends KubeMQClient {
       int maxSendMessageSize,
       Boolean waitForReady,
       KubeMQLogger logger,
-      boolean validateOnBuild) {
+      boolean validateOnBuild,
+      ManagedChannel grpcChannel,
+      List<ClientInterceptor> interceptors) {
     super(
         address,
         clientId,
@@ -95,14 +99,17 @@ public class PubSubClient extends KubeMQClient {
         maxSendMessageSize,
         waitForReady,
         logger,
-        validateOnBuild);
+        validateOnBuild,
+        grpcChannel,
+        interceptors);
     eventStreamHelper = new EventStreamHelper();
   }
 
   /**
    * Publishes an event message. This is the preferred method name per cross-SDK verb alignment.
    *
-   * <p><b>Example:</b></p>
+   * <p><b>Example:</b>
+   *
    * <pre>{@code
    * PubSubClient client = PubSubClient.builder()
    *     .address("localhost:50000")
@@ -181,7 +188,8 @@ public class PubSubClient extends KubeMQClient {
    * Publishes an event store message. This is the preferred method name per cross-SDK verb
    * alignment.
    *
-   * <p><b>Example:</b></p>
+   * <p><b>Example:</b>
+   *
    * <pre>{@code
    * PubSubClient client = PubSubClient.builder()
    *     .address("localhost:50000")
@@ -200,8 +208,8 @@ public class PubSubClient extends KubeMQClient {
    *
    * @param message the event store message containing the target channel, body, metadata, and
    *     optional tags to publish
-   * @return an {@link EventSendResult} indicating whether the message was successfully persisted
-   *     by the server, including the server-assigned message ID
+   * @return an {@link EventSendResult} indicating whether the message was successfully persisted by
+   *     the server, including the server-assigned message ID
    * @throws ValidationException if the message is missing required fields (e.g. channel)
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
@@ -396,7 +404,8 @@ public class PubSubClient extends KubeMQClient {
   /**
    * Subscribes to events and returns the subscription handle for lifecycle control.
    *
-   * <p><b>Example:</b></p>
+   * <p><b>Example:</b>
+   *
    * <pre>{@code
    * PubSubClient client = PubSubClient.builder()
    *     .address("localhost:50000")
@@ -462,8 +471,8 @@ public class PubSubClient extends KubeMQClient {
    * Subscribes to events store and returns the subscription handle for lifecycle control.
    *
    * @param subscription the subscription configuration specifying the channel, optional consumer
-   *     group, start position (e.g. from sequence, from time), {@code onReceiveEvent} callback,
-   *     and {@code onError} callback
+   *     group, start position (e.g. from sequence, from time), {@code onReceiveEvent} callback, and
+   *     {@code onError} callback
    * @return the same subscription object, now active, with {@link EventsStoreSubscription#cancel()}
    *     available for stopping the subscription
    * @throws ValidationException if the subscription is missing required fields (e.g. channel or
@@ -663,8 +672,8 @@ public class PubSubClient extends KubeMQClient {
    * Creates an events channel asynchronously.
    *
    * @param channelName the name of the events channel to create (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     created successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was created
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #createEventsChannel(String)
    */
@@ -677,8 +686,8 @@ public class PubSubClient extends KubeMQClient {
    * Creates an events store channel asynchronously.
    *
    * @param channelName the name of the events store channel to create (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     created successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was created
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #createEventsStoreChannel(String)
    */
@@ -691,8 +700,8 @@ public class PubSubClient extends KubeMQClient {
    * Deletes an events channel asynchronously.
    *
    * @param channelName the name of the events channel to delete (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     deleted successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was deleted
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #deleteEventsChannel(String)
    */
@@ -705,8 +714,8 @@ public class PubSubClient extends KubeMQClient {
    * Deletes an events store channel asynchronously.
    *
    * @param channelName the name of the events store channel to delete (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     deleted successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was deleted
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #deleteEventsStoreChannel(String)
    */
@@ -765,7 +774,8 @@ public class PubSubClient extends KubeMQClient {
     } catch (KubeMQException e) {
       throw e;
     } catch (StatusRuntimeException e) {
-      throw GrpcErrorMapper.map(e, "subscribeToEventsWithHandle", subscription.getChannel(), null, false);
+      throw GrpcErrorMapper.map(
+          e, "subscribeToEventsWithHandle", subscription.getChannel(), null, false);
     } catch (Exception e) {
       throw KubeMQException.newBuilder()
           .code(ErrorCode.UNKNOWN_ERROR)
@@ -801,7 +811,8 @@ public class PubSubClient extends KubeMQClient {
     } catch (KubeMQException e) {
       throw e;
     } catch (StatusRuntimeException e) {
-      throw GrpcErrorMapper.map(e, "subscribeToEventsStoreWithHandle", subscription.getChannel(), null, false);
+      throw GrpcErrorMapper.map(
+          e, "subscribeToEventsStoreWithHandle", subscription.getChannel(), null, false);
     } catch (Exception e) {
       throw KubeMQException.newBuilder()
           .code(ErrorCode.UNKNOWN_ERROR)
@@ -853,9 +864,11 @@ public class PubSubClient extends KubeMQClient {
               .putTags("client_id", this.getClientId())
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = this.getClient()
-          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
-          .sendRequest(request);
+      kubemq.Kubemq.Response response =
+          this.getClient()
+              .withDeadlineAfter(
+                  CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+              .sendRequest(request);
       return response.getExecuted();
     } catch (StatusRuntimeException e) {
       throw GrpcErrorMapper.map(e, operationName, channelName, null, false);
@@ -890,9 +903,11 @@ public class PubSubClient extends KubeMQClient {
               .putTags("channel_search", search != null ? search : "")
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = this.getClient()
-          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
-          .sendRequest(request);
+      kubemq.Kubemq.Response response =
+          this.getClient()
+              .withDeadlineAfter(
+                  CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+              .sendRequest(request);
       getLogger().debug(operationName + " response received");
       if (response.getExecuted()) {
         return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());

@@ -38,7 +38,9 @@ class QueuesClientCoverageTest {
 
   @BeforeEach
   void setup() {
-    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
+    lenient()
+        .when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class)))
+        .thenReturn(mockBlockingStub);
     client = QueuesClient.builder().address("localhost:50000").clientId("test-client").build();
   }
 

@@ -131,7 +131,8 @@ public class QueryMessage {
    */
   public Request encode(String clientId) {
     Request.Builder pbQueryBuilder = Request.newBuilder();
-    java.util.Map<String, String> encodedTags = new java.util.HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
+    java.util.Map<String, String> encodedTags =
+        new java.util.HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
     encodedTags.put("x-kubemq-client-id", clientId);
     pbQueryBuilder
         .setRequestID(id != null ? id : UUID.randomUUID().toString())

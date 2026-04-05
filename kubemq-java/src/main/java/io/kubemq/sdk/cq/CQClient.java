@@ -1,14 +1,14 @@
 package io.kubemq.sdk.cq;
 
+import io.grpc.ClientInterceptor;
+import io.grpc.ManagedChannel;
 import io.kubemq.sdk.auth.CredentialProvider;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.client.Subscription;
-import io.kubemq.sdk.common.ChannelDecoder;
 import io.kubemq.sdk.common.KubeMQUtils;
 import io.kubemq.sdk.exception.AuthenticationException;
 import io.kubemq.sdk.exception.ClientClosedException;
 import io.kubemq.sdk.exception.ConnectionException;
-import io.kubemq.sdk.exception.GRPCException;
 import io.kubemq.sdk.exception.KubeMQException;
 import io.kubemq.sdk.exception.KubeMQTimeoutException;
 import io.kubemq.sdk.exception.ValidationException;
@@ -66,7 +66,9 @@ public class CQClient extends KubeMQClient {
       int maxSendMessageSize,
       Boolean waitForReady,
       KubeMQLogger logger,
-      boolean validateOnBuild) {
+      boolean validateOnBuild,
+      ManagedChannel grpcChannel,
+      List<ClientInterceptor> interceptors) {
     super(
         address,
         clientId,
@@ -94,7 +96,9 @@ public class CQClient extends KubeMQClient {
         maxSendMessageSize,
         waitForReady,
         logger,
-        validateOnBuild);
+        validateOnBuild,
+        grpcChannel,
+        interceptors);
   }
 
   /**
@@ -133,8 +137,8 @@ public class CQClient extends KubeMQClient {
    * @param body the query payload as a byte array; {@code null} is treated as empty
    * @param timeoutInSeconds the maximum time in seconds to wait for a response from a query
    *     subscriber
-   * @return a {@link QueryResponseMessage} containing the responder's body, metadata, and
-   *     execution status
+   * @return a {@link QueryResponseMessage} containing the responder's body, metadata, and execution
+   *     status
    * @throws ValidationException if the channel name is null or empty
    * @throws ClientClosedException if this client has been closed
    * @throws KubeMQTimeoutException if no response is received within the specified timeout
@@ -157,7 +161,8 @@ public class CQClient extends KubeMQClient {
    * Sends a command to the KubeMQ server. This is the preferred method name per cross-SDK verb
    * alignment.
    *
-   * <p><b>Example:</b></p>
+   * <p><b>Example:</b>
+   *
    * <pre>{@code
    * CQClient client = CQClient.builder()
    *     .address("localhost:50000")
@@ -216,13 +221,16 @@ public class CQClient extends KubeMQClient {
     if (!isConnectionReadyAndStabilized(POST_RECONNECT_STABILIZATION_MS)) {
       throw io.kubemq.sdk.exception.ConnectionNotReadyException.create(
           getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
-              ? "STABILIZING" : getConnectionState().name());
+              ? "STABILIZING"
+              : getConnectionState().name());
     }
     message.validate();
     Kubemq.Request request = message.encode(this.getClientId());
-    Kubemq.Response response = this.getClient()
-        .withDeadlineAfter(message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
-        .sendRequest(request);
+    Kubemq.Response response =
+        this.getClient()
+            .withDeadlineAfter(
+                message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+            .sendRequest(request);
     getLogger().debug("sendCommandRequest response received");
     return CommandResponseMessage.builder().build().decode(response);
   }
@@ -231,7 +239,8 @@ public class CQClient extends KubeMQClient {
    * Sends a query to the KubeMQ server. This is the preferred method name per cross-SDK verb
    * alignment.
    *
-   * <p><b>Example:</b></p>
+   * <p><b>Example:</b>
+   *
    * <pre>{@code
    * CQClient client = CQClient.builder()
    *     .address("localhost:50000")
@@ -272,8 +281,8 @@ public class CQClient extends KubeMQClient {
    * Sends a query request to the KubeMQ server.
    *
    * @param message the query message specifying the target channel, body, and timeout
-   * @return a {@link QueryResponseMessage} containing the responder's body, metadata, and
-   *     execution status
+   * @return a {@link QueryResponseMessage} containing the responder's body, metadata, and execution
+   *     status
    * @throws ValidationException if the message is missing required fields (e.g. channel, timeout)
    * @throws ClientClosedException if this client has been closed
    * @throws KubeMQTimeoutException if no response is received within the query's timeout
@@ -290,13 +299,16 @@ public class CQClient extends KubeMQClient {
     if (!isConnectionReadyAndStabilized(POST_RECONNECT_STABILIZATION_MS)) {
       throw io.kubemq.sdk.exception.ConnectionNotReadyException.create(
           getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
-              ? "STABILIZING" : getConnectionState().name());
+              ? "STABILIZING"
+              : getConnectionState().name());
     }
     message.validate();
     Kubemq.Request request = message.encode(this.getClientId());
-    Kubemq.Response response = this.getClient()
-        .withDeadlineAfter(message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
-        .sendRequest(request);
+    Kubemq.Response response =
+        this.getClient()
+            .withDeadlineAfter(
+                message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+            .sendRequest(request);
     getLogger().debug("sendQueryRequest response received");
     return QueryResponseMessage.builder().build().decode(response);
   }
@@ -322,15 +334,16 @@ public class CQClient extends KubeMQClient {
           .withDeadlineAfter(getRequestTimeoutSeconds(), java.util.concurrent.TimeUnit.SECONDS)
           .sendResponse(message.encode(this.getClientId()));
     } catch (io.grpc.StatusRuntimeException e) {
-      throw io.kubemq.sdk.exception.GrpcErrorMapper.map(e, "sendCommandResponse", null, null, false);
+      throw io.kubemq.sdk.exception.GrpcErrorMapper.map(
+          e, "sendCommandResponse", null, null, false);
     }
   }
 
   /**
    * Sends a response message to the KubeMQ server.
    *
-   * @param message the query response to send back to the query issuer, containing the result
-   *     body, metadata, and execution status
+   * @param message the query response to send back to the query issuer, containing the result body,
+   *     metadata, and execution status
    * @throws ValidationException if the response message is missing required fields
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
@@ -428,8 +441,8 @@ public class CQClient extends KubeMQClient {
    *
    * @param channelSearch a channel name filter; use an empty string or {@code null} to list all
    *     channels, or a partial name to match channels containing that substring
-   * @return a list of {@link CQChannel} objects for commands channels matching the search
-   *     criteria, including channel statistics (e.g. active subscribers)
+   * @return a list of {@link CQChannel} objects for commands channels matching the search criteria,
+   *     including channel statistics (e.g. active subscribers)
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
    * @throws KubeMQException if listing channels fails
@@ -446,8 +459,8 @@ public class CQClient extends KubeMQClient {
    *
    * @param channelSearch a channel name filter; use an empty string or {@code null} to list all
    *     channels, or a partial name to match channels containing that substring
-   * @return a list of {@link CQChannel} objects for queries channels matching the search
-   *     criteria, including channel statistics (e.g. active subscribers)
+   * @return a list of {@link CQChannel} objects for queries channels matching the search criteria,
+   *     including channel statistics (e.g. active subscribers)
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
    * @throws KubeMQException if listing channels fails
@@ -528,8 +541,8 @@ public class CQClient extends KubeMQClient {
    *
    * @param message the command message specifying the target channel, body, and timeout
    * @return a {@link CompletableFuture} that completes with a {@link CommandResponseMessage}
-   *     indicating execution status; completes exceptionally with a {@link KubeMQException}
-   *     subtype on failure
+   *     indicating execution status; completes exceptionally with a {@link KubeMQException} subtype
+   *     on failure
    * @throws ValidationException if the message is missing required fields (e.g. channel, timeout)
    * @throws ClientClosedException if this client has been closed
    * @see CommandMessage
@@ -546,7 +559,8 @@ public class CQClient extends KubeMQClient {
       rejected.completeExceptionally(
           io.kubemq.sdk.exception.ConnectionNotReadyException.create(
               getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
-                  ? "STABILIZING" : getConnectionState().name()));
+                  ? "STABILIZING"
+                  : getConnectionState().name()));
       return rejected;
     }
     message.validate();
@@ -559,8 +573,7 @@ public class CQClient extends KubeMQClient {
     // True async: use the gRPC async stub with StreamObserver callback.
     // No thread is blocked waiting for the response.
     this.getAsyncClient()
-        .withDeadlineAfter(
-            message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+        .withDeadlineAfter(message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
         .sendRequest(
             request,
             new io.grpc.stub.StreamObserver<Kubemq.Response>() {
@@ -623,7 +636,8 @@ public class CQClient extends KubeMQClient {
       rejected.completeExceptionally(
           io.kubemq.sdk.exception.ConnectionNotReadyException.create(
               getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY
-                  ? "STABILIZING" : getConnectionState().name()));
+                  ? "STABILIZING"
+                  : getConnectionState().name()));
       return rejected;
     }
     message.validate();
@@ -634,8 +648,7 @@ public class CQClient extends KubeMQClient {
     // True async: use the gRPC async stub with StreamObserver callback.
     // No thread is blocked waiting for the response.
     this.getAsyncClient()
-        .withDeadlineAfter(
-            message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
+        .withDeadlineAfter(message.getTimeoutInSeconds() + 2, java.util.concurrent.TimeUnit.SECONDS)
         .sendRequest(
             request,
             new io.grpc.stub.StreamObserver<Kubemq.Response>() {
@@ -664,8 +677,8 @@ public class CQClient extends KubeMQClient {
    *
    * @param message the query message specifying the target channel, body, and timeout
    * @param timeout the maximum time to wait for the response before throwing
-   * @return a {@link QueryResponseMessage} containing the responder's body, metadata, and
-   *     execution status
+   * @return a {@link QueryResponseMessage} containing the responder's body, metadata, and execution
+   *     status
    * @throws KubeMQTimeoutException if the operation exceeds the specified timeout
    * @throws ValidationException if the message is missing required fields (e.g. channel, timeout)
    * @throws ClientClosedException if this client has been closed
@@ -701,8 +714,8 @@ public class CQClient extends KubeMQClient {
   /**
    * Sends a query response message asynchronously.
    *
-   * @param message the query response to send back to the query issuer, containing the result
-   *     body, metadata, and execution status
+   * @param message the query response to send back to the query issuer, containing the result body,
+   *     metadata, and execution status
    * @return a {@link CompletableFuture} that completes when the response has been sent to the
    *     server; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ValidationException if the response message is missing required fields
@@ -724,8 +737,8 @@ public class CQClient extends KubeMQClient {
    * Creates a commands channel asynchronously.
    *
    * @param channel the name of the commands channel to create (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     created successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was created
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #createCommandsChannel(String)
    */
@@ -738,8 +751,8 @@ public class CQClient extends KubeMQClient {
    * Creates a queries channel asynchronously.
    *
    * @param channel the name of the queries channel to create (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     created successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was created
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #createQueriesChannel(String)
    */
@@ -752,8 +765,8 @@ public class CQClient extends KubeMQClient {
    * Deletes a commands channel asynchronously.
    *
    * @param channel the name of the commands channel to delete (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     deleted successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was deleted
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #deleteCommandsChannel(String)
    */
@@ -766,8 +779,8 @@ public class CQClient extends KubeMQClient {
    * Deletes a queries channel asynchronously.
    *
    * @param channel the name of the queries channel to delete (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     deleted successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was deleted
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #deleteQueriesChannel(String)
    */

@@ -32,7 +32,9 @@ class CQClientTest {
 
   @BeforeEach
   void setup() {
-    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
+    lenient()
+        .when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class)))
+        .thenReturn(mockBlockingStub);
     client = CQClient.builder().address("localhost:50000").clientId("test-cq-client").build();
     client.setBlockingStub(mockBlockingStub);
     client.setAsyncStub(mockAsyncStub);
@@ -249,15 +251,15 @@ class CQClientTest {
     }
 
     @Test
-    @DisplayName("StatusRuntimeException is mapped via GrpcErrorMapper for sendResponseMessage (command)")
+    @DisplayName(
+        "StatusRuntimeException is mapped via GrpcErrorMapper for sendResponseMessage (command)")
     void sendResponseMessage_command_statusRuntimeException_mapped() {
       when(mockBlockingStub.sendResponse(any(Kubemq.Response.class)))
           .thenThrow(new StatusRuntimeException(Status.UNAVAILABLE));
 
       // Production code maps StatusRuntimeException via GrpcErrorMapper
       assertThrows(
-          KubeMQException.class,
-          () -> client.sendResponseMessage(buildValidCommandResponse()));
+          KubeMQException.class, () -> client.sendResponseMessage(buildValidCommandResponse()));
     }
 
     @Test
@@ -318,15 +320,15 @@ class CQClientTest {
     }
 
     @Test
-    @DisplayName("StatusRuntimeException is mapped via GrpcErrorMapper for sendResponseMessage (query)")
+    @DisplayName(
+        "StatusRuntimeException is mapped via GrpcErrorMapper for sendResponseMessage (query)")
     void sendResponseMessage_query_statusRuntimeException_mapped() {
       when(mockBlockingStub.sendResponse(any(Kubemq.Response.class)))
           .thenThrow(new StatusRuntimeException(Status.INTERNAL));
 
       // Production code maps StatusRuntimeException via GrpcErrorMapper
       assertThrows(
-          KubeMQException.class,
-          () -> client.sendResponseMessage(buildValidQueryResponse()));
+          KubeMQException.class, () -> client.sendResponseMessage(buildValidQueryResponse()));
     }
 
     @Test
@@ -351,8 +353,7 @@ class CQClientTest {
       // Production code does not wrap exceptions
       RuntimeException ex =
           assertThrows(
-              RuntimeException.class,
-              () -> client.sendResponseMessage(buildValidQueryResponse()));
+              RuntimeException.class, () -> client.sendResponseMessage(buildValidQueryResponse()));
       assertTrue(ex.getMessage().contains("codec error"));
     }
   }

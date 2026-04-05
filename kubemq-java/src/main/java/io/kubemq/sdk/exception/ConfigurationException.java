@@ -14,7 +14,10 @@ public class ConfigurationException extends KubeMQException {
 
   /** Builder for {@link ConfigurationException} with configuration-error-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with FAILED_PRECONDITION code, VALIDATION category, and non-retryable. */
+    /**
+     * Constructs a new Builder with FAILED_PRECONDITION code, VALIDATION category, and
+     * non-retryable.
+     */
     public Builder() {
       code(ErrorCode.FAILED_PRECONDITION);
       category(ErrorCategory.VALIDATION);
