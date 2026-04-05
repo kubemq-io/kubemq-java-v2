@@ -32,7 +32,7 @@ public class ReplayFromSequenceExample {
         }
         System.out.println("Sent 10 messages.\n");
 
-        int startSequence = 5;
+        long startSequence = 5L;
         AtomicInteger received = new AtomicInteger(0);
         CountDownLatch latch = new CountDownLatch(6);
 
