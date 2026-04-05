@@ -208,7 +208,8 @@ class EventStreamHelperCoverageTest {
       assertEquals("connection lost", result1.getError());
 
       // After onError, the stream handler IS cleared in current production code.
-      assertNull(helper.getQueuesUpStreamHandler(),
+      assertNull(
+          helper.getQueuesUpStreamHandler(),
           "Stream handler is cleared by onError in current production code");
     }
   }

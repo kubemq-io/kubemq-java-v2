@@ -58,7 +58,8 @@ public class QueueMessageWaitingPulled {
     received.reRouteFromQueue = message.getAttributes().getReRoutedFromQueue();
     received.expiredAt =
         Instant.ofEpochSecond(message.getAttributes().getExpirationAt() / 1_000_000_000L);
-    received.delayedTo = Instant.ofEpochSecond(message.getAttributes().getDelayedTo() / 1_000_000_000L);
+    received.delayedTo =
+        Instant.ofEpochSecond(message.getAttributes().getDelayedTo() / 1_000_000_000L);
     received.receiverClientId = receiverClientId;
 
     return received;

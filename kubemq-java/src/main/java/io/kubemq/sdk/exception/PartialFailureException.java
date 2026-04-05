@@ -28,7 +28,9 @@ public class PartialFailureException extends KubeMQException {
   public static class Builder extends KubeMQException.Builder<Builder> {
     private Map<String, KubeMQException> perMessageErrors;
 
-    /** Constructs a new Builder with PARTIAL_FAILURE code, TRANSIENT category, and non-retryable. */
+    /**
+     * Constructs a new Builder with PARTIAL_FAILURE code, TRANSIENT category, and non-retryable.
+     */
     public Builder() {
       code(ErrorCode.PARTIAL_FAILURE);
       category(ErrorCategory.TRANSIENT);

@@ -11,7 +11,9 @@ public class ThrottlingException extends KubeMQException {
 
   /** Builder for {@link ThrottlingException} with throttling-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with RESOURCE_EXHAUSTED code, THROTTLING category, and retryable. */
+    /**
+     * Constructs a new Builder with RESOURCE_EXHAUSTED code, THROTTLING category, and retryable.
+     */
     public Builder() {
       code(ErrorCode.RESOURCE_EXHAUSTED);
       category(ErrorCategory.THROTTLING);

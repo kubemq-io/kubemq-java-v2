@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.cq.CQClient;
@@ -14,7 +13,6 @@ import io.kubemq.sdk.pubsub.EventMessage;
 import io.kubemq.sdk.pubsub.EventSendResult;
 import io.kubemq.sdk.pubsub.EventStreamHelper;
 import io.kubemq.sdk.pubsub.EventsStoreSubscription;
-import io.kubemq.sdk.pubsub.EventsStoreType;
 import io.kubemq.sdk.pubsub.EventsSubscription;
 import io.kubemq.sdk.pubsub.PubSubClient;
 import java.lang.reflect.Field;
@@ -28,8 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import kubemq.Kubemq;
 import kubemq.kubemqGrpc;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -119,8 +115,7 @@ class CriticalFindingsTest {
       EventStreamHelper helper = new EventStreamHelper();
 
       // 1. First send creates the stream
-      Kubemq.Event event1 =
-          Kubemq.Event.newBuilder().setEventID("evt-1").setChannel("ch").build();
+      Kubemq.Event event1 = Kubemq.Event.newBuilder().setEventID("evt-1").setChannel("ch").build();
       helper.sendEventMessage(mockClient, event1);
 
       // 2. Trigger onError on the result observer (simulates broken stream)
@@ -128,8 +123,7 @@ class CriticalFindingsTest {
       resultObserver.onError(new RuntimeException("Connection reset"));
 
       // 3. Second send should trigger a NEW stream creation
-      Kubemq.Event event2 =
-          Kubemq.Event.newBuilder().setEventID("evt-2").setChannel("ch").build();
+      Kubemq.Event event2 = Kubemq.Event.newBuilder().setEventID("evt-2").setChannel("ch").build();
       helper.sendEventMessage(mockClient, event2);
 
       // The async stub's sendEventsStream should have been called TWICE:
@@ -167,11 +161,7 @@ class CriticalFindingsTest {
 
       // Send an event store message async (creates the stream and a pending future)
       Kubemq.Event event =
-          Kubemq.Event.newBuilder()
-              .setEventID("store-evt")
-              .setChannel("ch")
-              .setStore(true)
-              .build();
+          Kubemq.Event.newBuilder().setEventID("store-evt").setChannel("ch").setStore(true).build();
       CompletableFuture<EventSendResult> future =
           helper.sendEventStoreMessageAsync(mockClient, event);
 
@@ -220,11 +210,7 @@ class CriticalFindingsTest {
 
       // Send a store message async
       Kubemq.Event event =
-          Kubemq.Event.newBuilder()
-              .setEventID("race-evt")
-              .setChannel("ch")
-              .setStore(true)
-              .build();
+          Kubemq.Event.newBuilder().setEventID("race-evt").setChannel("ch").setStore(true).build();
       CompletableFuture<EventSendResult> future =
           helper.sendEventStoreMessageAsync(mockClient, event);
 
@@ -290,8 +276,7 @@ class CriticalFindingsTest {
     @Test
     @DisplayName("C6: sendCommandRequest should set withDeadlineAfter on the blocking stub")
     void sendCommandRequest_shouldSetDeadline() {
-      CQClient client =
-          CQClient.builder().address("localhost:50000").clientId("c6-test").build();
+      CQClient client = CQClient.builder().address("localhost:50000").clientId("c6-test").build();
       try {
         // Set up: if withDeadlineAfter is called, return a different stub
         // (this lets us detect whether the deadline-wrapped stub is used)
@@ -323,8 +308,7 @@ class CriticalFindingsTest {
 
         // Verify withDeadlineAfter was called on the blocking stub.
         // Currently FAILS because sendCommandRequest uses the raw stub directly.
-        verify(mockBlockingStub, atLeastOnce())
-            .withDeadlineAfter(anyLong(), any(TimeUnit.class));
+        verify(mockBlockingStub, atLeastOnce()).withDeadlineAfter(anyLong(), any(TimeUnit.class));
 
         // Verify sendRequest was called on the deadline-wrapped stub, not the raw one
         verify(mockDeadlineStub).sendRequest(any(Kubemq.Request.class));

@@ -47,7 +47,7 @@ public class CommandsSubscription {
             return t;
           });
 
-  @Builder.Default private volatile transient SubscriptionReconnectHandler reconnectHandler = null;
+  @Builder.Default private transient volatile SubscriptionReconnectHandler reconnectHandler = null;
 
   public static ScheduledExecutorService getReconnectExecutor() {
     return RECONNECT_EXECUTOR;
@@ -60,7 +60,7 @@ public class CommandsSubscription {
 
   @Builder.Default private int maxConcurrentCallbacks = 1;
 
-  private volatile transient Semaphore callbackSemaphore;
+  private transient volatile Semaphore callbackSemaphore;
 
   private Consumer<CommandMessageReceived> onReceiveCommandCallback;
 
@@ -246,9 +246,7 @@ public class CommandsSubscription {
               "subscribeToCommands");
       // JV-8: Wait for channel-level READY before attempting resubscription
       reconnectHandler.setConnectionReadyCheck(
-          () ->
-              cQClient.getConnectionState()
-                  == io.kubemq.sdk.client.ConnectionState.READY);
+          () -> cQClient.getConnectionState() == io.kubemq.sdk.client.ConnectionState.READY);
     }
     reconnectHandler.scheduleReconnect(
         () -> {

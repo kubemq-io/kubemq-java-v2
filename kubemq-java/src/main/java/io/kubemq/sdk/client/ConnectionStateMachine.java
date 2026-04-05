@@ -173,12 +173,12 @@ public class ConnectionStateMachine {
   }
 
   /**
-   * Returns {@code true} if the connection is READY and has been stable for at least
-   * {@code stabilizationMs} after a reconnection. If the last READY transition was from
-   * CONNECTING (initial connect) rather than RECONNECTING, no stabilization window applies.
+   * Returns {@code true} if the connection is READY and has been stable for at least {@code
+   * stabilizationMs} after a reconnection. If the last READY transition was from CONNECTING
+   * (initial connect) rather than RECONNECTING, no stabilization window applies.
    *
-   * <p>This prevents the race where senders resume immediately after reconnection but
-   * subscription responders have not yet re-established, causing server-side timeouts.
+   * <p>This prevents the race where senders resume immediately after reconnection but subscription
+   * responders have not yet re-established, causing server-side timeouts.
    *
    * @param stabilizationMs grace period in milliseconds after reconnection
    * @return true if the connection is READY and stabilized
@@ -206,6 +206,62 @@ public class ConnectionStateMachine {
    */
   public long getReadySinceNanos() {
     return readySinceNanos;
+  }
+
+  /**
+   * Fire {@link ConnectionStateListener#onDisconnected()} on all registered listeners without
+   * changing the connection state. Used for external channel TRANSIENT_FAILURE notifications where
+   * the client should stay alive (FR-5).
+   */
+  public void fireDisconnected() {
+    try {
+      listenerExecutor.submit(
+          () -> {
+            for (ConnectionStateListener listener : listeners) {
+              try {
+                listener.onDisconnected();
+              } catch (Exception e) {
+                LOG.error("Error in connection state listener: {}", e.getMessage(), e);
+              }
+            }
+          });
+    } catch (RejectedExecutionException e) {
+      for (ConnectionStateListener listener : listeners) {
+        try {
+          listener.onDisconnected();
+        } catch (Exception ex) {
+          LOG.error("Error in connection state listener: {}", ex.getMessage(), ex);
+        }
+      }
+    }
+  }
+
+  /**
+   * Fire {@link ConnectionStateListener#onConnected()} on all registered listeners without changing
+   * the connection state. Used for external channel recovery from TRANSIENT_FAILURE to READY
+   * (FR-5).
+   */
+  public void fireConnected() {
+    try {
+      listenerExecutor.submit(
+          () -> {
+            for (ConnectionStateListener listener : listeners) {
+              try {
+                listener.onConnected();
+              } catch (Exception e) {
+                LOG.error("Error in connection state listener: {}", e.getMessage(), e);
+              }
+            }
+          });
+    } catch (RejectedExecutionException e) {
+      for (ConnectionStateListener listener : listeners) {
+        try {
+          listener.onConnected();
+        } catch (Exception ex) {
+          LOG.error("Error in connection state listener: {}", ex.getMessage(), ex);
+        }
+      }
+    }
   }
 
   /** Shutdown the listener executor. */

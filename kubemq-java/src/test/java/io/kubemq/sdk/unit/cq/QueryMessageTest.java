@@ -272,7 +272,14 @@ class QueryMessageTest {
     void encode_withEmptyTags_doesNotThrowNPE() {
       QueryMessage msg =
           new QueryMessage(
-              null, "test-channel", null, "test".getBytes(), new java.util.HashMap<>(), 30, null, 0);
+              null,
+              "test-channel",
+              null,
+              "test".getBytes(),
+              new java.util.HashMap<>(),
+              30,
+              null,
+              0);
 
       Kubemq.Request proto = msg.encode("client");
 
