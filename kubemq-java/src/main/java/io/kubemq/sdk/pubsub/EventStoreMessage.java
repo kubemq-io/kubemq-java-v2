@@ -115,7 +115,8 @@ public class EventStoreMessage {
    * @return The encoded pbEvent object.
    */
   public Kubemq.Event encode(String clientId) {
-    Map<String, String> encodedTags = new HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
+    Map<String, String> encodedTags =
+        new HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
     encodedTags.put("x-kubemq-client-id", clientId);
     return Kubemq.Event.newBuilder()
         .setEventID(id != null ? id : UUID.randomUUID().toString())

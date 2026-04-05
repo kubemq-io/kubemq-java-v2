@@ -66,8 +66,8 @@ public final class RetryPolicy {
   /**
    * Returns true if retries are enabled (maxRetries &gt; 0).
    *
-   * @return {@code true} if this policy will retry failed operations, {@code false} if retries
-   *     are disabled
+   * @return {@code true} if this policy will retry failed operations, {@code false} if retries are
+   *     disabled
    */
   public boolean isEnabled() {
     return maxRetries > 0;
@@ -101,10 +101,10 @@ public final class RetryPolicy {
   /**
    * Returns the worst-case total latency for this policy with a given operation timeout.
    *
-   * @param operationTimeout the timeout of a single operation attempt (used to calculate total
-   *     time including all retries)
-   * @return the maximum total duration including all retry attempts, backoff delays, and
-   *     operation timeouts
+   * @param operationTimeout the timeout of a single operation attempt (used to calculate total time
+   *     including all retries)
+   * @return the maximum total duration including all retry attempts, backoff delays, and operation
+   *     timeouts
    */
   public Duration worstCaseLatency(Duration operationTimeout) {
     long totalMs = operationTimeout.toMillis();
@@ -190,9 +190,8 @@ public final class RetryPolicy {
      * Sets the jitter type.
      *
      * @param j the randomization strategy for backoff durations: {@link JitterType#FULL} randomizes
-     *     over [0, backoff], {@link JitterType#EQUAL} over [backoff/2, backoff], and
-     *     {@link JitterType#NONE} uses the exact computed backoff; defaults to
-     *     {@link JitterType#FULL}
+     *     over [0, backoff], {@link JitterType#EQUAL} over [backoff/2, backoff], and {@link
+     *     JitterType#NONE} uses the exact computed backoff; defaults to {@link JitterType#FULL}
      * @return this builder for method chaining
      */
     public Builder jitterType(JitterType j) {
@@ -203,8 +202,8 @@ public final class RetryPolicy {
     /**
      * Sets the maximum number of concurrent retries.
      *
-     * @param n the maximum number of operations that can be retrying concurrently, in the range
-     *     [0, 100]; defaults to 10. Use 0 to disable the concurrency limit.
+     * @param n the maximum number of operations that can be retrying concurrently, in the range [0,
+     *     100]; defaults to 10. Use 0 to disable the concurrency limit.
      * @return this builder for method chaining
      * @throws IllegalArgumentException if the value is outside the range [0, 100]
      */

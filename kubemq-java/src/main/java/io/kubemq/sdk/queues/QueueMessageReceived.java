@@ -217,7 +217,8 @@ public class QueueMessageReceived {
     this.receiveCount = message.getAttributes().getReceiveCount();
     this.isReRouted = message.getAttributes().getReRouted();
     this.reRouteFromQueue = message.getAttributes().getReRoutedFromQueue();
-    this.expiredAt = Instant.ofEpochSecond(message.getAttributes().getExpirationAt() / 1_000_000_000L);
+    this.expiredAt =
+        Instant.ofEpochSecond(message.getAttributes().getExpirationAt() / 1_000_000_000L);
     this.delayedTo = Instant.ofEpochSecond(message.getAttributes().getDelayedTo() / 1_000_000_000L);
     this.transactionId = transactionId;
     this.isTransactionCompleted = transactionIsCompleted;

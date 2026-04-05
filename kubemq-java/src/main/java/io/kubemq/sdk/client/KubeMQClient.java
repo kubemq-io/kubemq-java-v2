@@ -43,6 +43,9 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -88,7 +91,8 @@ import lombok.Setter;
  * client.close();
  * }</pre>
  *
- * <p><b>Example — creating each client type:</b></p>
+ * <p><b>Example — creating each client type:</b>
+ *
  * <pre>{@code
  * // Pub/Sub client
  * PubSubClient pubSub = PubSubClient.builder()
@@ -190,6 +194,10 @@ public abstract class KubeMQClient implements AutoCloseable {
   @Setter private volatile kubemqGrpc.kubemqBlockingStub blockingStub;
   @Setter private volatile kubemqGrpc.kubemqStub asyncStub;
 
+  // --- External channel and interceptor support ---
+  private final boolean externalChannel;
+  private final List<ClientInterceptor> userInterceptors;
+
   // --- REQ-AUTH-6: Thread-safe reconnection ---
   private final Object reconnectLock = new Object();
 
@@ -230,6 +238,9 @@ public abstract class KubeMQClient implements AutoCloseable {
    * @param logger User-provided KubeMQLogger (null for auto-detection via KubeMQLoggerFactory).
    * @param validateOnBuild When true, pings the server during construction to verify connectivity.
    *     Default: {@code false}.
+   * @param grpcChannel Pre-built ManagedChannel for external channel injection (nullable).
+   * @param interceptors Additional ClientInterceptors applied outermost on the gRPC channel
+   *     (nullable).
    */
   public KubeMQClient(
       String address,
@@ -258,28 +269,89 @@ public abstract class KubeMQClient implements AutoCloseable {
       int maxSendMessageSize,
       Boolean waitForReady,
       KubeMQLogger logger,
-      boolean validateOnBuild) {
+      boolean validateOnBuild,
+      ManagedChannel grpcChannel,
+      List<ClientInterceptor> interceptors) {
 
     this.logger = (logger != null) ? logger : KubeMQLoggerFactory.getLogger("io.kubemq.sdk");
 
-    // REQ-DX-2: Default address resolution: explicit > env var > localhost:50000
-    String envAddress = System.getenv("KUBEMQ_ADDRESS");
-    String effectiveAddress;
-    if (address != null && !address.trim().isEmpty()) {
-      effectiveAddress = address;
-    } else if (envAddress != null && !envAddress.trim().isEmpty()) {
-      effectiveAddress = envAddress;
-    } else {
-      effectiveAddress = "localhost:50000";
-      this.logger.warn(
-          "Using default address localhost:50000. "
-              + "Set address explicitly or use KUBEMQ_ADDRESS environment variable "
-              + "for production deployments.");
-    }
+    // --- External channel and interceptor setup ---
+    this.externalChannel = (grpcChannel != null);
+    this.userInterceptors =
+        (interceptors != null && !interceptors.isEmpty())
+            ? Collections.unmodifiableList(new ArrayList<>(interceptors))
+            : Collections.emptyList();
 
-    // REQ-DX-1: Validate address format
-    validateAddress(effectiveAddress);
-    this.address = effectiveAddress;
+    if (this.externalChannel) {
+      // FR-6: Address relaxation for external channel
+      if (address != null && !address.trim().isEmpty()) {
+        // FR-6: grpcChannel + address both provided -- log warning, use grpcChannel
+        this.logger.warn(
+            "Both grpcChannel and address provided. grpcChannel takes precedence; "
+                + "address is stored for logging only.",
+            "address",
+            address);
+        this.address = address;
+      } else {
+        this.address = "external-channel";
+      }
+
+      // FR-7: Warn about ignored TLS and channel-config parameters
+      if (tls != null && tls) {
+        this.logger.warn(
+            "grpcChannel provided -- tls parameter is ignored (caller manages channel TLS config)");
+      }
+      if (tlsCertFile != null && !tlsCertFile.isEmpty()) {
+        this.logger.warn("grpcChannel provided -- tlsCertFile parameter is ignored");
+      }
+      if (tlsKeyFile != null && !tlsKeyFile.isEmpty()) {
+        this.logger.warn("grpcChannel provided -- tlsKeyFile parameter is ignored");
+      }
+      if (caCertFile != null && !caCertFile.isEmpty()) {
+        this.logger.warn("grpcChannel provided -- caCertFile parameter is ignored");
+      }
+      if (caCertPem != null && caCertPem.length > 0) {
+        this.logger.warn("grpcChannel provided -- caCertPem parameter is ignored");
+      }
+      if (tlsCertPem != null && tlsCertPem.length > 0) {
+        this.logger.warn("grpcChannel provided -- tlsCertPem parameter is ignored");
+      }
+      if (tlsKeyPem != null && tlsKeyPem.length > 0) {
+        this.logger.warn("grpcChannel provided -- tlsKeyPem parameter is ignored");
+      }
+      if (serverNameOverride != null && !serverNameOverride.isEmpty()) {
+        this.logger.warn("grpcChannel provided -- serverNameOverride parameter is ignored");
+      }
+      if (insecureSkipVerify) {
+        this.logger.warn("grpcChannel provided -- insecureSkipVerify parameter is ignored");
+      }
+      if (maxSendMessageSize > 0) {
+        this.logger.warn("grpcChannel provided -- maxSendMessageSize parameter is ignored");
+      }
+
+      // Skip address validation and TLS validation for external channel
+      // (address and TLS are caller-managed)
+    } else {
+      // Original address resolution logic
+      // REQ-DX-2: Default address resolution: explicit > env var > localhost:50000
+      String envAddress = System.getenv("KUBEMQ_ADDRESS");
+      String effectiveAddress;
+      if (address != null && !address.trim().isEmpty()) {
+        effectiveAddress = address;
+      } else if (envAddress != null && !envAddress.trim().isEmpty()) {
+        effectiveAddress = envAddress;
+      } else {
+        effectiveAddress = "localhost:50000";
+        this.logger.warn(
+            "Using default address localhost:50000. "
+                + "Set address explicitly or use KUBEMQ_ADDRESS environment variable "
+                + "for production deployments.");
+      }
+
+      // REQ-DX-1: Validate address format
+      validateAddress(effectiveAddress);
+      this.address = effectiveAddress;
+    }
 
     // REQ-DX-2: Default clientId to auto-generated UUID
     if (clientId == null || clientId.trim().isEmpty()) {
@@ -290,9 +362,14 @@ public abstract class KubeMQClient implements AutoCloseable {
 
     // REQ-AUTH-2: Address-aware TLS defaulting
     if (tls == null) {
-      this.tls = !isLocalhostAddress(this.address);
-      if (this.tls) {
-        this.logger.info("TLS enabled by default for remote address", "address", this.address);
+      if (this.externalChannel) {
+        // External channel: TLS is caller-managed; default to false to avoid misleading logs
+        this.tls = false;
+      } else {
+        this.tls = !isLocalhostAddress(this.address);
+        if (this.tls) {
+          this.logger.info("TLS enabled by default for remote address", "address", this.address);
+        }
       }
     } else {
       this.tls = tls;
@@ -315,7 +392,10 @@ public abstract class KubeMQClient implements AutoCloseable {
     this.insecureSkipVerify = insecureSkipVerify;
     this.credentialProvider = credentialProvider;
 
-    validateTlsConfiguration();
+    // FR-7: Skip TLS validation for external channel
+    if (!this.externalChannel) {
+      validateTlsConfiguration();
+    }
 
     this.maxReceiveSize = maxReceiveSize <= 0 ? (1024 * 1024 * 100) : maxReceiveSize;
     this.reconnectIntervalSeconds = reconnectIntervalSeconds <= 0 ? 1 : reconnectIntervalSeconds;
@@ -366,9 +446,7 @@ public abstract class KubeMQClient implements AutoCloseable {
     // JV-2: Wire ping verification before ReconnectionManager marks READY
     this.reconnectionManager.setPingCheck(
         () -> {
-          blockingStub
-              .withDeadlineAfter(5, TimeUnit.SECONDS)
-              .ping(null);
+          blockingStub.withDeadlineAfter(5, TimeUnit.SECONDS).ping(null);
         });
     this.messageBuffer =
         new MessageBuffer(
@@ -383,6 +461,11 @@ public abstract class KubeMQClient implements AutoCloseable {
     this.tracing = TracingFactory.create(null, null, this.clientId, serverHost, serverPortNum);
     this.metrics = MetricsFactory.create(null, null, null);
 
+    // Set managedChannel from grpcChannel before initChannel() if external
+    if (this.externalChannel) {
+      this.managedChannel = grpcChannel;
+    }
+
     this.connectionStateMachine.transitionTo(ConnectionState.CONNECTING);
     initChannel();
     this.connectionStateMachine.transitionTo(ConnectionState.READY);
@@ -393,7 +476,7 @@ public abstract class KubeMQClient implements AutoCloseable {
       try {
         this.ping();
       } catch (Exception e) {
-        if (managedChannel != null) {
+        if (managedChannel != null && !externalChannel) {
           managedChannel.shutdownNow();
         }
         throw ConnectionException.builder()
@@ -632,47 +715,59 @@ public abstract class KubeMQClient implements AutoCloseable {
    * enabled, otherwise uses plaintext communication.
    */
   private void initChannel() {
-    String resolvedAddress = address;
-    if (!address.contains("://")) {
-      resolvedAddress = "dns:///" + address;
-    }
+    if (externalChannel) {
+      // FR-1: Use caller-provided channel instead of creating one
+      // managedChannel was already set via grpcChannel constructor param
+      logger.debug(
+          "Using externally-provided gRPC channel",
+          "address",
+          address,
+          "user_interceptors",
+          userInterceptors.size());
+    } else {
+      // Original internal channel creation
+      String resolvedAddress = address;
+      if (!address.contains("://")) {
+        resolvedAddress = "dns:///" + address;
+      }
 
-    logger.debug("Constructing channel to KubeMQ", "address", resolvedAddress);
-    if (isTls()) {
-      try {
-        NettyChannelBuilder ncb =
+      logger.debug("Constructing channel to KubeMQ", "address", resolvedAddress);
+      if (isTls()) {
+        try {
+          NettyChannelBuilder ncb =
+              NettyChannelBuilder.forTarget(resolvedAddress)
+                  .negotiationType(NegotiationType.TLS)
+                  .maxInboundMessageSize(maxReceiveSize)
+                  .flowControlWindow(16 * 1024 * 1024);
+
+          if (serverNameOverride != null && !serverNameOverride.isEmpty()) {
+            ncb = ncb.overrideAuthority(serverNameOverride);
+          }
+
+          SslContext sslContext = createSslContext();
+          ncb = ncb.sslContext(sslContext);
+
+          configureKeepAlive(ncb);
+          managedChannel = ncb.build();
+        } catch (SSLException e) {
+          throw classifyTlsException(e);
+        }
+      } else {
+        NettyChannelBuilder mcb =
             NettyChannelBuilder.forTarget(resolvedAddress)
-                .negotiationType(NegotiationType.TLS)
+                .negotiationType(NegotiationType.PLAINTEXT)
                 .maxInboundMessageSize(maxReceiveSize)
                 .flowControlWindow(16 * 1024 * 1024);
-
-        if (serverNameOverride != null && !serverNameOverride.isEmpty()) {
-          ncb = ncb.overrideAuthority(serverNameOverride);
-        }
-
-        SslContext sslContext = createSslContext();
-        ncb = ncb.sslContext(sslContext);
-
-        configureKeepAlive(ncb);
-        managedChannel = ncb.build();
-      } catch (SSLException e) {
-        throw classifyTlsException(e);
+        configureKeepAlive(mcb);
+        managedChannel = mcb.build();
       }
-    } else {
-      NettyChannelBuilder mcb =
-          NettyChannelBuilder.forTarget(resolvedAddress)
-              .negotiationType(NegotiationType.PLAINTEXT)
-              .maxInboundMessageSize(maxReceiveSize)
-              .flowControlWindow(16 * 1024 * 1024);
-      configureKeepAlive(mcb);
-      managedChannel = mcb.build();
     }
 
-    // Always apply AuthInterceptor -- it checks token presence on each call
-    ClientInterceptor authInterceptor = new AuthInterceptor();
-    Channel channel = ClientInterceptors.intercept(managedChannel, authInterceptor);
-    this.blockingStub = kubemqGrpc.newBlockingStub(channel);
-    this.asyncStub = kubemqGrpc.newStub(channel);
+    // Apply all interceptors (AuthInterceptor innermost, user interceptors outermost)
+    // managedChannel field stays as raw ManagedChannel for state monitoring
+    Channel interceptedChannel = applyInterceptors(managedChannel);
+    this.blockingStub = kubemqGrpc.newBlockingStub(interceptedChannel);
+    this.asyncStub = kubemqGrpc.newStub(interceptedChannel);
 
     addChannelStateListener();
 
@@ -693,6 +788,29 @@ public abstract class KubeMQClient implements AutoCloseable {
     builder.keepAliveWithoutCalls(withoutCalls);
   }
 
+  /**
+   * Applies interceptors to the channel. User interceptors are outermost (execute first on call
+   * path), AuthInterceptor is innermost (closest to transport).
+   *
+   * <p>Since {@code ClientInterceptors.intercept()} makes the LAST interceptor in the list
+   * outermost, user interceptors are placed last and AuthInterceptor first.
+   *
+   * <p><strong>Important:</strong> This method returns a {@link Channel} (not {@code
+   * ManagedChannel}), because {@code ClientInterceptors.intercept()} wraps the original channel in
+   * a decorator. The returned {@code Channel} MUST be used only for stub creation. The {@code
+   * managedChannel} field MUST remain the raw {@code ManagedChannel} for state monitoring via
+   * {@code notifyWhenStateChanged()}, {@code getState()}, and {@code shutdown()}.
+   *
+   * @param rawChannel the raw ManagedChannel to wrap with interceptors
+   * @return a Channel with all interceptors applied (for stub creation only)
+   */
+  private Channel applyInterceptors(ManagedChannel rawChannel) {
+    List<ClientInterceptor> allInterceptors = new ArrayList<>();
+    allInterceptors.add(new AuthInterceptor()); // innermost (first in list)
+    allInterceptors.addAll(userInterceptors); // outermost (last in list)
+    return ClientInterceptors.intercept(rawChannel, allInterceptors);
+  }
+
   private void addChannelStateListener() {
     monitorChannelState(managedChannel.getState(false));
   }
@@ -705,33 +823,69 @@ public abstract class KubeMQClient implements AutoCloseable {
         currentState,
         () -> {
           ConnectivityState newState = managedChannel.getState(false);
-          switch (newState) {
-            case TRANSIENT_FAILURE:
-              logger.debug("gRPC channel TRANSIENT_FAILURE detected");
-              managedChannel.resetConnectBackoff();
-              reconnectionManager.startReconnection(this::reconnectChannel);
-              break;
-            case SHUTDOWN:
-              // JV-5: Only close on user-initiated shutdown; otherwise attempt reconnection
-              if (closed.get()) {
-                logger.debug("gRPC channel SHUTDOWN detected (user-initiated), closing");
-                connectionStateMachine.transitionTo(ConnectionState.CLOSED);
-              } else {
+          if (externalChannel) {
+            // FR-5: External channel -- no reconnection, notify listener only
+            switch (newState) {
+              case TRANSIENT_FAILURE:
                 logger.debug(
-                    "gRPC channel SHUTDOWN detected (not user-initiated), attempting reconnection");
-                reconnectionManager.startReconnection(KubeMQClient.this::reconnectChannel);
-              }
-              break;
-            case READY:
-              break;
-            default:
-              break;
+                    "External channel TRANSIENT_FAILURE detected -- notifying onDisconnected() (no reconnection)");
+                // FR-5: Fire onDisconnected() directly without state machine transition.
+                // We do NOT transition to CLOSED (terminal -- would kill the client) or
+                // RECONNECTING (misleading -- dispatches onReconnecting()). Instead, we
+                // notify listeners directly so the client stays alive and continues
+                // monitoring. The external channel may recover to READY on its own
+                // (gRPC handles transport-level backoff internally).
+                connectionStateMachine.fireDisconnected();
+                break;
+              case READY:
+                logger.debug("External channel READY detected -- notifying onConnected()");
+                // FR-5: Channel recovered from TRANSIENT_FAILURE. Notify listeners
+                // that the connection is restored. fireConnected() notifies without
+                // state transition, keeping the state machine consistent.
+                connectionStateMachine.fireConnected();
+                break;
+              case SHUTDOWN:
+                logger.debug("External channel SHUTDOWN detected -- transitioning to CLOSED");
+                connectionStateMachine.transitionTo(ConnectionState.CLOSED);
+                break;
+              default:
+                break;
+            }
+          } else {
+            // Original internal channel behavior
+            switch (newState) {
+              case TRANSIENT_FAILURE:
+                logger.debug("gRPC channel TRANSIENT_FAILURE detected");
+                managedChannel.resetConnectBackoff();
+                reconnectionManager.startReconnection(this::reconnectChannel);
+                break;
+              case SHUTDOWN:
+                // JV-5: Only close on user-initiated shutdown; otherwise attempt reconnection
+                if (closed.get()) {
+                  logger.debug("gRPC channel SHUTDOWN detected (user-initiated), closing");
+                  connectionStateMachine.transitionTo(ConnectionState.CLOSED);
+                } else {
+                  logger.debug(
+                      "gRPC channel SHUTDOWN detected (not user-initiated), attempting reconnection");
+                  reconnectionManager.startReconnection(KubeMQClient.this::reconnectChannel);
+                }
+                break;
+              case READY:
+                break;
+              default:
+                break;
+            }
           }
           monitorChannelState(newState);
         });
   }
 
   private void reconnectChannel() {
+    if (externalChannel) {
+      // FR-5: External channel -- caller manages reconnection; SDK does not reconnect
+      logger.debug("Skipping reconnection -- channel is externally managed");
+      return;
+    }
     if (isTls()) {
       reconnectWithCertReload();
     } else {
@@ -778,10 +932,10 @@ public abstract class KubeMQClient implements AutoCloseable {
 
         managedChannel = ncb.build();
 
-        ClientInterceptor authInterceptor = new AuthInterceptor();
-        Channel channel = ClientInterceptors.intercept(managedChannel, authInterceptor);
-        this.blockingStub = kubemqGrpc.newBlockingStub(channel);
-        this.asyncStub = kubemqGrpc.newStub(channel);
+        // Use centralized interceptor application (AuthInterceptor + user interceptors)
+        Channel interceptedChannel = applyInterceptors(managedChannel);
+        this.blockingStub = kubemqGrpc.newBlockingStub(interceptedChannel);
+        this.asyncStub = kubemqGrpc.newStub(interceptedChannel);
 
         addChannelStateListener();
 
@@ -852,10 +1006,10 @@ public abstract class KubeMQClient implements AutoCloseable {
   }
 
   /**
-   * Returns the executor for async operations. Uses a cached thread pool that creates threads
-   * on demand and reclaims idle threads after 60 seconds. This ensures admin async methods
-   * are truly non-blocking (always able to obtain a thread) while keeping overhead low
-   * since admin calls are infrequent.
+   * Returns the executor for async operations. Uses a cached thread pool that creates threads on
+   * demand and reclaims idle threads after 60 seconds. This ensures admin async methods are truly
+   * non-blocking (always able to obtain a thread) while keeping overhead low since admin calls are
+   * infrequent.
    *
    * @return the result
    */
@@ -1048,14 +1202,19 @@ public abstract class KubeMQClient implements AutoCloseable {
     shutdownSdkExecutor(defaultAsyncOperationExecutor, "async-operation");
 
     if (managedChannel != null) {
-      try {
-        managedChannel.shutdown().awaitTermination(shutdownTimeoutSeconds, TimeUnit.SECONDS);
-      } catch (InterruptedException e) {
-        logger.error("Channel shutdown interrupted", e);
-        Thread.currentThread().interrupt();
-      } finally {
-        if (!managedChannel.isTerminated()) {
-          managedChannel.shutdownNow();
+      if (externalChannel) {
+        // FR-4: Do NOT shut down externally-provided channel -- caller owns lifecycle
+        logger.debug("Skipping channel shutdown -- channel is externally managed");
+      } else {
+        try {
+          managedChannel.shutdown().awaitTermination(shutdownTimeoutSeconds, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+          logger.error("Channel shutdown interrupted", e);
+          Thread.currentThread().interrupt();
+        } finally {
+          if (!managedChannel.isTerminated()) {
+            managedChannel.shutdownNow();
+          }
         }
       }
     }
@@ -1153,12 +1312,12 @@ public abstract class KubeMQClient implements AutoCloseable {
   }
 
   /**
-   * Returns {@code true} if the connection is READY and has been stable long enough
-   * for subscriptions to re-establish after a reconnection.
+   * Returns {@code true} if the connection is READY and has been stable long enough for
+   * subscriptions to re-establish after a reconnection.
    *
    * <p>After an initial connect (not a reconnect), this always returns true if state is READY.
-   * After a reconnect, it enforces a stabilization window to prevent sending RPCs to a broker
-   * that has no subscribed responders yet.
+   * After a reconnect, it enforces a stabilization window to prevent sending RPCs to a broker that
+   * has no subscribed responders yet.
    *
    * @param stabilizationMs grace period in milliseconds after reconnection
    * @return true if ready and stabilized
@@ -1333,8 +1492,8 @@ public abstract class KubeMQClient implements AutoCloseable {
    * messages. Use {@link #hasAuthToken()} to check token presence without exposing the value.
    *
    * @return the current auth token, or null if not set
-   * @deprecated Use {@link #hasAuthToken()} to check presence. Direct token access risks
-   *     accidental exposure in logs or error messages. This method will be removed in v3.0.
+   * @deprecated Use {@link #hasAuthToken()} to check presence. Direct token access risks accidental
+   *     exposure in logs or error messages. This method will be removed in v3.0.
    */
   @Deprecated(since = "2.3.0", forRemoval = true)
   public String getAuthToken() {

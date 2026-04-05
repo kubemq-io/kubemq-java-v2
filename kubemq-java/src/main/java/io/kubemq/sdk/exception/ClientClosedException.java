@@ -20,7 +20,10 @@ public class ClientClosedException extends KubeMQException {
 
   /** Builder for {@link ClientClosedException} with client-closed-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with CONNECTION_CLOSED code, FATAL category, non-retryable, and a standard message. */
+    /**
+     * Constructs a new Builder with CONNECTION_CLOSED code, FATAL category, non-retryable, and a
+     * standard message.
+     */
     public Builder() {
       code(ErrorCode.CONNECTION_CLOSED);
       category(ErrorCategory.FATAL);

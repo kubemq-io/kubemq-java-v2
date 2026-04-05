@@ -176,9 +176,12 @@ public class KubeMQUtils {
               .putTags("client_id", clientId)
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = kubeMQClient.getClient()
-          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
-          .sendRequest(request);
+      kubemq.Kubemq.Response response =
+          kubeMQClient
+              .getClient()
+              .withDeadlineAfter(
+                  CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+              .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return true;
       } else if (response != null) {
@@ -217,9 +220,12 @@ public class KubeMQUtils {
               .setTimeout(10 * 1000)
               .build();
 
-      Response response = kubeMQClient.getClient()
-          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
-          .sendRequest(request);
+      Response response =
+          kubeMQClient
+              .getClient()
+              .withDeadlineAfter(
+                  CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+              .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return ChannelDecoder.decodeQueuesChannelList(response.getBody().toByteArray());
       } else if (response != null) {
@@ -269,9 +275,12 @@ public class KubeMQUtils {
               .putTags("channel_search", channelSearch != null ? channelSearch : "")
               .setTimeout(10 * 1000)
               .build();
-      kubemq.Kubemq.Response response = kubeMQClient.getClient()
-          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
-          .sendRequest(request);
+      kubemq.Kubemq.Response response =
+          kubeMQClient
+              .getClient()
+              .withDeadlineAfter(
+                  CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+              .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return ChannelDecoder.decodePubSubChannelList(response.getBody().toByteArray());
       } else if (response != null) {
@@ -322,9 +331,12 @@ public class KubeMQUtils {
               .setTimeout(10 * 1000)
               .build();
 
-      Response response = kubeMQClient.getClient()
-          .withDeadlineAfter(CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
-          .sendRequest(request);
+      Response response =
+          kubeMQClient
+              .getClient()
+              .withDeadlineAfter(
+                  CHANNEL_MGMT_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+              .sendRequest(request);
       if (response != null && response.getExecuted()) {
         return ChannelDecoder.decodeCqChannelList(response.getBody().toByteArray());
       } else if (response != null) {

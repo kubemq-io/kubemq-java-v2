@@ -11,7 +11,10 @@ public class AuthenticationException extends KubeMQException {
 
   /** Builder for {@link AuthenticationException} with authentication-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with AUTHENTICATION_FAILED code, AUTHENTICATION category, and non-retryable. */
+    /**
+     * Constructs a new Builder with AUTHENTICATION_FAILED code, AUTHENTICATION category, and
+     * non-retryable.
+     */
     public Builder() {
       code(ErrorCode.AUTHENTICATION_FAILED);
       category(ErrorCategory.AUTHENTICATION);
