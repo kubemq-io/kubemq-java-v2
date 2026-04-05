@@ -74,7 +74,8 @@ public class SubscriptionReconnectHandler {
     this.baseIntervalMs = baseIntervalMs;
     this.channel = channel;
     this.operationName = operationName;
-    this.maxReconnectAttempts = maxReconnectAttempts > 0 ? maxReconnectAttempts : DEFAULT_MAX_RECONNECT_ATTEMPTS;
+    this.maxReconnectAttempts =
+        maxReconnectAttempts > 0 ? maxReconnectAttempts : DEFAULT_MAX_RECONNECT_ATTEMPTS;
   }
 
   /**
@@ -149,11 +150,11 @@ public class SubscriptionReconnectHandler {
   }
 
   /**
-   * JV-1c: Schedule a fast poll to check for connection READY. Uses a short fixed interval
-   * ({@value #READY_POLL_INTERVAL_MS}ms) instead of the exponential backoff delay, ensuring
-   * subscriptions re-establish within ~200ms of the connection becoming READY rather than
-   * up to 1000ms+ with the standard backoff. Once READY is detected, this delegates back to
-   * {@link #scheduleReconnect} for the actual resubscription attempt.
+   * JV-1c: Schedule a fast poll to check for connection READY. Uses a short fixed interval ({@value
+   * #READY_POLL_INTERVAL_MS}ms) instead of the exponential backoff delay, ensuring subscriptions
+   * re-establish within ~200ms of the connection becoming READY rather than up to 1000ms+ with the
+   * standard backoff. Once READY is detected, this delegates back to {@link #scheduleReconnect} for
+   * the actual resubscription attempt.
    */
   private void scheduleReadyPoll(Runnable reconnectAction, Consumer<KubeMQException> onError) {
     executor.schedule(
@@ -168,8 +169,12 @@ public class SubscriptionReconnectHandler {
               int attempt = reconnectAttempts.incrementAndGet();
               reconnectAction.run();
               reconnectAttempts.set(0);
-              LOG.info("Successfully reconnected after ready poll", "channel", channel,
-                  "attempts", attempt);
+              LOG.info(
+                  "Successfully reconnected after ready poll",
+                  "channel",
+                  channel,
+                  "attempts",
+                  attempt);
             } catch (Exception e) {
               LOG.error("Reconnection after ready poll failed", e, "channel", channel);
               scheduleReconnect(reconnectAction, onError);
@@ -181,8 +186,8 @@ public class SubscriptionReconnectHandler {
   }
 
   /**
-   * Sets a readiness check that is evaluated before attempting resubscription.
-   * If the check returns false, the reconnection attempt is delayed.
+   * Sets a readiness check that is evaluated before attempting resubscription. If the check returns
+   * false, the reconnection attempt is delayed.
    *
    * @param readyCheck returns true if the connection is ready for resubscription
    */

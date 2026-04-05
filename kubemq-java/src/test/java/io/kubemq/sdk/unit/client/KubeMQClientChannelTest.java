@@ -35,7 +35,9 @@ class KubeMQClientChannelTest {
 
   @BeforeEach
   void setup() {
-    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
+    lenient()
+        .when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class)))
+        .thenReturn(mockBlockingStub);
     // Create a real client first
     client = CQClient.builder().address("localhost:50000").clientId("test-client").build();
   }

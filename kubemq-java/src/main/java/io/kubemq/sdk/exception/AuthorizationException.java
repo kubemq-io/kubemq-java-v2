@@ -11,7 +11,10 @@ public class AuthorizationException extends KubeMQException {
 
   /** Builder for {@link AuthorizationException} with authorization-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with AUTHORIZATION_DENIED code, AUTHORIZATION category, and non-retryable. */
+    /**
+     * Constructs a new Builder with AUTHORIZATION_DENIED code, AUTHORIZATION category, and
+     * non-retryable.
+     */
     public Builder() {
       code(ErrorCode.AUTHORIZATION_DENIED);
       category(ErrorCategory.AUTHORIZATION);

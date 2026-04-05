@@ -19,7 +19,10 @@ public class NotImplementedException extends KubeMQException {
 
   /** Builder for {@link NotImplementedException} with not-implemented-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with FEATURE_NOT_IMPLEMENTED code, FATAL category, and non-retryable. */
+    /**
+     * Constructs a new Builder with FEATURE_NOT_IMPLEMENTED code, FATAL category, and
+     * non-retryable.
+     */
     public Builder() {
       code(ErrorCode.FEATURE_NOT_IMPLEMENTED);
       category(ErrorCategory.FATAL);

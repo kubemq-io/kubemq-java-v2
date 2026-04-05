@@ -11,7 +11,10 @@ public class OperationCancelledException extends KubeMQException {
 
   /** Builder for {@link OperationCancelledException} with cancellation-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with CANCELLED_BY_CLIENT code, CANCELLATION category, and non-retryable. */
+    /**
+     * Constructs a new Builder with CANCELLED_BY_CLIENT code, CANCELLATION category, and
+     * non-retryable.
+     */
     public Builder() {
       code(ErrorCode.CANCELLED_BY_CLIENT);
       category(ErrorCategory.CANCELLATION);

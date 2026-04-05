@@ -161,9 +161,7 @@ public final class KubeMQMetrics implements Metrics {
   @Override
   public void recordConnectionClosed() {
     connectionCount.add(
-        -1,
-        Attributes.of(
-            KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
+        -1, Attributes.of(KubeMQSemconv.MESSAGING_SYSTEM, KubeMQSemconv.MESSAGING_SYSTEM_VALUE));
   }
 
   /** Records the reconnection attempt. */

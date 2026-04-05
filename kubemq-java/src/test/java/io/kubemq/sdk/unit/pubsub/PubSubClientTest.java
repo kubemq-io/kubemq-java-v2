@@ -31,7 +31,10 @@ class PubSubClientTest {
 
   @BeforeEach
   void setup() {
-    lenient().when(mockBlockingStub.withDeadlineAfter(anyLong(), any(java.util.concurrent.TimeUnit.class))).thenReturn(mockBlockingStub);
+    lenient()
+        .when(
+            mockBlockingStub.withDeadlineAfter(anyLong(), any(java.util.concurrent.TimeUnit.class)))
+        .thenReturn(mockBlockingStub);
     client =
         PubSubClient.builder().address("localhost:50000").clientId("test-pubsub-client").build();
     client.setBlockingStub(mockBlockingStub);

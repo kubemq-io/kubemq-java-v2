@@ -55,5 +55,4 @@ public class PubSubChannel {
         + ", outgoing="
         + outgoing;
   }
-
 }

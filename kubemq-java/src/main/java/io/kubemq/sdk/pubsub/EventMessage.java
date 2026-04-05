@@ -119,7 +119,8 @@ public class EventMessage {
    * @return the encoded KubeMQ event.
    */
   public Kubemq.Event encode(String clientId) {
-    Map<String, String> encodedTags = new HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
+    Map<String, String> encodedTags =
+        new HashMap<>(tags != null ? tags : java.util.Collections.emptyMap());
     encodedTags.put("x-kubemq-client-id", clientId);
     return Kubemq.Event.newBuilder()
         .setChannel(channel)

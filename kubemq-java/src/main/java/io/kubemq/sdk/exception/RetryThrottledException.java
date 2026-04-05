@@ -11,7 +11,9 @@ public class RetryThrottledException extends KubeMQException {
 
   /** Builder for {@link RetryThrottledException} with retry-throttling-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with RETRY_THROTTLED code, BACKPRESSURE category, and non-retryable. */
+    /**
+     * Constructs a new Builder with RETRY_THROTTLED code, BACKPRESSURE category, and non-retryable.
+     */
     public Builder() {
       code(ErrorCode.RETRY_THROTTLED);
       category(ErrorCategory.BACKPRESSURE);

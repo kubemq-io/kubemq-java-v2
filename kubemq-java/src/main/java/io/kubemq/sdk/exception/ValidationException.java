@@ -11,7 +11,9 @@ public class ValidationException extends KubeMQException {
 
   /** Builder for {@link ValidationException} with validation-specific defaults. */
   public static class Builder extends KubeMQException.Builder<Builder> {
-    /** Constructs a new Builder with INVALID_ARGUMENT code, VALIDATION category, and non-retryable. */
+    /**
+     * Constructs a new Builder with INVALID_ARGUMENT code, VALIDATION category, and non-retryable.
+     */
     public Builder() {
       code(ErrorCode.INVALID_ARGUMENT);
       category(ErrorCategory.VALIDATION);

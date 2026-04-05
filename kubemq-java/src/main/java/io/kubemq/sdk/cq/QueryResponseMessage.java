@@ -67,8 +67,7 @@ public class QueryResponseMessage {
           .operation("QueryResponseMessage.validate")
           .build();
     }
-    if (queryReceived.getReplyChannel() == null
-        || queryReceived.getReplyChannel().isEmpty()) {
+    if (queryReceived.getReplyChannel() == null || queryReceived.getReplyChannel().isEmpty()) {
       throw io.kubemq.sdk.exception.ValidationException.builder()
           .code(io.kubemq.sdk.exception.ErrorCode.INVALID_ARGUMENT)
           .message("Query response must have a reply channel.")

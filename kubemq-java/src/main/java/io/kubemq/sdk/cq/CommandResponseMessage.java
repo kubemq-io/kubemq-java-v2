@@ -58,8 +58,7 @@ public class CommandResponseMessage {
           .operation("CommandResponseMessage.validate")
           .build();
     }
-    if (commandReceived.getReplyChannel() == null
-        || commandReceived.getReplyChannel().isEmpty()) {
+    if (commandReceived.getReplyChannel() == null || commandReceived.getReplyChannel().isEmpty()) {
       throw io.kubemq.sdk.exception.ValidationException.builder()
           .code(io.kubemq.sdk.exception.ErrorCode.INVALID_ARGUMENT)
           .message("Command response must have a reply channel.")

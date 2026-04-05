@@ -142,10 +142,9 @@ class QueueMessageWaitingPulledTest {
   class TimestampConversionTests {
 
     /**
-     * Verifies that nanosecond timestamps from the KubeMQ server are correctly
-     * converted to Instant values representing reasonable dates (not year 58173).
-     * This is a regression test for a bug where division by 1_000_000 (milliseconds)
-     * was used instead of 1_000_000_000 (nanoseconds).
+     * Verifies that nanosecond timestamps from the KubeMQ server are correctly converted to Instant
+     * values representing reasonable dates (not year 58173). This is a regression test for a bug
+     * where division by 1_000_000 (milliseconds) was used instead of 1_000_000_000 (nanoseconds).
      */
     @Test
     void decode_timestampsFromNanoseconds_produceCorrectInstants() {
@@ -179,15 +178,18 @@ class QueueMessageWaitingPulledTest {
 
       // All timestamps should be within a reasonable year range (2020-2030)
       int year = decoded.getTimestamp().atZone(java.time.ZoneOffset.UTC).getYear();
-      assertTrue(year >= 2020 && year <= 2030,
+      assertTrue(
+          year >= 2020 && year <= 2030,
           "Timestamp year should be between 2020 and 2030, but was " + year);
 
       int expYear = decoded.getExpiredAt().atZone(java.time.ZoneOffset.UTC).getYear();
-      assertTrue(expYear >= 2020 && expYear <= 2030,
+      assertTrue(
+          expYear >= 2020 && expYear <= 2030,
           "ExpirationAt year should be between 2020 and 2030, but was " + expYear);
 
       int delayYear = decoded.getDelayedTo().atZone(java.time.ZoneOffset.UTC).getYear();
-      assertTrue(delayYear >= 2020 && delayYear <= 2030,
+      assertTrue(
+          delayYear >= 2020 && delayYear <= 2030,
           "DelayedTo year should be between 2020 and 2030, but was " + delayYear);
     }
 

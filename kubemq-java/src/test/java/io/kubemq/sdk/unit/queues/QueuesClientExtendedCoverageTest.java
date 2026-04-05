@@ -70,8 +70,7 @@ class QueuesClientExtendedCoverageTest {
     @Test
     @DisplayName("message with empty body and no metadata fails validation")
     void emptyBodyNoMetadata_failsValidation() {
-      QueueMessage msg =
-          QueueMessage.builder().channel("test-queue").body(new byte[0]).build();
+      QueueMessage msg = QueueMessage.builder().channel("test-queue").body(new byte[0]).build();
 
       assertThrows(ValidationException.class, () -> client.sendQueueMessage(msg));
     }
@@ -80,11 +79,7 @@ class QueuesClientExtendedCoverageTest {
     @DisplayName("valid message with metadata passes validation (may fail on connection)")
     void validMessageWithMetadata_passesValidation() {
       QueueMessage msg =
-          QueueMessage.builder()
-              .channel("test-queue")
-              .body(new byte[0])
-              .metadata("meta")
-              .build();
+          QueueMessage.builder().channel("test-queue").body(new byte[0]).metadata("meta").build();
 
       // Validation passes but will fail on actual send due to no connection
       // The important thing is that no ValidationException is thrown
@@ -119,8 +114,7 @@ class QueuesClientExtendedCoverageTest {
     void invalidMessage_throwsValidationException() {
       QueueMessage invalidMsg = QueueMessage.builder().body("data".getBytes()).build();
 
-      assertThrows(
-          ValidationException.class, () -> client.sendQueuesMessages(List.of(invalidMsg)));
+      assertThrows(ValidationException.class, () -> client.sendQueuesMessages(List.of(invalidMsg)));
     }
   }
 

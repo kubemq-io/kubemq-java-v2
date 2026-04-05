@@ -47,7 +47,8 @@ class KubeMQUtilsTest {
   void setup() {
     when(mockClient.getClient()).thenReturn(mockBlockingStub);
     when(mockClient.getClientId()).thenReturn("test-client");
-    when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
+    when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class)))
+        .thenReturn(mockBlockingStub);
   }
 
   @Nested

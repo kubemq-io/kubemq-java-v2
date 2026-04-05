@@ -30,7 +30,8 @@ class TimeoutIT extends BaseIntegrationTest {
       StatusRuntimeException thrown =
           assertThrows(StatusRuntimeException.class, () -> client.sendCommandRequest(cmd));
 
-      assertNotNull(thrown.getStatus(),
+      assertNotNull(
+          thrown.getStatus(),
           "No-responder command should produce StatusRuntimeException with status");
     } finally {
       client.close();
@@ -54,7 +55,8 @@ class TimeoutIT extends BaseIntegrationTest {
       StatusRuntimeException thrown =
           assertThrows(StatusRuntimeException.class, () -> client.sendQueryRequest(query));
 
-      assertNotNull(thrown.getStatus(),
+      assertNotNull(
+          thrown.getStatus(),
           "No-responder query should produce StatusRuntimeException with status");
     } finally {
       client.close();

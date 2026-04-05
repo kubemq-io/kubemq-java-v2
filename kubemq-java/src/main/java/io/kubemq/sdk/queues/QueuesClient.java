@@ -1,5 +1,7 @@
 package io.kubemq.sdk.queues;
 
+import io.grpc.ClientInterceptor;
+import io.grpc.ManagedChannel;
 import io.kubemq.sdk.auth.CredentialProvider;
 import io.kubemq.sdk.client.KubeMQClient;
 import io.kubemq.sdk.common.KubeMQUtils;
@@ -60,7 +62,9 @@ public class QueuesClient extends KubeMQClient {
       int maxSendMessageSize,
       Boolean waitForReady,
       KubeMQLogger logger,
-      boolean validateOnBuild) {
+      boolean validateOnBuild,
+      ManagedChannel grpcChannel,
+      List<ClientInterceptor> interceptors) {
     super(
         address,
         clientId,
@@ -88,7 +92,9 @@ public class QueuesClient extends KubeMQClient {
         maxSendMessageSize,
         waitForReady,
         logger,
-        validateOnBuild);
+        validateOnBuild,
+        grpcChannel,
+        interceptors);
     this.queueDownstreamHandler = new QueueDownstreamHandler(this);
     this.queueUpstreamHandler = new QueueUpstreamHandler(this);
   }
@@ -134,8 +140,8 @@ public class QueuesClient extends KubeMQClient {
    *
    * @param channelSearch a channel name filter; use an empty string or {@code null} to list all
    *     channels, or a partial name to match channels containing that substring
-   * @return a list of {@link QueuesChannel} objects matching the search criteria, including
-   *     channel statistics (e.g. pending message count, active subscribers)
+   * @return a list of {@link QueuesChannel} objects matching the search criteria, including channel
+   *     statistics (e.g. pending message count, active subscribers)
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
    * @throws KubeMQException if listing channels fails for any other reason
@@ -215,8 +221,8 @@ public class QueuesClient extends KubeMQClient {
    *
    * @param channel the target queue channel name (must not be null or empty)
    * @param body the message payload as a byte array; {@code null} is treated as empty
-   * @return a {@link QueueSendResult} containing the server-assigned message ID, send status,
-   *     and timestamp
+   * @return a {@link QueueSendResult} containing the server-assigned message ID, send status, and
+   *     timestamp
    * @throws ValidationException if the channel name is null or empty
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
@@ -234,7 +240,8 @@ public class QueuesClient extends KubeMQClient {
    * Sends a message to a queue channel. This is the preferred method name per cross-SDK verb
    * alignment.
    *
-   * <p><b>Example:</b></p>
+   * <p><b>Example:</b>
+   *
    * <pre>{@code
    * QueuesClient client = QueuesClient.builder()
    *     .address("localhost:50000")
@@ -253,8 +260,8 @@ public class QueuesClient extends KubeMQClient {
    *
    * @param queueMessage the queue message containing the target channel, body, metadata, optional
    *     tags, and optional policy (e.g. expiration, delay, max receive count)
-   * @return a {@link QueueSendResult} containing the server-assigned message ID, send status,
-   *     and timestamp
+   * @return a {@link QueueSendResult} containing the server-assigned message ID, send status, and
+   *     timestamp
    * @throws ValidationException if the message is missing required fields (e.g. channel)
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
@@ -273,10 +280,9 @@ public class QueuesClient extends KubeMQClient {
   /**
    * Sends messages to a queues channel.
    *
-   * @param queueMessage the queue message containing the target channel, body, and metadata to
-   *     send
-   * @return a {@link QueueSendResult} containing the server-assigned message ID, send status,
-   *     and timestamp
+   * @param queueMessage the queue message containing the target channel, body, and metadata to send
+   * @return a {@link QueueSendResult} containing the server-assigned message ID, send status, and
+   *     timestamp
    * @throws ValidationException if the message is missing required fields (e.g. channel)
    * @throws ClientClosedException if this client has been closed
    * @throws KubeMQException if sending the message fails
@@ -327,7 +333,8 @@ public class QueuesClient extends KubeMQClient {
    * Receives messages from a queue channel. This is the preferred method name per cross-SDK verb
    * alignment.
    *
-   * <p><b>Example:</b></p>
+   * <p><b>Example:</b>
+   *
    * <pre>{@code
    * QueuesClient client = QueuesClient.builder()
    *     .address("localhost:50000")
@@ -350,9 +357,9 @@ public class QueuesClient extends KubeMQClient {
    *
    * @param queuesPollRequest the poll request specifying the channel, maximum number of messages,
    *     wait timeout, visibility timeout, and auto-acknowledge mode
-   * @return a {@link QueuesPollResponse} containing the list of received
-   *     {@link QueueMessageReceived} objects; each message must be explicitly acknowledged,
-   *     rejected, or re-queued unless auto-acknowledge is enabled
+   * @return a {@link QueuesPollResponse} containing the list of received {@link
+   *     QueueMessageReceived} objects; each message must be explicitly acknowledged, rejected, or
+   *     re-queued unless auto-acknowledge is enabled
    * @throws ValidationException if the poll request is missing required fields (e.g. channel)
    * @throws ClientClosedException if this client has been closed
    * @throws ConnectionException if the connection to the KubeMQ server is unavailable
@@ -374,8 +381,7 @@ public class QueuesClient extends KubeMQClient {
    *
    * @param queuesPollRequest the poll request specifying the channel, maximum number of messages,
    *     wait timeout, and auto-acknowledge mode
-   * @return a {@link QueuesPollResponse} containing the received messages and any error
-   *     information
+   * @return a {@link QueuesPollResponse} containing the received messages and any error information
    * @throws ValidationException if the poll request is missing required fields (e.g. channel)
    * @throws ClientClosedException if this client has been closed
    * @throws KubeMQException if the poll operation fails
@@ -535,8 +541,8 @@ public class QueuesClient extends KubeMQClient {
    *
    * @param queuesPollRequest the poll request specifying the channel, maximum number of messages,
    *     wait timeout, and auto-acknowledge mode
-   * @return a {@link CompletableFuture} that completes with a {@link QueuesPollResponse}
-   *     containing received messages; completes exceptionally on failure
+   * @return a {@link CompletableFuture} that completes with a {@link QueuesPollResponse} containing
+   *     received messages; completes exceptionally on failure
    * @throws ValidationException if the poll request is missing required fields (e.g. channel)
    * @throws ClientClosedException if this client has been closed
    * @see QueuesPollRequest
@@ -572,8 +578,8 @@ public class QueuesClient extends KubeMQClient {
    * Creates a queues channel asynchronously.
    *
    * @param channel the name of the queues channel to create (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     created successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was created
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #createQueuesChannel(String)
    */
@@ -586,8 +592,8 @@ public class QueuesClient extends KubeMQClient {
    * Deletes a queues channel asynchronously.
    *
    * @param channel the name of the queues channel to delete (must not be null or empty)
-   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was
-   *     deleted successfully; completes exceptionally with a {@link KubeMQException} on failure
+   * @return a {@link CompletableFuture} that completes with {@code true} if the channel was deleted
+   *     successfully; completes exceptionally with a {@link KubeMQException} on failure
    * @throws ClientClosedException if this client has been closed
    * @see #deleteQueuesChannel(String)
    */
@@ -636,8 +642,7 @@ public class QueuesClient extends KubeMQClient {
    * @param maxMessages the maximum number of messages to pull (must be &gt; 0)
    * @param waitTimeoutInSeconds the maximum time to wait for messages in seconds (must be &gt; 0)
    * @return a {@link CompletableFuture} that completes with a {@link QueueMessagesPulled} object
-   *     containing the pulled messages (removed from the queue); completes exceptionally on
-   *     failure
+   *     containing the pulled messages (removed from the queue); completes exceptionally on failure
    * @throws ClientClosedException if this client has been closed
    * @see #pull(String, int, int)
    */

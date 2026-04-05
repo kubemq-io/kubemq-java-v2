@@ -26,17 +26,10 @@ class GenericChannelMethodsTest {
   @BeforeEach
   void setup() {
     pubSubClient =
-        PubSubClient.builder()
-            .address("localhost:50000")
-            .clientId("test-pubsub-generic")
-            .build();
-    cqClient =
-        CQClient.builder().address("localhost:50000").clientId("test-cq-generic").build();
+        PubSubClient.builder().address("localhost:50000").clientId("test-pubsub-generic").build();
+    cqClient = CQClient.builder().address("localhost:50000").clientId("test-cq-generic").build();
     queuesClient =
-        QueuesClient.builder()
-            .address("localhost:50000")
-            .clientId("test-queues-generic")
-            .build();
+        QueuesClient.builder().address("localhost:50000").clientId("test-queues-generic").build();
   }
 
   @AfterEach
@@ -53,8 +46,7 @@ class GenericChannelMethodsTest {
     @Test
     @DisplayName("createChannel rejects null type")
     void createChannel_nullType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> pubSubClient.createChannel("test-ch", null));
+      assertThrows(ValidationException.class, () -> pubSubClient.createChannel("test-ch", null));
     }
 
     @Test
@@ -67,29 +59,25 @@ class GenericChannelMethodsTest {
     @Test
     @DisplayName("deleteChannel rejects null type")
     void deleteChannel_nullType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> pubSubClient.deleteChannel("test-ch", null));
+      assertThrows(ValidationException.class, () -> pubSubClient.deleteChannel("test-ch", null));
     }
 
     @Test
     @DisplayName("deleteChannel rejects invalid type")
     void deleteChannel_invalidType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> pubSubClient.deleteChannel("test-ch", "bad"));
+      assertThrows(ValidationException.class, () -> pubSubClient.deleteChannel("test-ch", "bad"));
     }
 
     @Test
     @DisplayName("listChannels rejects null type")
     void listChannels_nullType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> pubSubClient.listChannels(null, ""));
+      assertThrows(ValidationException.class, () -> pubSubClient.listChannels(null, ""));
     }
 
     @Test
     @DisplayName("listChannels rejects invalid type")
     void listChannels_invalidType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> pubSubClient.listChannels("unknown", ""));
+      assertThrows(ValidationException.class, () -> pubSubClient.listChannels("unknown", ""));
     }
 
     @Test
@@ -108,29 +96,25 @@ class GenericChannelMethodsTest {
     @Test
     @DisplayName("createChannel rejects null type")
     void createChannel_nullType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> cqClient.createChannel("test-ch", null));
+      assertThrows(ValidationException.class, () -> cqClient.createChannel("test-ch", null));
     }
 
     @Test
     @DisplayName("createChannel rejects invalid type")
     void createChannel_invalidType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> cqClient.createChannel("test-ch", "wrong"));
+      assertThrows(ValidationException.class, () -> cqClient.createChannel("test-ch", "wrong"));
     }
 
     @Test
     @DisplayName("deleteChannel rejects null type")
     void deleteChannel_nullType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> cqClient.deleteChannel("test-ch", null));
+      assertThrows(ValidationException.class, () -> cqClient.deleteChannel("test-ch", null));
     }
 
     @Test
     @DisplayName("listChannels rejects invalid type")
     void listChannels_invalidType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> cqClient.listChannels("x", ""));
+      assertThrows(ValidationException.class, () -> cqClient.listChannels("x", ""));
     }
 
     @Test
@@ -149,29 +133,25 @@ class GenericChannelMethodsTest {
     @Test
     @DisplayName("createChannel rejects null type")
     void createChannel_nullType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> queuesClient.createChannel("test-ch", null));
+      assertThrows(ValidationException.class, () -> queuesClient.createChannel("test-ch", null));
     }
 
     @Test
     @DisplayName("createChannel rejects invalid type")
     void createChannel_invalidType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> queuesClient.createChannel("test-ch", "nope"));
+      assertThrows(ValidationException.class, () -> queuesClient.createChannel("test-ch", "nope"));
     }
 
     @Test
     @DisplayName("deleteChannel rejects invalid type")
     void deleteChannel_invalidType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> queuesClient.deleteChannel("test-ch", "fake"));
+      assertThrows(ValidationException.class, () -> queuesClient.deleteChannel("test-ch", "fake"));
     }
 
     @Test
     @DisplayName("listChannels rejects null type")
     void listChannels_nullType_throwsValidationException() {
-      assertThrows(
-          ValidationException.class, () -> queuesClient.listChannels(null, ""));
+      assertThrows(ValidationException.class, () -> queuesClient.listChannels(null, ""));
     }
 
     @Test

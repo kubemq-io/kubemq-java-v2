@@ -8,8 +8,6 @@ import io.kubemq.sdk.cq.*;
 import io.kubemq.sdk.exception.ValidationException;
 import io.kubemq.sdk.pubsub.*;
 import io.kubemq.sdk.queues.*;
-import java.util.HashMap;
-import java.util.Map;
 import kubemq.Kubemq;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -71,8 +69,7 @@ class ComplianceGapTest {
 
     @Test
     void validate_shouldRejectNullCommandReceived() {
-      CommandResponseMessage msg =
-          CommandResponseMessage.builder().isExecuted(true).build();
+      CommandResponseMessage msg = CommandResponseMessage.builder().isExecuted(true).build();
 
       assertThrows(ValidationException.class, msg::validate);
     }
@@ -141,8 +138,7 @@ class ComplianceGapTest {
 
     @Test
     void validate_shouldRejectNullQueryReceived() {
-      QueryResponseMessage msg =
-          QueryResponseMessage.builder().isExecuted(true).build();
+      QueryResponseMessage msg = QueryResponseMessage.builder().isExecuted(true).build();
 
       assertThrows(Exception.class, msg::validate);
     }
@@ -195,14 +191,12 @@ class ComplianceGapTest {
 
     @Test
     void validateChannelName_shouldRejectNullChannel() {
-      assertThrows(
-          ValidationException.class, () -> KubeMQUtils.validateChannelName(null, "test"));
+      assertThrows(ValidationException.class, () -> KubeMQUtils.validateChannelName(null, "test"));
     }
 
     @Test
     void validateChannelName_shouldRejectEmptyChannel() {
-      assertThrows(
-          ValidationException.class, () -> KubeMQUtils.validateChannelName("", "test"));
+      assertThrows(ValidationException.class, () -> KubeMQUtils.validateChannelName("", "test"));
     }
   }
 
@@ -235,9 +229,7 @@ class ComplianceGapTest {
     @Test
     void commandsSubscription_shouldRejectNullChannel() {
       CommandsSubscription sub =
-          CommandsSubscription.builder()
-              .onReceiveCommandCallback(c -> {})
-              .build();
+          CommandsSubscription.builder().onReceiveCommandCallback(c -> {}).build();
 
       assertThrows(ValidationException.class, sub::validate);
     }
@@ -245,9 +237,7 @@ class ComplianceGapTest {
     @Test
     void queriesSubscription_shouldRejectNullChannel() {
       QueriesSubscription sub =
-          QueriesSubscription.builder()
-              .onReceiveQueryCallback(q -> {})
-              .build();
+          QueriesSubscription.builder().onReceiveQueryCallback(q -> {}).build();
 
       assertThrows(ValidationException.class, sub::validate);
     }
@@ -363,8 +353,7 @@ class ComplianceGapTest {
 
     @Test
     void queueMessagesPulled_shouldHaveBasicFields() {
-      QueueMessagesPulled pulled =
-          QueueMessagesPulled.builder().isError(false).error("").build();
+      QueueMessagesPulled pulled = QueueMessagesPulled.builder().isError(false).error("").build();
 
       assertFalse(pulled.isError());
       assertEquals("", pulled.getError());
@@ -379,11 +368,7 @@ class ComplianceGapTest {
     @Test
     void commandResponseMessage_toStringShouldContainClientId() {
       CommandResponseMessage msg =
-          CommandResponseMessage.builder()
-              .clientId("c1")
-              .requestId("r1")
-              .isExecuted(true)
-              .build();
+          CommandResponseMessage.builder().clientId("c1").requestId("r1").isExecuted(true).build();
 
       String s = msg.toString();
       assertTrue(s.contains("clientId=c1"));
@@ -392,11 +377,7 @@ class ComplianceGapTest {
     @Test
     void queryResponseMessage_toStringShouldContainFields() {
       QueryResponseMessage msg =
-          QueryResponseMessage.builder()
-              .clientId("c1")
-              .requestId("r1")
-              .isExecuted(true)
-              .build();
+          QueryResponseMessage.builder().clientId("c1").requestId("r1").isExecuted(true).build();
 
       String s = msg.toString();
       assertTrue(s.contains("isExecuted=true"));

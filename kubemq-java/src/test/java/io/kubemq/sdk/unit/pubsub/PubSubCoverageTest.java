@@ -43,7 +43,8 @@ class PubSubCoverageTest {
 
   @BeforeEach
   void setup() {
-    when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class))).thenReturn(mockBlockingStub);
+    when(mockBlockingStub.withDeadlineAfter(anyLong(), any(TimeUnit.class)))
+        .thenReturn(mockBlockingStub);
     client =
         PubSubClient.builder().address("localhost:50000").clientId("test-coverage-client").build();
     client.setBlockingStub(mockBlockingStub);
@@ -1265,7 +1266,8 @@ class PubSubCoverageTest {
     @Test
     @DisplayName("EventMessage encode with empty tags adds client-id")
     void encode_emptyTags_addsClientId() {
-      EventMessage msg = new EventMessage(null, "ch", null, "b".getBytes(), new java.util.HashMap<>());
+      EventMessage msg =
+          new EventMessage(null, "ch", null, "b".getBytes(), new java.util.HashMap<>());
       Kubemq.Event proto = msg.encode("client");
       assertEquals("client", proto.getTagsMap().get("x-kubemq-client-id"));
       assertFalse(proto.getStore());

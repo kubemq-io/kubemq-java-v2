@@ -169,10 +169,7 @@ public class QueueDownstreamHandler {
       synchronized (QueueDownstreamHandler.class) {
         if (!cleanupStarted) {
           CLEANUP_EXECUTOR.scheduleAtFixedRate(
-              this::cleanupStaleRequests,
-              30,
-              30,
-              TimeUnit.SECONDS);
+              this::cleanupStaleRequests, 30, 30, TimeUnit.SECONDS);
           cleanupStarted = true;
         }
       }

@@ -45,8 +45,7 @@ class CommandResponseMessageTest {
     void validate_withoutCommandReceived_throws() {
       CommandResponseMessage response = CommandResponseMessage.builder().isExecuted(true).build();
 
-      ValidationException ex =
-          assertThrows(ValidationException.class, response::validate);
+      ValidationException ex = assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("command request"));
     }
 
@@ -58,8 +57,7 @@ class CommandResponseMessageTest {
               .isExecuted(true)
               .build();
 
-      ValidationException ex =
-          assertThrows(ValidationException.class, response::validate);
+      ValidationException ex = assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("reply channel"));
     }
 
@@ -71,8 +69,7 @@ class CommandResponseMessageTest {
               .isExecuted(true)
               .build();
 
-      ValidationException ex =
-          assertThrows(ValidationException.class, response::validate);
+      ValidationException ex = assertThrows(ValidationException.class, response::validate);
       assertTrue(ex.getMessage().contains("reply channel"));
     }
 

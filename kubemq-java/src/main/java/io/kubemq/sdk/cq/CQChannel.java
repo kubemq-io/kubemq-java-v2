@@ -57,5 +57,4 @@ public class CQChannel {
         + ", outgoing="
         + outgoing;
   }
-
 }

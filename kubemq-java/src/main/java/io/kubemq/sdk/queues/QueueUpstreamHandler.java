@@ -192,10 +192,7 @@ public class QueueUpstreamHandler {
       synchronized (QueueUpstreamHandler.class) {
         if (!cleanupStarted) {
           CLEANUP_EXECUTOR.scheduleAtFixedRate(
-              this::cleanupStaleRequests,
-              30,
-              30,
-              TimeUnit.SECONDS);
+              this::cleanupStaleRequests, 30, 30, TimeUnit.SECONDS);
           cleanupStarted = true;
         }
       }
@@ -234,15 +231,11 @@ public class QueueUpstreamHandler {
                     .complete(
                         Collections.singletonList(
                             QueueSendResult.builder()
-                                .error(
-                                    "Batch request timed out after "
-                                        + REQUEST_TIMEOUT_MS
-                                        + "ms")
+                                .error("Batch request timed out after " + REQUEST_TIMEOUT_MS + "ms")
                                 .isError(true)
                                 .build()));
                 requestTimestamps.remove(entry.getKey());
-                LOG.warn(
-                    "Cleaned up stale pending batch request", "requestId", entry.getKey());
+                LOG.warn("Cleaned up stale pending batch request", "requestId", entry.getKey());
                 return true;
               }
               return false;
