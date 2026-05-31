@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-05-31
+
+### Improvements
+- Update gRPC 1.79.0 → 1.81.0, Protobuf 4.34.0 → 4.35.0, OpenTelemetry BOM 1.60.1 → 1.62.0, and Jackson Databind 2.21.1 → 2.21.4 for security and currency
+
 ## [3.1.0] - 2026-04-05
 
 ### Features
