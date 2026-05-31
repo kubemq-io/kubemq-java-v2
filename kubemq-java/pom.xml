@@ -41,8 +41,8 @@
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <protobuf.version>4.34.0</protobuf.version>
-        <grpc.version>1.79.0</grpc.version>
+        <protobuf.version>4.35.0</protobuf.version>
+        <grpc.version>1.81.0</grpc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <skipUnitTests>false</skipUnitTests>
         <skipITs>false</skipITs>
@@ -61,7 +61,7 @@
             <dependency>
                 <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-bom</artifactId>
-                <version>1.60.1</version>
+                <version>1.62.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -140,7 +140,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.21.1</version>
+            <version>2.21.4</version>
         </dependency>
 
         <!-- Testing dependencies -->
