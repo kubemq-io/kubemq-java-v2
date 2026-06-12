@@ -78,7 +78,14 @@ public final class QueriesWorker extends BaseWorker {
                 activeSubscriptions.add(subscription);
             }
 
-            client.subscribeToQueries(subscription);
+            // Bound subscribe-startup concurrency: only the subscribe call is gated,
+            // not the keep-alive loop below.
+            acquireSubscribeSlot();
+            try {
+                client.subscribeToQueries(subscription);
+            } finally {
+                releaseSubscribeSlot();
+            }
 
             while (!consumerStop.get()) {
                 try {

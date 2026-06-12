@@ -41,6 +41,12 @@ public final class Engine implements Closeable, ClientRecreator {
 
     private static final String CHANNEL_PREFIX = "java_burnin_";
     private static final int WARMUP_COUNT = 3;
+    // Global cap on concurrent subscribe-startup RPCs across ALL patterns. The
+    // step-5 loop launches every pattern's consumers at once; without a bound,
+    // java fires ~56 events_store subscribes (plus events/commands/queries) as an
+    // unbounded burst that, combined with other SDKs, overwhelms the broker's
+    // persistent-subscribe path. Bounding to a small N makes java a lighter peer.
+    private static final int MAX_CONCURRENT_SUBSCRIBES = 10;
 
     private final BurninConfig cfg;
     // Shared clients for channel management, ping, warmup
@@ -137,12 +143,19 @@ public final class Engine implements Closeable, ClientRecreator {
         }
 
         // Step 5: Start ALL consumers/responders across ALL patterns
-        // Each pattern gets its own dedicated client for independent gRPC streams
+        // Each pattern gets its own dedicated client for independent gRPC streams.
+        // A single shared gate bounds the aggregate subscribe-startup burst across
+        // all patterns so no more than MAX_CONCURRENT_SUBSCRIBES subscribe RPCs are
+        // in flight at once (only subscribing patterns use it; queue pollers ignore it).
+        Semaphore subscribeGate = new Semaphore(MAX_CONCURRENT_SUBSCRIBES);
         for (PatternGroup pg : patternGroups.values()) {
             String pattern = pg.getPattern();
             PubSubClient ps = perPatternPubSub.getOrDefault(pattern, pubSubClient);
             QueuesClient qs = perPatternQueues.getOrDefault(pattern, queuesClient);
             CQClient cq = perPatternCQ.getOrDefault(pattern, cqClient);
+            for (BaseWorker w : pg.getWorkers()) {
+                w.setSubscribeGate(subscribeGate);
+            }
             pg.startConsumers(ps, qs, cq);
             System.out.println("consumers started: " + pattern + " (" + pg.getChannelCount() + " channels)");
         }

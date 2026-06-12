@@ -90,7 +90,14 @@ public final class EventsStoreWorker extends BaseWorker {
                 activeSubscriptions.add(subscription);
             }
 
-            client.subscribeToEventsStore(subscription);
+            // Bound subscribe-startup concurrency: only the subscribe call is gated,
+            // not the keep-alive loop below.
+            acquireSubscribeSlot();
+            try {
+                client.subscribeToEventsStore(subscription);
+            } finally {
+                releaseSubscribeSlot();
+            }
 
             while (!consumerStop.get()) {
                 try {

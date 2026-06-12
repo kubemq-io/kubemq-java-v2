@@ -78,7 +78,14 @@ public final class CommandsWorker extends BaseWorker {
                 activeSubscriptions.add(subscription);
             }
 
-            client.subscribeToCommands(subscription);
+            // Bound subscribe-startup concurrency: only the subscribe call is gated,
+            // not the keep-alive loop below.
+            acquireSubscribeSlot();
+            try {
+                client.subscribeToCommands(subscription);
+            } finally {
+                releaseSubscribeSlot();
+            }
 
             while (!consumerStop.get()) {
                 try {

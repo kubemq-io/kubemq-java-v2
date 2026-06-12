@@ -10,6 +10,7 @@ import io.kubemq.sdk.cq.CQClient;
 
 import java.io.Closeable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -45,6 +46,15 @@ public abstract class BaseWorker implements Closeable {
     // Pattern-level shared latency accumulator (thread-safe, shared across all channels in a PatternGroup)
     private volatile LatencyAccumulator patternLatencyAccum;
     private volatile LatencyAccumulator patternRpcLatencyAccum;
+
+    // Shared subscribe-startup gate (optional): bounds the number of subscribe RPCs
+    // in flight at once during startup so this client is a lighter, better-behaved
+    // peer under multi-SDK contention. Only the subscribing workers (events,
+    // events_store, commands, queries) use it; queue pollers do not subscribe.
+    private volatile Semaphore subscribeGate;
+    // Settle delay (ms) the gate is held after issuing a subscribe so the async
+    // subscribe RPCs are spaced into waves rather than firing simultaneously.
+    private static final long SUBSCRIBE_SETTLE_MS = 100;
 
     // Rate limiting
     private final RateLimiter limiter;
@@ -180,6 +190,50 @@ public abstract class BaseWorker implements Closeable {
 
     public void setPatternRpcLatencyAccum(LatencyAccumulator accum) {
         this.patternRpcLatencyAccum = accum;
+    }
+
+    /**
+     * Set the shared subscribe-startup gate. When set, subscribing workers must
+     * bracket their subscribe call with {@link #acquireSubscribeSlot()} /
+     * {@link #releaseSubscribeSlot()} so no more than N subscribes are issued
+     * concurrently across all patterns during startup.
+     */
+    public void setSubscribeGate(Semaphore gate) {
+        this.subscribeGate = gate;
+    }
+
+    /**
+     * Acquire a subscribe-startup permit (no-op if no gate is configured).
+     * Must be called immediately before issuing a subscribe RPC, and must be
+     * paired with {@link #releaseSubscribeSlot()} in a finally block. Bracket
+     * ONLY the subscribe call -- never the keep-alive loop -- otherwise live
+     * subscriber concurrency would be permanently capped.
+     */
+    protected void acquireSubscribeSlot() {
+        Semaphore gate = subscribeGate;
+        if (gate == null) return;
+        try {
+            gate.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Release a subscribe-startup permit. Sleeps a short settle delay first so
+     * the (async, non-blocking) subscribe RPCs are spaced into waves rather than
+     * all releasing at once. No-op if no gate is configured.
+     */
+    protected void releaseSubscribeSlot() {
+        Semaphore gate = subscribeGate;
+        if (gate == null) return;
+        try {
+            Thread.sleep(SUBSCRIBE_SETTLE_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            gate.release();
+        }
     }
 
     /**
