@@ -25,12 +25,12 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-core</artifactId>
-                <version>2.21.1</version>
+                <version>2.21.5</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>2.21.1</version>
+                <version>2.21.5</version>
             </dependency>
             <!-- Security: override transitive logback-core to fix CVE-2024-12798/CVE-2025-11226/CVE-2024-12801/CVE-2026-1225 -->
             <dependency>
