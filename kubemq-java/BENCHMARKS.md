@@ -32,7 +32,7 @@ Benchmarks require a running KubeMQ server.
 
 ```bash
 # Start KubeMQ via Docker
-docker run -d -p 50000:50000 kubemq/kubemq:latest
+docker run -d -p 50000:50000 europe-docker.pkg.dev/kubemq/images/kubemq-next:latest
 
 # Build the benchmark jar (opt-in profile, skips unit tests)
 mvn package -Pbenchmark -DskipTests

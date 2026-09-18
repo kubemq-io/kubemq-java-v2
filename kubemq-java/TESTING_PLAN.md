@@ -76,7 +76,7 @@ During code review, it was confirmed that `visibilitySeconds` is intentionally a
 | Assumption | Rationale |
 |------------|-----------|
 | Docker is available in CI/CD | Required for integration tests with Testcontainers |
-| KubeMQ Docker image is accessible | `kubemq/kubemq:latest` from Docker Hub |
+| KubeMQ Docker image is accessible | `europe-docker.pkg.dev/kubemq/images/kubemq-next:latest` from Google Artifact Registry (anonymous pull) |
 | Tests run on Linux/macOS CI runners | Standard Java CI environments |
 | Java 8+ compatibility required | Based on current `pom.xml` target |
 
@@ -166,7 +166,7 @@ During code review, it was confirmed that `visibilitySeconds` is intentionally a
 
 ```java
 @Container
-protected static GenericContainer<?> kubemq = new GenericContainer<>("kubemq/kubemq:latest")
+protected static GenericContainer<?> kubemq = new GenericContainer<>("europe-docker.pkg.dev/kubemq/images/kubemq-next:latest")
     .withExposedPorts(50000)
     .withEnv("KUBEMQ_TOKEN", System.getenv("KUBEMQ_TEST_TOKEN"))
     .waitingFor(Wait.forListeningPort(50000))
@@ -285,7 +285,7 @@ env:
 public abstract class BaseIntegrationTest {
 
     @Container
-    protected static GenericContainer<?> kubemq = new GenericContainer<>("kubemq/kubemq:latest")
+    protected static GenericContainer<?> kubemq = new GenericContainer<>("europe-docker.pkg.dev/kubemq/images/kubemq-next:latest")
         .withExposedPorts(50000)
         .withEnv("KUBEMQ_TOKEN", System.getenv("KUBEMQ_TEST_TOKEN"))
         .waitingFor(Wait.forListeningPort(50000))  // Safer than log message regex
@@ -725,7 +725,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class QueuesIntegrationTest {
 
     @Container
-    static GenericContainer<?> kubemq = new GenericContainer<>("kubemq/kubemq:latest")
+    static GenericContainer<?> kubemq = new GenericContainer<>("europe-docker.pkg.dev/kubemq/images/kubemq-next:latest")
         .withExposedPorts(50000)
         .withEnv("KUBEMQ_TOKEN", System.getenv("KUBEMQ_TEST_TOKEN"))
         .waitingFor(Wait.forListeningPort(50000))
